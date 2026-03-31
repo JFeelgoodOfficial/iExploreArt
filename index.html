@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>iExploreArt | Discover Art Through the Eyes of JFeelgood</title>
+  <meta name="description" content="Explore painting analysis, artist insight, abstract art ideas, and original work by JFeelgood on iExploreArt." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --paper: #fbf8f3;
+      --ink: #1e1a17;
+      --muted: #6f675f;
+      --line: rgba(30, 26, 23, 0.12);
+      --accent: #2f6f73;
+      --accent-2: #b46f3d;
+      --card: #fffdf9;
+      --shadow: 0 20px 60px rgba(30, 26, 23, 0.08);
+      --radius: 22px;
+      --max: 1180px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(180,111,61,0.10), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(47,111,115,0.10), transparent 30%),
+        var(--bg);
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    .container {
+      width: min(100% - 2rem, var(--max));
+      margin: 0 auto;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(14px);
+      background: rgba(246, 241, 232, 0.82);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      min-height: 78px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg, #fffdf9, #efe6d8);
+      box-shadow: var(--shadow);
+      font-family: "Cormorant Garamond", serif;
+      font-size: 1.15rem;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    .brand-text span:first-child {
+      font-size: 1rem;
+      text-transform: lowercase;
+    }
+
+    .brand-text span:last-child {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 500;
+      margin-top: 0.25rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .nav-links a:hover,
+    .nav-links a:focus-visible {
+      color: var(--ink);
+    }
+
+    .nav-cta {
+      padding: 0.85rem 1.2rem;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .hero {
+      padding: 5.5rem 0 3rem;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 0.45rem 0.8rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.6);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+
+    h1, h2, h3 {
+      font-family: "Cormorant Garamond", serif;
+      line-height: 0.95;
+      margin: 0 0 1rem;
+      font-weight: 600;
+    }
+
+    h1 {
+      font-size: clamp(3rem, 7vw, 6rem);
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      max-width: 60ch;
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin: 0 0 1.5rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.95rem 1.35rem;
+      border-radius: 999px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      border-color: var(--line);
+      background: rgba(255,255,255,0.55);
+      color: var(--ink);
+    }
+
+    .hero-visual {
+      position: relative;
+      min-height: 560px;
+    }
+
+    .panel {
+      position: absolute;
+      border-radius: 26px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      background: var(--card);
+      border: 1px solid rgba(30,26,23,0.08);
+    }
+
+    .panel img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .panel-a {
+      inset: 0 14% 14% 0;
+      transform: rotate(-3deg);
+    }
+
+    .panel-b {
+      width: 42%;
+      height: 46%;
+      right: 0;
+      top: 8%;
+      transform: rotate(5deg);
+    }
+
+    .panel-c {
+      width: 38%;
+      height: 38%;
+      right: 8%;
+      bottom: 0;
+      transform: rotate(-4deg);
+    }
+
+    .section {
+      padding: 5rem 0;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+      align-items: end;
+      margin-bottom: 2rem;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      max-width: 58ch;
+      margin: 0;
+    }
+
+    h2 {
+      font-size: clamp(2.4rem, 4vw, 4rem);
+      margin-bottom: 0.5rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.35rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card h3 {
+      font-size: 2rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .feature-number {
+      color: var(--accent-2);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.9rem;
+      font-weight: 700;
+    }
+
+    .story {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 1.5rem;
+      align-items: stretch;
+    }
+
+    .quote-box {
+      background: linear-gradient(180deg, #fffdf9, #f2eadc);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .quote-box blockquote {
+      font-family: "Cormorant Garamond", serif;
+      font-size: clamp(1.8rem, 3vw, 2.7rem);
+      line-height: 1.08;
+      margin: 0 0 1rem;
+    }
+
+    .quote-box cite {
+      font-style: normal;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .story-copy {
+      background: rgba(255,255,255,0.5);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 2rem;
+    }
+
+    .story-copy p {
+      color: var(--muted);
+      margin: 0 0 1rem;
+    }
+
+    .articles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+
+    .article-card {
+      overflow: hidden;
+      border-radius: 24px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .article-card .thumb {
+      aspect-ratio: 4 / 3;
+      background: linear-gradient(135deg, rgba(47,111,115,0.18), rgba(180,111,61,0.18));
+      display: grid;
+      place-items: center;
+      padding: 1.2rem;
+      color: var(--ink);
+      font-family: "Cormorant Garamond", serif;
+      font-size: 2rem;
+      text-align: center;
+    }
+
+    .article-card .content {
+      padding: 1.3rem;
+    }
+
+    .meta {
+      color: var(--accent-2);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 0.7rem;
+    }
+
+    .article-card h3 {
+      font-size: 1.8rem;
+      line-height: 1.02;
+      margin-bottom: 0.6rem;
+    }
+
+    .article-card p {
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .article-card a {
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .cta-band {
+      background: #1f1c19;
+      color: #f6f1e8;
+      border-radius: 32px;
+      padding: 2.5rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+      align-items: center;
+      box-shadow: var(--shadow);
+    }
+
+    .cta-band p {
+      color: rgba(246,241,232,0.76);
+      margin: 0.6rem 0 0;
+      max-width: 58ch;
+    }
+
+    footer {
+      padding: 2.2rem 0 4rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .footer-row {
+      border-top: 1px solid var(--line);
+      padding-top: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .story,
+      .grid-3,
+      .articles,
+      .section-head,
+      .cta-band {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding-top: 3rem;
+      }
+
+      .hero-visual {
+        min-height: 420px;
+      }
+
+      .panel-a {
+        inset: 0 10% 15% 0;
+      }
+
+      .panel-b {
+        width: 46%;
+        height: 42%;
+      }
+
+      .panel-c {
+        width: 44%;
+        height: 34%;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .nav {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1rem 0;
+      }
+
+      .nav-links {
+        gap: 0.8rem;
+      }
+
+      .hero-visual {
+        min-height: 320px;
+      }
+
+      .panel-a {
+        inset: 0 8% 8% 0;
+      }
+
+      .panel-b,
+      .panel-c {
+        display: none;
+      }
+
+      .card,
+      .story-copy,
+      .quote-box,
+      .cta-band {
+        padding: 1.35rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav">
+      <a href="#" class="brand" aria-label="iExploreArt home">
+        <span class="brand-mark">iA</span>
+        <span class="brand-text">
+          <span>iexploreart</span>
+          <span>discover art deeply</span>
+        </span>
+      </a>
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#about">About</a>
+        <a href="#explore">Explore</a>
+        <a href="#features">Featured Writing</a>
+        <a href="shop.html">Shop</a>
+        <a href="#connect" class="nav-cta">Start Exploring</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="eyebrow">Art discovery, analysis, and original work</span>
+          <h1>Explore art beyond the surface.</h1>
+          <p>
+            iExploreArt is a space for discovering original art, thoughtful painting analysis, and creative insight through the perspective of artist JFeelgood. It brings together visual storytelling, reflection, and practical guidance for people who want to experience art more deeply.
+          </p>
+          <div class="hero-actions">
+            <a href="shop.html" class="btn btn-primary">Shop Original Art</a>
+            <a href="#features" class="btn btn-secondary">Read Featured Writing</a>
+          </div>
+        </div>
+
+        <div class="hero-visual" aria-hidden="true">
+          <figure class="panel panel-a">
+            <img src="1000029612.jpg" alt="" />
+          </figure>
+          <figure class="panel panel-b">
+            <img src="1000029606.jpg" alt="" />
+          </figure>
+          <figure class="panel panel-c">
+            <img src="1000029645.jpg" alt="" />
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="about" class="section">
+      <div class="container story">
+        <div class="quote-box">
+          <blockquote>
+            “My idea was to escape a sense of contrived concept, while keeping my presence in pure unadulterated raw, honest expression.”
+          </blockquote>
+          <cite>— JFeelgood</cite>
+        </div>
+        <div class="story-copy">
+          <h2>Why iExploreArt</h2>
+          <p>
+            This platform is built for people who want more than a quick scroll past an image. It invites viewers to slow down, study, reflect, and connect with both the artwork and the ideas behind it.
+          </p>
+          <p>
+            Through artist features, painting breakdowns, and practical creative writing, iExploreArt becomes part gallery, part journal, and part guide for collectors, artists, and curious viewers alike.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="explore" class="section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>What you can explore</h2>
+            <p>Built around discovery, interpretation, and creative practice.</p>
+          </div>
+        </div>
+        <div class="grid-3">
+          <article class="card">
+            <div class="feature-number">01</div>
+            <h3>Painting Analysis</h3>
+            <p>Dive into focused written interpretations that unpack symbolism, composition, emotion, and meaning in individual works.</p>
+          </article>
+          <article class="card">
+            <div class="feature-number">02</div>
+            <h3>Artist Insight</h3>
+            <p>Follow JFeelgood’s perspective on abstract art, process, and the relationship between intuition, technique, and expression.</p>
+          </article>
+          <article class="card">
+            <div class="feature-number">03</div>
+            <h3>Original Art</h3>
+            <p>Move from reading about art to collecting it, with direct pathways to featured works, prints, and curated pieces.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>Featured writing</h2>
+            <p>Use these highlighted entry points to shape the site’s editorial side.</p>
+          </div>
+        </div>
+
+        <div class="articles">
+          <article class="article-card">
+            <div class="thumb">A Simple Meditation</div>
+            <div class="content">
+              <div class="meta">Painting analysis</div>
+              <h3>Unfiltered Expression</h3>
+              <p>A closer reading of “A Simple Meditation,” framed around introspection, raw gesture, and inner peace.</p>
+              <a href="https://iexploreart.com/painting-analysis/a-simple-meditation/" target="_blank" rel="noopener noreferrer">Read article</a>
+            </div>
+          </article>
+
+          <article class="article-card">
+            <div class="thumb">Abstract Art Guide</div>
+            <div class="content">
+              <div class="meta">Creative practice</div>
+              <h3>How to Create Abstract Art</h3>
+              <p>A practical piece on inspiration, spontaneity, and building abstract work through experimentation.</p>
+              <a href="https://iexploreart.com/painting-analysis/how-to-create-abstract-art-a-step-by-step-guide-by-jfeelgood/" target="_blank" rel="noopener noreferrer">Read article</a>
+            </div>
+          </article>
+
+          <article class="article-card">
+            <div class="thumb">Ideas That Spark</div>
+            <div class="content">
+              <div class="meta">Featured artist</div>
+              <h3>10 Innovative Abstract Art Ideas</h3>
+              <p>A discovery-focused article offering prompts and approaches for pushing abstract work in new directions.</p>
+              <a href="https://iexploreart.com/featured-artist/jfeelgood/10-innovative-abstract-art-ideas-to-ignite-your-creative-journey/" target="_blank" rel="noopener noreferrer">Read article</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="connect" class="section">
+      <div class="container">
+        <div class="cta-band">
+          <div>
+            <h2>Start with the art. Stay for the meaning.</h2>
+            <p>
+              Whether someone arrives as a collector, artist, or curious reader, iExploreArt should guide them from discovery into deeper engagement.
+            </p>
+          </div>
+          <a href="shop.html" class="btn btn-primary">Enter the Shop</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-row">
+      <span>© 2026 iExploreArt</span>
+      
