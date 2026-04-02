@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unfiltered Expression: The Raw Intimacy of JFeelgood's 'A Simple Meditation' — iExploreArt</title>
+  <meta name="description" content="A closer reading of 'A Simple Meditation' — 10 minutes, no brushes, just paint tubes and hands. What that constraint made possible." />
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+
+    :root {
+      --bg: #f6f1e8;
+      --paper: #fbf8f3;
+      --ink: #1e1a17;
+      --muted: #6f675f;
+      --line: rgba(30,26,23,0.12);
+      --accent: #2f6f73;
+      --accent-2: #b46f3d;
+      --card: #fffdf9;
+      --shadow: 0 20px 60px rgba(30,26,23,0.08);
+      --radius: 22px;
+      --max: 1180px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(180,111,61,0.10), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(47,111,115,0.10), transparent 30%),
+        var(--bg);
+      line-height: 1.6;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    .container { width: min(100% - 2rem, var(--max)); margin: 0 auto; }
+    h1,h2,h3,h4 { font-family: "Cormorant Garamond", serif; margin: 0 0 1rem; font-weight: 600; }
+    h1 { font-size: clamp(3rem,7vw,6rem); line-height: 0.95; letter-spacing:-0.03em; }
+    h2 { font-size: clamp(2.4rem,4vw,4rem); line-height: 0.95; }
+    h3 { font-size: clamp(1.6rem,2.5vw,2.2rem); line-height: 1.05; }
+
+    /* ── Nav ── */
+    .site-header {
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(14px);
+      background: rgba(246,241,232,0.82);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 1rem; min-height: 78px;
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 0.9rem;
+      font-weight: 700; letter-spacing: 0.02em;
+    }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 50%;
+      display: grid; place-items: center;
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg,#fffdf9,#efe6d8);
+      box-shadow: var(--shadow);
+      font-family: "Cormorant Garamond", serif; font-size: 1.15rem;
+    }
+    .brand-text { display: flex; flex-direction: column; line-height: 1; }
+    .brand-text span:first-child { font-size: 1rem; text-transform: lowercase; }
+    .brand-text span:last-child {
+      font-size: 0.75rem; color: var(--muted); font-weight: 500;
+      margin-top: 0.25rem; letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+    .nav-links a { color: var(--muted); font-size: 0.95rem; }
+    .nav-links a:hover, .nav-links a.active { color: var(--ink); }
+    .nav-cta {
+      padding: 0.85rem 1.2rem; border-radius: 999px;
+      background: var(--ink); color: #fff !important; font-weight: 600;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.95rem 1.35rem; border-radius: 999px; font-weight: 600;
+      border: 1px solid transparent;
+      transition: transform 0.2s ease, background 0.2s ease;
+      cursor: pointer; font-size: 1rem;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { border-color: var(--line); background: rgba(255,255,255,.55); color: var(--ink); }
+    .btn-ghost { border-color: var(--line); background: transparent; color: var(--muted); }
+
+    /* ── Misc ── */
+    .eyebrow {
+      display: inline-block; padding: 0.45rem 0.8rem;
+      border: 1px solid var(--line); border-radius: 999px;
+      color: var(--muted); background: rgba(255,255,255,.6);
+      font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+    .meta {
+      color: var(--accent-2); text-transform: uppercase;
+      letter-spacing: 0.08em; font-size: 0.78rem; font-weight: 700;
+    }
+    .section { padding: 5rem 0; }
+    footer {
+      padding: 2.2rem 0 4rem; color: var(--muted); font-size: 0.95rem;
+    }
+    .footer-row {
+      border-top: 1px solid var(--line); padding-top: 1.5rem;
+      display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+    }
+    .footer-links { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+    .footer-links a { color: var(--muted); }
+    .footer-links a:hover { color: var(--ink); }
+
+    /* ── Responsive ── */
+    @media (max-width: 720px) {
+      .nav { flex-direction: column; align-items: flex-start; padding: 1rem 0; }
+      .nav-links { gap: 0.8rem; }
+    }
+
+    .article-hero { padding: 4rem 0 0; }
+    .article-back {
+      display: inline-flex; align-items: center; gap: .5rem;
+      color: var(--muted); font-size: .9rem; margin-bottom: 2rem; transition: color .18s;
+    }
+    .article-back:hover { color: var(--ink); }
+    .article-header { max-width: 820px; }
+    .article-header .meta { margin-bottom: 1rem; }
+    .article-header h1 { font-size: clamp(2.8rem,6vw,5.5rem); line-height: .95; margin-bottom: 1rem; }
+    .article-header .deck { font-size: 1.2rem; color: var(--muted); max-width: 60ch; margin-bottom: 1.5rem; line-height: 1.55; }
+    .article-byline {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 1rem 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+      color: var(--muted); font-size: .9rem;
+    }
+    .byline-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg,rgba(47,111,115,.3),rgba(180,111,61,.3));
+      display: grid; place-items: center;
+      font-family: "Cormorant Garamond",serif; font-size: 1.1rem;
+      border: 1px solid var(--line); flex-shrink: 0;
+    }
+    .byline-info strong { color: var(--ink); display: block; }
+    .article-image {
+      margin: 2.5rem 0; border-radius: 28px; overflow: hidden;
+      box-shadow: var(--shadow); border: 1px solid var(--line);
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg,rgba(47,111,115,.18),rgba(180,111,61,.18));
+      display: grid; place-items: center;
+      font-family: "Cormorant Garamond",serif; font-size: clamp(1.5rem,3vw,2.5rem); color: var(--ink);
+    }
+    .article-image img { width:100%; height:100%; object-fit:cover; }
+    .image-caption { text-align: center; color: var(--muted); font-size: .88rem; margin-top: .75rem; font-style: italic; }
+    .article-grid {
+      display: grid; grid-template-columns: 1fr 280px; gap: 4rem;
+      align-items: start; padding: 2.5rem 0 5rem;
+    }
+    .article-body { max-width: 720px; }
+    .article-body p { font-size: 1.1rem; line-height: 1.75; color: var(--ink); margin: 0 0 1.5rem; }
+    .article-body h2 { font-size: clamp(1.8rem,3vw,2.8rem); margin: 2.5rem 0 1rem; }
+    .article-body h3 { font-size: clamp(1.4rem,2vw,2rem); margin: 2rem 0 .75rem; }
+    .article-body ul, .article-body ol { padding-left: 1.5rem; margin: 0 0 1.5rem; }
+    .article-body li { font-size: 1.05rem; line-height: 1.7; margin-bottom: .5rem; }
+    .article-body strong { color: var(--ink); }
+    .article-body em { font-style: italic; }
+    .article-body a { color: var(--accent); text-decoration: underline; }
+    .pull-quote {
+      margin: 2.5rem 0;
+      background: linear-gradient(180deg,#fffdf9,#f2eadc);
+      border: 1px solid var(--line); border-radius: 28px; padding: 2rem 2.5rem;
+      box-shadow: var(--shadow);
+    }
+    .pull-quote blockquote {
+      font-family: "Cormorant Garamond",serif; font-size: clamp(1.6rem,3vw,2.4rem);
+      line-height: 1.1; margin: 0 0 .75rem; font-style: italic;
+    }
+    .pull-quote cite { font-style: normal; color: var(--muted); font-size: .95rem; }
+    .callout {
+      background: rgba(47,111,115,0.08); border-left: 3px solid var(--accent);
+      border-radius: 0 16px 16px 0; padding: 1.2rem 1.5rem; margin: 2rem 0;
+    }
+    .callout p { margin: 0; }
+    .article-sidebar { position: sticky; top: 100px; }
+    .sidebar-card {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); margin-bottom: 1.25rem;
+    }
+    .sidebar-card h4 { font-size: 1.3rem; margin-bottom: .75rem; font-family: "Cormorant Garamond",serif; }
+    .sidebar-card p { color: var(--muted); font-size: .9rem; margin-bottom: 1rem; }
+    .share-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .share-btn {
+      padding: .5rem .9rem; border-radius: 999px; border: 1px solid var(--line);
+      font-size: .82rem; background: rgba(255,255,255,.6); cursor: pointer;
+      font-family: inherit; color: var(--ink); transition: all .18s;
+    }
+    .share-btn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .related { padding: 4rem 0; border-top: 1px solid var(--line); }
+    .related h2 { margin-bottom: 1.5rem; }
+    .related-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem; }
+    .related-card {
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      overflow: hidden; box-shadow: var(--shadow); transition: transform .2s;
+    }
+    .related-card:hover { transform: translateY(-4px); }
+    .related-thumb {
+      aspect-ratio: 4/3;
+      background: linear-gradient(135deg,rgba(47,111,115,.15),rgba(180,111,61,.15));
+      display: grid; place-items: center; font-family: "Cormorant Garamond",serif;
+      font-size: 1.2rem; color: var(--ink); padding: 1rem; text-align: center;
+    }
+    .related-body { padding: 1.1rem; }
+    .related-body h3 { font-size: 1.4rem; margin-bottom: .4rem; line-height: 1.1; }
+    .related-body p { color: var(--muted); font-size: .88rem; margin: 0; }
+    @media (max-width: 900px) {
+      .article-grid { grid-template-columns: 1fr; gap: 2rem; }
+      .article-sidebar { position: static; }
+      .related-grid { grid-template-columns: repeat(2,1fr); }
+    }
+    @media (max-width: 600px) { .related-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+
+  <header class="site-header">
+    <div class="container nav">
+      <a href="../index-5.html" class="brand" aria-label="iExploreArt home">
+        <span class="brand-mark">iA</span>
+        <span class="brand-text">
+          <span>iexploreart</span>
+          <span>discover art deeply</span>
+        </span>
+      </a>
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="../about.html">About</a>
+        <a href="index.html" class="active">Blog</a>
+        <a href="../archive.html">Archive</a>
+        <a href="https://iexploreart.com/shop" target="_blank">Shop</a>
+        <a href="index.html" class="nav-cta">Start Exploring</a>
+      </nav>
+    </div>
+  </header>
+
+
+  <main>
+    <div class="article-hero">
+      <div class="container">
+        <a href="../index.html" class="article-back">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+          Back to The Journal
+        </a>
+        <div class="article-header">
+          <div class="meta">Painting Analysis</div>
+          <h1>Unfiltered Expression: The Raw Intimacy of JFeelgood's 'A Simple Meditation'</h1>
+          <p class="deck">A closer reading of 'A Simple Meditation' — 10 minutes, no brushes, just paint tubes and hands. What that constraint made possible.</p>
+          <div class="article-byline">
+            <div class="byline-avatar">J</div>
+            <div class="byline-info">
+              <strong>JFeelgood</strong>
+              March 15, 2026 &nbsp;·&nbsp; 6 min read
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="article-image">
+        <!-- Replace with: <img src="../../images/your-artwork.jpg" alt="Unfiltered Expression: The Raw Intimacy of JFeelgood's 'A Simple Meditation'" /> -->
+        Unfiltered Expression: The Raw Intimacy of JFeelgood's 'A Simple Meditation'
+      </div>
+
+      <div class="article-grid">
+        <article class="article-body">
+
+          <div class="pull-quote">
+            <blockquote>"My idea was to escape a sense of contrived concept, while keeping my presence in pure unadulterated raw, honest expression. As true to a mirror for my spirit's state as possible."</blockquote>
+            <cite>— JFeelgood</cite>
+          </div>
+
+          <p>I kept my paint time down to 10 minutes, no more. Whatever I could do in that time is what the painting would be. The absence of paintbrushes permits me to be more intimate with emerging expression — my only tools for application were the paint tubes and my hands.</p>
+
+          <p>It began with <em>A Simple Meditation</em>, but it felt so good and right that a three-piece series came of it. <em>Ronin</em> and <em>Monarch</em> followed to complete the series.</p>
+
+          <h2 id="analysis">Analysis of "A Simple Meditation"</h2>
+
+          <p><em>A Simple Meditation</em> is an evocative acrylic on canvas piece measuring 24×36×2 inches. This painting captures the essence of introspection and inner peace through its abstract representation of a solitary figure. The use of bold, gestural strokes in yellow, white, and blue creates a dynamic interplay of colour and form, conveying a sense of both energy and calm.</p>
+
+          <p>The central figure, rendered in an almost primitive style, appears deep in thought, holding a black cup — a possible symbol of contemplation or solitude. The abstract background, with its erratic lines and patches of colour, suggests a chaotic mind seeking order through meditation.</p>
+
+          <div class="callout">
+            <p><strong>On the medium:</strong> The raw, unrefined marks made by hand add an element of authenticity and emotional depth that brushwork simply cannot replicate. The intimacy of touch changes what the paint can say.</p>
+          </div>
+
+          <p>The result invites viewers to reflect on their own states of mind — and the quiet pursuit of tranquility amidst life's chaos.</p>
+
+          <h2 id="book">In <em>Thought Entropy</em></h2>
+
+          <p>This painting is also featured in JFeelgood's book, <em>Thought Entropy</em>, available for purchase on Amazon — a deeper look at the body of work and the thinking behind it.</p>
+
+        </article>
+
+        <aside class="article-sidebar">
+          <div class="sidebar-card">
+            <h4>Share</h4>
+            <div class="share-btns">
+              <button class="share-btn" onclick="navigator.clipboard.writeText(location.href);this.textContent='Copied!'">Copy link</button>
+              <a href="https://twitter.com/intent/tweet?url=&text=Unfiltered+Expression:+The+Raw+Intimacy+of+JFeelgood's+'A+Simple+Meditation'" target="_blank" class="share-btn">Twitter</a>
+            </div>
+          </div>
+          <div class="sidebar-card">
+            <h4>Thought Entropy</h4>
+            <p>JFeelgood's book — featuring A Simple Meditation and more original work.</p>
+            <a href="https://www.amazon.com" class="btn btn-primary" style="width:100%;justify-content:center" target="_blank">On Amazon →</a>
+          </div>
+          <div class="sidebar-card">
+            <h4>Original Art</h4>
+            <p>Originals, prints, and curated pieces available in the shop.</p>
+            <a href="https://iexploreart.com/shop" class="btn btn-secondary" style="width:100%;justify-content:center" target="_blank">Visit Shop</a>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <section class="related">
+      <div class="container">
+        <h2>More from The Journal</h2>
+        <div class="related-grid" id="relatedGrid"></div>
+      </div>
+    </section>
+  </main>
+
+
+  <footer>
+    <div class="container footer-row">
+      <span>© 2026 iExploreArt · JFeelgood</span>
+      <div class="footer-links">
+        <a href="../about.html">About</a>
+        <a href="index.html">Blog</a>
+        <a href="../archive.html">Archive</a>
+        <a href="https://iexploreart.com/shop" target="_blank">Shop</a>
+        <a href="https://instagram.com" target="_blank">Instagram</a>
+      </div>
+    </div>
+  </footer>
+
+
+  <script src="../../posts.js"></script>
+  <script>
+    const currentPostId = 1;
+    const currentCategory = 'Painting Analysis';
+    const related = POSTS.filter(p => p.id !== currentPostId && p.category === currentCategory).slice(0,3);
+    const fallback = POSTS.filter(p => p.id !== currentPostId).slice(0, 3 - related.length);
+    const show = [...related, ...fallback].slice(0,3);
+    document.getElementById('relatedGrid').innerHTML = show.map(p => `
+      <a href="${p.url}" class="related-card" ${p.url.startsWith('http')?'target="_blank" rel="noopener"':''}>
+        <div class="related-thumb">${p.thumb ? `<img src="${p.thumb}" alt="${p.title}" />` : p.title}</div>
+        <div class="related-body">
+          <div class="meta" style="margin-bottom:.4rem">${p.category}</div>
+          <h3>${p.title}</h3>
+          <p>${p.dateDisplay} · ${p.readTime} read</p>
+        </div>
+      </a>`).join('');
+  </script>
+</body>
+</html>
