@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About JFeelgood — iExploreArt</title>
+  <meta name="description" content="JFeelgood is an abstract artist whose work blurs the line between instinct and intention. iExploreArt is the space where that work lives in words." />
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+
+    :root {
+      --bg: #f6f1e8;
+      --paper: #fbf8f3;
+      --ink: #1e1a17;
+      --muted: #6f675f;
+      --line: rgba(30,26,23,0.12);
+      --accent: #2f6f73;
+      --accent-2: #b46f3d;
+      --card: #fffdf9;
+      --shadow: 0 20px 60px rgba(30,26,23,0.08);
+      --radius: 22px;
+      --max: 1180px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(180,111,61,0.10), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(47,111,115,0.10), transparent 30%),
+        var(--bg);
+      line-height: 1.6;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    .container { width: min(100% - 2rem, var(--max)); margin: 0 auto; }
+    h1,h2,h3,h4 { font-family: "Cormorant Garamond", serif; margin: 0 0 1rem; font-weight: 600; }
+    h1 { font-size: clamp(3rem,7vw,6rem); line-height: 0.95; letter-spacing:-0.03em; }
+    h2 { font-size: clamp(2.4rem,4vw,4rem); line-height: 0.95; }
+    h3 { font-size: clamp(1.6rem,2.5vw,2.2rem); line-height: 1.05; }
+
+    /* ── Nav ── */
+    .site-header {
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(14px);
+      background: rgba(246,241,232,0.82);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 1rem; min-height: 78px;
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 0.9rem;
+      font-weight: 700; letter-spacing: 0.02em;
+    }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 50%;
+      display: grid; place-items: center;
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg,#fffdf9,#efe6d8);
+      box-shadow: var(--shadow);
+      font-family: "Cormorant Garamond", serif; font-size: 1.15rem;
+    }
+    .brand-text { display: flex; flex-direction: column; line-height: 1; }
+    .brand-text span:first-child { font-size: 1rem; text-transform: lowercase; }
+    .brand-text span:last-child {
+      font-size: 0.75rem; color: var(--muted); font-weight: 500;
+      margin-top: 0.25rem; letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+    .nav-links a { color: var(--muted); font-size: 0.95rem; }
+    .nav-links a:hover, .nav-links a.active { color: var(--ink); }
+    .nav-cta {
+      padding: 0.85rem 1.2rem; border-radius: 999px;
+      background: var(--ink); color: #fff !important; font-weight: 600;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.95rem 1.35rem; border-radius: 999px; font-weight: 600;
+      border: 1px solid transparent;
+      transition: transform 0.2s ease, background 0.2s ease;
+      cursor: pointer; font-size: 1rem;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { border-color: var(--line); background: rgba(255,255,255,.55); color: var(--ink); }
+    .btn-ghost { border-color: var(--line); background: transparent; color: var(--muted); }
+
+    /* ── Misc ── */
+    .eyebrow {
+      display: inline-block; padding: 0.45rem 0.8rem;
+      border: 1px solid var(--line); border-radius: 999px;
+      color: var(--muted); background: rgba(255,255,255,.6);
+      font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+    .meta {
+      color: var(--accent-2); text-transform: uppercase;
+      letter-spacing: 0.08em; font-size: 0.78rem; font-weight: 700;
+    }
+    .section { padding: 5rem 0; }
+    footer {
+      padding: 2.2rem 0 4rem; color: var(--muted); font-size: 0.95rem;
+    }
+    .footer-row {
+      border-top: 1px solid var(--line); padding-top: 1.5rem;
+      display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+    }
+    .footer-links { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+    .footer-links a { color: var(--muted); }
+    .footer-links a:hover { color: var(--ink); }
+
+    /* ── Responsive ── */
+    @media (max-width: 720px) {
+      .nav { flex-direction: column; align-items: flex-start; padding: 1rem 0; }
+      .nav-links { gap: 0.8rem; }
+    }
+
+    /* Hero */
+    .about-hero {
+      padding: 5rem 0 3rem;
+    }
+    .about-hero-grid {
+      display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2rem; align-items: center;
+    }
+    .about-hero h1 {
+      font-size: clamp(3.5rem,8vw,7rem); margin-bottom: .75rem;
+    }
+    .about-hero p {
+      font-size: 1.1rem; color: var(--muted); max-width: 54ch; margin-bottom: 1.5rem;
+    }
+    .about-hero-actions { display: flex; flex-wrap: wrap; gap: 1rem; }
+
+    /* Photo placeholder */
+    .portrait-wrap {
+      position: relative; border-radius: 32px; overflow: hidden;
+      box-shadow: var(--shadow); border: 1px solid var(--line);
+      aspect-ratio: 3/4; max-height: 560px;
+      background: linear-gradient(155deg,rgba(47,111,115,.22),rgba(180,111,61,.22));
+      display: grid; place-items: center;
+    }
+    .portrait-wrap img { width:100%; height:100%; object-fit:cover; }
+    .portrait-label {
+      font-family: "Cormorant Garamond",serif;
+      font-size: 2rem; color: var(--ink); text-align: center; padding: 2rem;
+    }
+
+    /* Quote band */
+    .quote-band {
+      background: linear-gradient(180deg,#fffdf9,#f2eadc);
+      border: 1px solid var(--line); border-radius: 28px;
+      padding: 3rem; box-shadow: var(--shadow); margin: 0;
+    }
+    .quote-band blockquote {
+      font-family: "Cormorant Garamond",serif;
+      font-size: clamp(2rem,4vw,3.2rem); line-height: 1.08;
+      margin: 0 0 1.25rem; font-style: italic; max-width: 900px;
+    }
+    .quote-band cite { font-style: normal; color: var(--muted); }
+
+    /* Bio section */
+    .bio-section {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start;
+    }
+    .bio-section h2 { margin-bottom: 1rem; }
+    .bio-section p { color: var(--muted); line-height: 1.75; margin-bottom: 1rem; }
+
+    /* What I make */
+    .makes-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem;
+    }
+    .make-card {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .make-card .num {
+      color: var(--accent-2); font-size: .85rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em; margin-bottom: .75rem;
+    }
+    .make-card h3 { font-size: 2rem; margin-bottom: .65rem; }
+    .make-card p { color: var(--muted); margin: 0; }
+
+    /* CTA band */
+    .cta-band {
+      background: #1f1c19; color: #f6f1e8; border-radius: 32px;
+      padding: 2.5rem; display: grid; grid-template-columns: 1fr auto;
+      gap: 1rem; align-items: center; box-shadow: var(--shadow);
+    }
+    .cta-band h2 { color: inherit; font-size: clamp(2rem,3vw,3.2rem); }
+    .cta-band p { color: rgba(246,241,232,.76); margin: .6rem 0 0; max-width: 54ch; }
+
+    @media (max-width: 900px) {
+      .about-hero-grid, .bio-section { grid-template-columns: 1fr; }
+      .makes-grid { grid-template-columns: 1fr 1fr; }
+      .cta-band { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .makes-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+
+  <header class="site-header">
+    <div class="container nav">
+      <a href="index-5.html" class="brand" aria-label="iExploreArt home">
+        <span class="brand-mark">iA</span>
+        <span class="brand-text">
+          <span>iexploreart</span>
+          <span>discover art deeply</span>
+        </span>
+      </a>
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="about.html">About</a>
+        <a href="blog/index.html" class="active">Blog</a>
+        <a href="archive.html">Archive</a>
+        <a href="https://iexploreart.com/shop" target="_blank">Shop</a>
+        <a href="blog/index.html" class="nav-cta">Start Exploring</a>
+      </nav>
+    </div>
+  </header>
+
+
+  <main>
+    <section class="about-hero section">
+      <div class="container about-hero-grid">
+        <div>
+          <span class="eyebrow">Abstract artist · JFeelgood</span>
+          <h1>Art made from the inside out.</h1>
+          <p>
+            I'm JFeelgood — an abstract artist working in paint, gesture, and honest expression. iExploreArt is the space where that work gets its words: painting analysis, studio notes, and thoughts on what it means to make something real.
+          </p>
+          <div class="about-hero-actions">
+            <a href="blog/index.html" class="btn btn-primary">Read The Journal</a>
+            <a href="https://iexploreart.com/shop" class="btn btn-secondary" target="_blank">Shop Original Art</a>
+          </div>
+        </div>
+        <div class="portrait-wrap">
+          <!-- ✏️ EDIT: Replace with your photo -->
+          <!-- <img src="images/jfeelgood-portrait.jpg" alt="JFeelgood in the studio" /> -->
+          <div class="portrait-label">JFeelgood<br>in the studio</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="quote-band">
+          <blockquote>"My idea was to escape a sense of contrived concept, while keeping my presence in pure unadulterated raw, honest expression."</blockquote>
+          <cite>— JFeelgood</cite>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container bio-section">
+        <div>
+          <h2>About the work</h2>
+          <p>Abstract painting is the place where I get to be most honest. There's no subject to hide behind, no story line to follow. Just paint, surface, and whatever I'm carrying into the studio that day.</p>
+          <p>The work isn't planned in advance. It's responsive — built from gesture, adjusted in real time, pushed until something true appears. That means some paintings arrive quickly and others take weeks of revision. I don't rush either kind.</p>
+          <p>My palette runs warm and textural. I'm interested in the difference between a mark that's placed and a mark that's made — and in keeping as many of the latter as I can.</p>
+        </div>
+        <div>
+          <h2>About iExploreArt</h2>
+          <p>iExploreArt started as a way to give the work a context it could live inside. Not just a gallery wall or a shop listing, but a place where someone could read about the thinking behind the painting — or the painting behind the thinking.</p>
+          <p>The site features original painting analysis, first-person studio writing, and artist spotlights. It's built for collectors, artists, and anyone who wants to slow down and look more carefully.</p>
+          <p>I write everything here myself. It's a personal blog, not a publication — which means it moves at the pace of the studio, not a content calendar.</p>
+          <a href="blog/index.html" class="btn btn-secondary" style="margin-top:.5rem">Read the journal →</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head" style="display:grid;grid-template-columns:1fr;margin-bottom:2rem">
+          <h2>What you'll find here</h2>
+          <p style="color:var(--muted);margin:.25rem 0 0">iExploreArt is part gallery, part journal, part guide.</p>
+        </div>
+        <div class="makes-grid">
+          <div class="make-card">
+            <div class="num">01</div>
+            <h3>Painting Analysis</h3>
+            <p>Deep reads of individual works — unpacking symbol, colour, composition, and what the painting is actually doing.</p>
+          </div>
+          <div class="make-card">
+            <div class="num">02</div>
+            <h3>Process Notes</h3>
+            <p>First-person writing from inside the studio. What worked, what didn't, and what I'm still figuring out.</p>
+          </div>
+          <div class="make-card">
+            <div class="num">03</div>
+            <h3>Original Art</h3>
+            <p>Originals, prints, and curated pieces available to collect. Works that are meant to be lived with.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="cta-band">
+          <div>
+            <h2>Start with the art. Stay for the meaning.</h2>
+            <p>Whether you arrive as a collector, an artist, or just curious — there's something here worth slowing down for.</p>
+          </div>
+          <a href="https://iexploreart.com/shop" class="btn btn-primary" target="_blank">Enter the Shop</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+
+  <footer>
+    <div class="container footer-row">
+      <span>© 2026 iExploreArt · JFeelgood</span>
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="blog/index.html">Blog</a>
+        <a href="archive.html">Archive</a>
+        <a href="https://iexploreart.com/shop" target="_blank">Shop</a>
+        <a href="https://instagram.com" target="_blank">Instagram</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
