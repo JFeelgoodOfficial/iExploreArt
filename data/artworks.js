@@ -146,6 +146,35 @@ export const ARTWORKS = [
     slot: 'M-S1', size: [1.6, 1.62],
     description: DESC,
   },
+  {
+    id: 'errands',
+    title: 'Errands',
+    year: '', medium: '', price: 'Inquire',
+    buyUrl: 'https://minicuration.com/',
+    image: 'assets/art/errands.webp',
+    slot: 'M-E1', size: [1.8, 1.69],
+    // Errands is a shaped, two-panel diptych: the source image is transparent
+    // around the paint. transparent lets the wall show through those areas;
+    // outline traces the true opaque silhouette as fractions of the source image
+    // (x east, y from top) — a taller right panel (top-aligned, ends higher) and
+    // a lower-set left panel. The frame follows the paint exactly, so the notch
+    // below the right panel stays open to the wall rather than being boxed in.
+    transparent: true,
+    outline: [
+      [0.502, 0], [1, 0], [1, 0.564], [0.502, 0.564],
+      [0.502, 0.680], [0, 0.680], [0, 0.285], [0.502, 0.285],
+    ],
+    description: DESC,
+  },
+  {
+    id: 'zen-kernel',
+    title: 'Zen Kernel',
+    year: '', medium: '', price: 'Inquire',
+    buyUrl: 'https://minicuration.com/',
+    image: 'assets/art/zen-kernel.webp',
+    slot: 'M-S2', size: [2.2, 1.78],
+    description: DESC,
+  },
   // --- the courtyard wall: works that live in open air ---------------------
   {
     id: 'dreamfall-big',
