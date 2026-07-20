@@ -5,8 +5,15 @@ import { buildGallery } from './world/Gallery.js';
 import { setupLighting } from './world/Lighting.js';
 import { Player } from './Player.js';
 import { DesktopControls } from './controls/DesktopControls.js';
+import { TouchControls } from './controls/TouchControls.js';
 import { createAssetPipeline } from './utils/assets.js';
+import { createEffects } from './Effects.js';
 import { buildArtworks } from './art/Artworks.js';
+import { buildCityView } from './world/CityView.js';
+import { buildCourtyard } from './world/Courtyard.js';
+import { buildDetails } from './world/Details.js';
+import { Curator } from './curator/Curator.js';
+import { tickWind } from './world/wind.js';
 import { Interaction } from './Interaction.js';
 import { UI } from './ui/UI.js';
 
@@ -31,7 +38,7 @@ const gallery = buildGallery(scene, materials);
 const lighting = setupLighting(scene, renderer, tier);
 
 const player = new Player(camera);
-const controls = new DesktopControls(canvas, player);
+const controls = IS_TOUCH ? new TouchControls(canvas, player) : new DesktopControls(canvas, player);
 const ui = new UI(controls);
 const interaction = new Interaction(camera, ui);
 controls.onInteract = () => interaction.activate();
@@ -45,6 +52,11 @@ const bootUI = { progress: (f) => { progressBar.style.width = `${Math.round(f * 
 const assets = createAssetPipeline(renderer, scene, materials, tier, bootUI);
 const artworks = buildArtworks(scene, materials, assets.manager);
 interaction.register(artworks.interactables);
+const city = buildCityView(scene, renderer);
+const courtyard = buildCourtyard(scene, materials, tier);
+const details = buildDetails(scene, materials, tier);
+const curator = new Curator(scene, materials, ui, player);
+interaction.register(curator.interactables);
 
 let entered = false;
 function readyToEnter() {
@@ -70,16 +82,25 @@ lighting.bake();
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
   player.update(dt, controls.intent);
   interaction.enabled = !ui.activePanel;
   interaction.update(dt);
-  renderer.render(scene, camera);
+  tickWind(t);
+  city.update(t);
+  details.update(t);
+  curator.update(dt, t);
+  if (effects) effects.render();
+  else renderer.render(scene, camera);
 });
+
+const effects = createEffects(renderer, scene, camera, tier);
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  if (effects) effects.resize(window.innerWidth, window.innerHeight);
 });
 
 // debug/testing handle (harmless in production)

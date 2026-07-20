@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
-  ROOM, WINDOW_N, GLASS_S, SKYLIGHT, STAIR, STAIR_VOID,
+  ROOM, WINDOW_N, GLASS_S, S_DOOR, SKYLIGHT, STAIR, STAIR_VOID,
   MEZZ_RECTS, FREE_WALL, DOOR, stairRamp,
 } from './layout.js';
 
@@ -112,10 +112,18 @@ export function buildGallery(scene, mats) {
   winGlass.position.set((WINDOW_N.x0 + WINDOW_N.x1) / 2, (WINDOW_N.sill + WINDOW_N.head) / 2, -0.02);
   glazing.add(winGlass);
 
-  const southGlass = pane(mats.glass, GLASS_S.x1 - GLASS_S.x0, GLASS_S.y1 - GLASS_S.y0);
-  southGlass.position.set((GLASS_S.x0 + GLASS_S.x1) / 2, (GLASS_S.y0 + GLASS_S.y1) / 2, D + 0.02);
-  southGlass.rotation.y = Math.PI;
-  glazing.add(southGlass);
+  // south glazing in three panes around the courtyard door opening
+  const southSpans = [
+    { x0: GLASS_S.x0, x1: S_DOOR.x0, y0: 0, y1: GLASS_S.y1 },
+    { x0: S_DOOR.x1, x1: GLASS_S.x1, y0: 0, y1: GLASS_S.y1 },
+    { x0: S_DOOR.x0, x1: S_DOOR.x1, y0: S_DOOR.h, y1: GLASS_S.y1 }, // header above the door
+  ];
+  for (const s of southSpans) {
+    const p = pane(mats.glass, s.x1 - s.x0, s.y1 - s.y0);
+    p.position.set((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, D + 0.02);
+    p.rotation.y = Math.PI;
+    glazing.add(p);
+  }
 
   const skyGlass = pane(mats.glass, sk.x1 - sk.x0, sk.z1 - sk.z0);
   skyGlass.position.set((sk.x0 + sk.x1) / 2, R + 0.12, (sk.z0 + sk.z1) / 2);
@@ -208,13 +216,15 @@ function mullionsNorth(list) {
 function mullionsSouth(list) {
   const { x0, x1, y0, y1 } = GLASS_S;
   const h = y1 - y0, cy = (y0 + y1) / 2;
-  const nV = 9;
-  for (let i = 0; i < nV; i++) {
-    const x = x0 + (i / (nV - 1)) * (x1 - x0);
-    boxInto(list, 0.09, h + 0.05, 0.16, x, cy, 14.02);
-  }
+  const verts = [2, 4.3, 6.6, 8.9, S_DOOR.x0, S_DOOR.x1, 15.2, 17.5, 19.8, 22];
+  for (const x of verts) boxInto(list, 0.09, h + 0.05, 0.16, x, cy, 14.02);
+  // full-width head rail
   boxInto(list, x1 - x0 + 0.09, 0.09, 0.16, (x0 + x1) / 2, y1, 14.02);
-  boxInto(list, x1 - x0 + 0.09, 0.06, 0.16, (x0 + x1) / 2, y0 + 0.03, 14.02);
+  // bottom shoes either side of the door
+  boxInto(list, S_DOOR.x0 - x0, 0.06, 0.16, (x0 + S_DOOR.x0) / 2, y0 + 0.03, 14.02);
+  boxInto(list, x1 - S_DOOR.x1, 0.06, 0.16, (S_DOOR.x1 + x1) / 2, y0 + 0.03, 14.02);
+  // door header rail
+  boxInto(list, S_DOOR.x1 - S_DOOR.x0 + 0.09, 0.09, 0.16, (S_DOOR.x0 + S_DOOR.x1) / 2, S_DOOR.h, 14.02);
 }
 
 function frameRect(list, x0, z0, x1, z1, y, h, w) {

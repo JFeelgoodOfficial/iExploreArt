@@ -191,6 +191,40 @@ export const ARTWORKS = [
     slot: 'M-S2', size: [1.8, 1.35],
     description: 'Moods pass through a day the way fronts cross a sky. Storm-dark ink gives way to clearings of paper and teal — proof that no inner weather is permanent.',
   },
+  // --- the courtyard wall: three works that live in open air ---------------
+  {
+    id: 'under-the-big-tree',
+    title: 'Under the Big Tree',
+    year: '2025',
+    medium: 'Acrylic on cradled panel, sealed for outdoors',
+    price: '$2,900',
+    buyUrl: 'https://minicuration.com/',
+    image: null, seed: 113, palette: 'teal',
+    slot: 'C-S1', size: [2.1, 1.6],
+    description: 'Painted in this courtyard, under this tree, across one whole summer. The canopy’s moving shadow kept redrawing the composition until the painting agreed to hold still instead.',
+  },
+  {
+    id: 'courtyard-in-bloom',
+    title: 'Courtyard in Bloom',
+    year: '2025',
+    medium: 'Acrylic on cradled panel, sealed for outdoors',
+    price: '$2,700',
+    buyUrl: 'https://minicuration.com/',
+    image: null, seed: 127, palette: 'terracotta',
+    slot: 'C-S2', size: [2.1, 1.6],
+    description: 'The flower beds at full tilt, translated into pure colour. It hangs where its subject grows — the only painting in the gallery you can smell.',
+  },
+  {
+    id: 'open-sky',
+    title: 'Open Sky',
+    year: '2025',
+    medium: 'Acrylic on cradled panel, sealed for outdoors',
+    price: '$3,400',
+    buyUrl: 'https://minicuration.com/',
+    image: null, seed: 131, palette: 'ink',
+    slot: 'C-S3', size: [2.1, 1.6],
+    description: 'A room with no ceiling deserves a painting about weather. Ink fronts cross a paper sky; stand here at different hours and the real light finishes it differently every time.',
+  },
 ];
 
 export const GALLERY_INFO = {

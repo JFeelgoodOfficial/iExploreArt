@@ -36,8 +36,11 @@ export class Interaction {
     if (!obj) { this.ui.prompt(null); return; }
 
     if (obj.material?.emissive) {
+      if (obj.material.map && !obj.material.emissiveMap) {
+        obj.material.emissiveMap = obj.material.map;
+        obj.material.needsUpdate = true;
+      }
       obj.material.emissive.setScalar(0.045);
-      if (obj.material.map && !obj.material.emissiveMap) obj.material.emissiveMap = obj.material.map;
     }
     const key = IS_TOUCH ? 'Tap' : '<b>E</b>';
     if (obj.userData.artwork) {

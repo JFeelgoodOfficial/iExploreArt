@@ -15,17 +15,18 @@ export function setupLighting(scene, renderer, tier) {
 
   // Afternoon sun from the south-west, raking through the courtyard glass
   // and skylight; the courtyard tree breaks it into dappled light.
+  // steep enough that light clears the courtyard's tall walls
   const sun = new THREE.DirectionalLight(0xfff0dd, 3.2);
-  sun.position.set(4, 17, 30);
+  sun.position.set(-8, 30, 26);
   sun.target.position.set(13, 0, 5);
   sun.castShadow = true;
   sun.shadow.mapSize.setScalar(tier.shadowSize);
-  sun.shadow.camera.left = -22;
-  sun.shadow.camera.right = 22;
-  sun.shadow.camera.top = 20;
-  sun.shadow.camera.bottom = -16;
+  sun.shadow.camera.left = -26;
+  sun.shadow.camera.right = 26;
+  sun.shadow.camera.top = 26;
+  sun.shadow.camera.bottom = -22;
   sun.shadow.camera.near = 4;
-  sun.shadow.camera.far = 60;
+  sun.shadow.camera.far = 90;
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.03;
   scene.add(sun, sun.target);
@@ -55,6 +56,10 @@ export function setupLighting(scene, renderer, tier) {
   addSpot(12, 7.2, 9.4, 12, 1.2, 7.4, 90, 0.55);
   // mezzanine bridge / upper walls
   addSpot(12, 7.25, 12.6, 12, 5.4, 13.9, 70, 0.6);
+  // courtyard display wall — three warm washes over the outdoor works
+  addSpot(6.5, 6.8, 20.8, 6.5, 2.2, 23.7, 55, 0.5);
+  addSpot(12, 6.8, 20.8, 12, 2.2, 23.7, 55, 0.5);
+  addSpot(17.5, 6.8, 20.8, 17.5, 2.2, 23.7, 55, 0.5);
 
   const bake = () => { renderer.shadowMap.needsUpdate = true; };
   return { hemi, sun, spots, bake };

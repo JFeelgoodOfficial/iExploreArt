@@ -13,8 +13,12 @@ export const ROOM = {
 
 // North window: between the structural piers, double height.
 export const WINDOW_N = { x0: 7, x1: 17, sill: 0.8, head: 6.5 };
-// South courtyard glazing: floor to mezzanine level.
+// South courtyard glazing: floor to mezzanine level, with a door out.
 export const GLASS_S = { x0: 2, x1: 22, y0: 0, y1: 4.0 };
+export const S_DOOR = { x0: 11.1, x1: 12.9, h: 2.55 };
+
+// The courtyard is a tall open-air room: walls rise to the treetop, no roof.
+export const COURTYARD = { x0: 0.6, x1: 23.4, z0: 14.3, z1: 23.8, wallH: 8.4 };
 // Skylight opening in the roof above the atrium void.
 export const SKYLIGHT = { x0: 9, x1: 15, z0: 3, z1: 7 };
 
@@ -89,6 +93,10 @@ export const SLOTS = [
   { id: 'M-E1', pos: [23.84, 5.7, 11.8], n: [-1, 0, 0], maxW: 2.2 },
   { id: 'M-S1', pos: [10.0, 5.8, 13.84], n: [0, 0, -1], maxW: 2.2 },
   { id: 'M-S2', pos: [14.0, 5.8, 13.84], n: [0, 0, -1], maxW: 2.2 },
+  // courtyard — open-air wall, facing back toward the gallery
+  { id: 'C-S1', pos: [6.5, 2.2, 23.62], n: [0, 0, -1], maxW: 2.4 },
+  { id: 'C-S2', pos: [12.0, 2.2, 23.62], n: [0, 0, -1], maxW: 2.4 },
+  { id: 'C-S3', pos: [17.5, 2.2, 23.62], n: [0, 0, -1], maxW: 2.4 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -130,8 +138,21 @@ function rect(x0, z0, x1, z1, level = 'all') {
 
 export function buildColliders() {
   const c = [];
-  // perimeter
-  c.push(seg(0, 0, 24, 0), seg(24, 0, 24, 14), seg(24, 14, 0, 14), seg(0, 14, 0, 0));
+  // perimeter — the south wall opens onto the courtyard through the door
+  c.push(seg(0, 0, 24, 0), seg(24, 0, 24, 14), seg(0, 14, 0, 0));
+  c.push(seg(0, 14, S_DOOR.x0, 14), seg(S_DOOR.x1, 14, 24, 14));
+  c.push(seg(S_DOOR.x0, 14, S_DOOR.x1, 14, ROOM.mezzY)); // bridge can't walk out over the door
+  // courtyard room
+  const cy = COURTYARD;
+  c.push(seg(cy.x0, 14, cy.x0, cy.z1), seg(cy.x1, 14, cy.x1, cy.z1), seg(cy.x0, cy.z1, cy.x1, cy.z1));
+  // tree trunk + courtyard benches + flower beds (split at the door path)
+  c.push(...rect(11.35, 18.55, 12.65, 19.85, 0));
+  c.push(...rect(8.0, 19.55, 9.7, 20.05, 0));
+  c.push(...rect(14.5, 18.55, 16.2, 19.05, 0));
+  c.push(...rect(3.2, 14.55, 10.5, 15.4, 0));
+  c.push(...rect(13.5, 14.55, 20.8, 15.4, 0));
+  c.push(...rect(1.9, 21.3, 7.0, 22.25, 0));
+  c.push(...rect(17.0, 21.3, 22.1, 22.25, 0));
   // freestanding wall (ground floor only)
   c.push(...rect(FREE_WALL.x0 - 0.05, FREE_WALL.z0, FREE_WALL.x1 + 0.05, FREE_WALL.z1, 0));
   // reception desk
