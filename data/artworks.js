@@ -152,7 +152,17 @@ export const ARTWORKS = [
     year: '', medium: '', price: 'Inquire',
     buyUrl: 'https://minicuration.com/',
     image: 'assets/art/errands.webp',
-    slot: 'M-E1', size: [1.5, 2.07],
+    slot: 'M-E1', size: [1.8, 1.69],
+    // Errands is a shaped, two-panel diptych: the source image is transparent
+    // around the paint. transparent lets the wall show through those areas;
+    // outline is the opaque silhouette as fractions of the source image (x east,
+    // y from top) — a taller right panel and a lower-set left panel meeting at
+    // the seam. The frame traces this outline instead of the image rectangle.
+    transparent: true,
+    outline: [
+      [0.502, 0], [1, 0], [1, 0.680], [0, 0.680],
+      [0, 0.285], [0.502, 0.285],
+    ],
     description: DESC,
   },
   {
