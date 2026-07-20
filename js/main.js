@@ -1,10 +1,14 @@
 import * as THREE from 'three';
-import { detectTier, IS_TOUCH, BRAND } from './config.js';
+import { detectTier, IS_TOUCH } from './config.js';
 import { createMaterials } from './world/materials.js';
 import { buildGallery } from './world/Gallery.js';
 import { setupLighting } from './world/Lighting.js';
 import { Player } from './Player.js';
 import { DesktopControls } from './controls/DesktopControls.js';
+import { createAssetPipeline } from './utils/assets.js';
+import { buildArtworks } from './art/Artworks.js';
+import { Interaction } from './Interaction.js';
+import { UI } from './ui/UI.js';
 
 const tier = detectTier();
 if (IS_TOUCH) document.body.classList.add('touch');
@@ -28,32 +32,55 @@ const lighting = setupLighting(scene, renderer, tier);
 
 const player = new Player(camera);
 const controls = new DesktopControls(canvas, player);
+const ui = new UI(controls);
+const interaction = new Interaction(camera, ui);
+controls.onInteract = () => interaction.activate();
 
-// --- temporary boot flow (UI module lands in a later phase) ---
+// --- loading flow ---
 const loadingEl = document.getElementById('loading');
 const enterBtn = document.getElementById('enter-btn');
-enterBtn.disabled = false;
-enterBtn.textContent = 'Enter the gallery';
+const progressBar = document.getElementById('progress-bar');
+const bootUI = { progress: (f) => { progressBar.style.width = `${Math.round(f * 100)}%`; } };
+
+const assets = createAssetPipeline(renderer, scene, materials, tier, bootUI);
+const artworks = buildArtworks(scene, materials, assets.manager);
+interaction.register(artworks.interactables);
+
+let entered = false;
+function readyToEnter() {
+  progressBar.style.width = '100%';
+  enterBtn.disabled = false;
+  enterBtn.textContent = 'Enter the gallery';
+  lighting.bake();
+}
+assets.done.then(readyToEnter);
+setTimeout(readyToEnter, 12000); // never gate entry on a stuck download
+
 enterBtn.addEventListener('click', () => {
+  if (enterBtn.disabled) return;
+  entered = true;
   loadingEl.classList.add('fade-out');
-  document.getElementById('hud').hidden = false;
+  ui.enter();
   controls.lock();
 });
 
 lighting.bake();
 
+// --- frame loop ---
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   player.update(dt, controls.intent);
+  interaction.enabled = !ui.activePanel;
+  interaction.update(dt);
   renderer.render(scene, camera);
 });
-
-// debug/testing handle (harmless in production)
-window.__gallery = { player, camera, scene, renderer, controls, lighting };
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+// debug/testing handle (harmless in production)
+window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction };
