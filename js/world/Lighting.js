@@ -16,7 +16,7 @@ export function setupLighting(scene, renderer, tier) {
   // Afternoon sun from the south-west, raking through the courtyard glass
   // and skylight; the courtyard tree breaks it into dappled light.
   // steep enough that light clears the courtyard's tall walls
-  const sun = new THREE.DirectionalLight(0xfff0dd, 3.2);
+  const sun = new THREE.DirectionalLight(0xfff0dd, 2.7);
   sun.position.set(-8, 30, 26);
   sun.target.position.set(13, 0, 5);
   sun.castShadow = true;
@@ -34,7 +34,7 @@ export function setupLighting(scene, renderer, tier) {
   // Gallery downlights: warm pools along the art walls.
   const spots = [];
   const addSpot = (x, y, z, tx, ty, tz, intensity = 60, angle = 0.7, shadow = false) => {
-    const s = new THREE.SpotLight(0xfff4e2, intensity, 0, angle, 0.65, 1.6);
+    const s = new THREE.SpotLight(0xfff4e2, intensity, 0, angle, 0.82, 1.6);
     s.position.set(x, y, z);
     s.target.position.set(tx, ty, tz);
     if (shadow) {
@@ -47,19 +47,22 @@ export function setupLighting(scene, renderer, tier) {
     return s;
   };
 
-  // under-mezzanine ceilings (west + east wings)
-  addSpot(3.5, 3.7, 4.0, 1.0, 1.2, 4.0, 50, 0.75, true);   // west art wall
-  addSpot(3.5, 3.7, 11.5, 2.2, 0.8, 12.2, 40, 0.8);        // reception
-  addSpot(20.5, 3.7, 11.0, 23.4, 1.3, 11.5, 50, 0.75);     // east art wall
+  // under-mezzanine ceilings (west + east wings) — soft, grazing washes
+  addSpot(3.5, 3.7, 4.0, 1.0, 1.2, 4.0, 26, 0.75, true);   // west art wall
+  addSpot(3.5, 3.7, 11.5, 2.2, 0.8, 12.2, 26, 0.8);        // reception
+  addSpot(20.5, 3.7, 11.0, 23.4, 1.3, 11.5, 26, 0.75);     // east art wall
   // atrium height, washing the freestanding wall + centre floor
-  addSpot(12, 7.2, 4.6, 12, 1.2, 6.8, 90, 0.55);
-  addSpot(12, 7.2, 9.4, 12, 1.2, 7.4, 90, 0.55);
+  addSpot(12, 7.2, 4.6, 12, 1.2, 6.8, 52, 0.55);
+  addSpot(12, 7.2, 9.4, 12, 1.2, 7.4, 52, 0.55);
   // mezzanine bridge / upper walls
-  addSpot(12, 7.25, 12.6, 12, 5.4, 13.9, 70, 0.6);
-  // courtyard display wall — three warm washes over the outdoor works
-  addSpot(6.5, 6.8, 20.8, 6.5, 2.2, 23.7, 55, 0.5);
-  addSpot(12, 6.8, 20.8, 12, 2.2, 23.7, 55, 0.5);
-  addSpot(17.5, 6.8, 20.8, 17.5, 2.2, 23.7, 55, 0.5);
+  addSpot(12, 7.25, 12.6, 12, 5.4, 13.9, 34, 0.6);
+  // courtyard display wall — soft washes aimed just ABOVE the works so the
+  // beam grazes the wall instead of blowing out the canvases (art centre y=2.2)
+  addSpot(6.5, 6.8, 20.8, 6.5, 2.8, 23.7, 30, 0.62);
+  addSpot(12, 6.8, 20.8, 12, 2.8, 23.7, 30, 0.62);
+  addSpot(17.5, 6.8, 20.8, 17.5, 2.8, 23.7, 30, 0.62);
+  // Gentrification's new home on the east courtyard wall — a gentle grazing wash
+  addSpot(21.0, 6.4, 18.0, 23.3, 2.8, 18.0, 30, 0.6);
 
   const bake = () => { renderer.shadowMap.needsUpdate = true; };
   return { hemi, sun, spots, bake };

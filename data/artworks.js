@@ -162,7 +162,7 @@ export const ARTWORKS = [
     year: '', medium: '', price: 'Inquire',
     buyUrl: 'https://minicuration.com/',
     image: 'assets/art/gentrification.webp',
-    slot: 'C-S2', size: [2.4, 1.87],
+    slot: 'C-E1', size: [2.4, 1.87],
     description: DESC,
   },
   {
