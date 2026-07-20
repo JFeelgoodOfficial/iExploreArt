@@ -146,6 +146,24 @@ export const ARTWORKS = [
     slot: 'M-S1', size: [1.6, 1.62],
     description: DESC,
   },
+  {
+    id: 'errands',
+    title: 'Errands',
+    year: '', medium: '', price: 'Inquire',
+    buyUrl: 'https://minicuration.com/',
+    image: 'assets/art/errands.webp',
+    slot: 'M-E1', size: [1.5, 2.07],
+    description: DESC,
+  },
+  {
+    id: 'zen-kernel',
+    title: 'Zen Kernel',
+    year: '', medium: '', price: 'Inquire',
+    buyUrl: 'https://minicuration.com/',
+    image: 'assets/art/zen-kernel.webp',
+    slot: 'M-S2', size: [2.2, 1.78],
+    description: DESC,
+  },
   // --- the courtyard wall: works that live in open air ---------------------
   {
     id: 'dreamfall-big',
