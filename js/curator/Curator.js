@@ -9,12 +9,13 @@ import { ARTWORKS } from '../../data/artworks.js';
 // minicuration.com from here. If the portrait fails to load, the original
 // stylized primitive figure (with head-tracking) stays in as a fallback.
 
-// receptionist.png: 623x928 alpha cutout, cropped at the waist with a soft
-// alpha fade over the bottom rows; the 1.08m desk hides the crop line.
+// receptionist.png: 341x1052 alpha cutout — a full-body standing portrait,
+// feet at floor level. She stands in the nook behind the reception desk, so
+// the desk naturally occludes her lower legs from the visitor's viewpoint.
 const PORTRAIT_URL = 'assets/image/receptionist.png';
-const PORTRAIT_ASPECT = 623 / 928;
-const PORTRAIT_H = 1.05;   // meters; head top lands ≈1.72m like the old figure
-const PORTRAIT_Y0 = 0.68;  // bottom edge, below the desk top
+const PORTRAIT_ASPECT = 341 / 1052;
+const PORTRAIT_H = 1.70;   // meters; full standing height, head top ≈1.70m
+const PORTRAIT_Y0 = 0.0;   // feet on the floor
 
 export class Curator {
   constructor(scene, mats, ui, player) {
@@ -86,12 +87,16 @@ export class Curator {
       (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = 8; // renderer clamps to hardware max
-        const mat = new THREE.MeshStandardMaterial({
+        // The portrait carries its own soft studio lighting, so it renders
+        // unlit — the reception spotlight would otherwise clip her pale dress
+        // past the bloom threshold and halo her out. A gentle grey multiply
+        // seats her tone into the warm gallery.
+        const mat = new THREE.MeshBasicMaterial({
           map: tex,
+          color: 0xe6e2da,
           transparent: true,
           alphaTest: 0.05,
           depthWrite: false,
-          roughness: 1,
           side: THREE.DoubleSide,
         });
         const plane = new THREE.Mesh(
