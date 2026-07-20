@@ -53,7 +53,7 @@ js/
   world/Courtyard.js  the open-air room: tree, flowers, display wall
   world/Lighting.js   sun, spots, baked shadows
   art/                frames, placards, placeholder painting generator
-  curator/Curator.js  figure, idle animation, dialogue runner
+  curator/Curator.js  portrait billboard, idle animation, dialogue runner
   ui/, controls/      overlays, pointer-lock + touch input
 vendor/three/         vendored Three.js (r0.185) + addons subset
 assets/               textures (MIT, from the three.js repo), HDR environment
