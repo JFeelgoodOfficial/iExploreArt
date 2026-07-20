@@ -61,7 +61,7 @@ export class UI {
     this.controls.unlock();
     this.prompt(null);
     this.el.infoTitle.textContent = art.title;
-    this.el.infoMeta.textContent = `${art.year} · ${art.medium} · JFeelgood`;
+    this.el.infoMeta.textContent = [art.year, art.medium, 'JFeelgood'].filter(Boolean).join(' · ');
     this.el.infoDesc.textContent = art.description;
     this.el.infoPrice.textContent = art.price;
     this.el.infoBuy.href = art.buyUrl;
