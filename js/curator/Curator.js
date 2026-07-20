@@ -3,9 +3,18 @@ import { CURATOR_POS } from '../world/layout.js';
 import { DIALOGUE } from '../../data/dialogue.js';
 import { ARTWORKS } from '../../data/artworks.js';
 
-// Mira, the curator: a stylized figure behind the reception desk with a
-// breathing idle and head-tracking, plus the dialogue-tree runner that the
-// UI renders. Purchases route to minicuration.com from here.
+// Mira, the curator: a photographic billboard behind the reception desk that
+// always turns to face the visitor, with a breathing idle, plus the
+// dialogue-tree runner that the UI renders. Purchases route to
+// minicuration.com from here. If the portrait fails to load, the original
+// stylized primitive figure (with head-tracking) stays in as a fallback.
+
+// receptionist.png: 623x928 alpha cutout, cropped at the waist with a soft
+// alpha fade over the bottom rows; the 1.08m desk hides the crop line.
+const PORTRAIT_URL = 'assets/image/receptionist.png';
+const PORTRAIT_ASPECT = 623 / 928;
+const PORTRAIT_H = 1.05;   // meters; head top lands ≈1.72m like the old figure
+const PORTRAIT_Y0 = 0.68;  // bottom edge, below the desk top
 
 export class Curator {
   constructor(scene, mats, ui, player) {
@@ -69,6 +78,35 @@ export class Curator {
     this.group = g;
     this._baseYaw = CURATOR_POS.facing;
     this._lookWeight = 0;
+    this.billboard = null;
+
+    // portrait billboard; on failure the primitive figure above stays
+    new THREE.TextureLoader().load(
+      PORTRAIT_URL,
+      (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 8; // renderer clamps to hardware max
+        const mat = new THREE.MeshStandardMaterial({
+          map: tex,
+          transparent: true,
+          alphaTest: 0.05,
+          depthWrite: false,
+          roughness: 1,
+          side: THREE.DoubleSide,
+        });
+        const plane = new THREE.Mesh(
+          new THREE.PlaneGeometry(PORTRAIT_H * PORTRAIT_ASPECT, PORTRAIT_H),
+          mat
+        );
+        plane.position.y = PORTRAIT_Y0 + PORTRAIT_H / 2;
+        this.torso.clear();
+        this.torso.rotation.set(0, 0, 0);
+        this.torso.add(plane);
+        this.billboard = plane;
+      },
+      undefined,
+      () => console.warn('[curator] portrait unavailable — keeping stylized figure')
+    );
   }
 
   get interactables() { return [this.hitbox]; }
@@ -78,11 +116,21 @@ export class Curator {
     const breathe = 1 + Math.sin(t * 1.7) * 0.012;
     this.torso.scale.set(1, breathe, 1);
 
-    // head (and gently the body) turns toward a nearby visitor
     const p = this.player.position;
     const dx = p.x - this.group.position.x;
     const dz = p.z - this.group.position.z;
     const dist = Math.hypot(dx, dz);
+
+    if (this.billboard) {
+      // the portrait always turns to face the visitor (Y-axis billboard)
+      const worldYaw = Math.atan2(dx, dz);
+      let rel = worldYaw - this.group.rotation.y;
+      rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+      this.group.rotation.y += rel * (1 - Math.exp(-8 * dt));
+      return;
+    }
+
+    // fallback figure: head (and gently the body) turns toward a nearby visitor
     const targetWeight = dist < 5 && Math.abs(this.player.walkY) < 0.5 ? 1 : 0;
     this._lookWeight += (targetWeight - this._lookWeight) * (1 - Math.exp(-4 * dt));
 
