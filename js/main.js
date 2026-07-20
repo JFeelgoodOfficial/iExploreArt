@@ -13,6 +13,7 @@ import { buildCityView } from './world/CityView.js';
 import { buildCourtyard } from './world/Courtyard.js';
 import { buildWallFountain } from './world/WallFountain.js';
 import { buildDetails } from './world/Details.js';
+import { buildMusic } from './audio/Music.js';
 import { Curator } from './curator/Curator.js';
 import { tickWind } from './world/wind.js';
 import { Interaction } from './Interaction.js';
@@ -55,7 +56,8 @@ const artworks = buildArtworks(scene, materials, assets.manager);
 interaction.register(artworks.interactables);
 const city = buildCityView(scene, renderer);
 const courtyard = buildCourtyard(scene, materials, tier);
-const fountain = buildWallFountain(scene, camera, materials, tier);
+const fountain = buildWallFountain(scene, camera, materials, tier, { volume: 0.75 });
+const music = buildMusic(camera);
 const details = buildDetails(scene, materials, tier);
 const curator = new Curator(scene, materials, ui, player);
 interaction.register(curator.interactables);
@@ -107,4 +109,4 @@ window.addEventListener('resize', () => {
 });
 
 // debug/testing handle (harmless in production)
-window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain };
+window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music };
