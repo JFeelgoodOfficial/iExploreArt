@@ -24,6 +24,7 @@ export class Interaction {
     this._accum = 0;
     if (!this.enabled) { this._setHovered(null); return; }
 
+    this.camera.updateMatrixWorld();
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
     const hits = this.raycaster.intersectObjects(this.targets, false);
     this._setHovered(hits.length ? hits[0].object : null);

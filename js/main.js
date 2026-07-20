@@ -104,4 +104,4 @@ window.addEventListener('resize', () => {
 });
 
 // debug/testing handle (harmless in production)
-window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction };
+window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city };

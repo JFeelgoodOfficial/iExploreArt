@@ -34,7 +34,7 @@ export function setupLighting(scene, renderer, tier) {
   // Gallery downlights: warm pools along the art walls.
   const spots = [];
   const addSpot = (x, y, z, tx, ty, tz, intensity = 60, angle = 0.7, shadow = false) => {
-    const s = new THREE.SpotLight(0xfff4e2, intensity, 0, angle, 0.45, 1.6);
+    const s = new THREE.SpotLight(0xfff4e2, intensity, 0, angle, 0.65, 1.6);
     s.position.set(x, y, z);
     s.target.position.set(tx, ty, tz);
     if (shadow) {

@@ -156,10 +156,9 @@ function signTexture() {
   ctx.textAlign = 'center';
   ctx.font = '600 128px "Cormorant Garamond", Georgia, serif';
   ctx.fillText('iExploreArt', 512, 150);
-  ctx.font = '500 40px Inter, sans-serif';
+  ctx.font = '500 34px Inter, sans-serif';
   ctx.fillStyle = '#6f675f';
-  ctx.letterSpacing = '14px';
-  ctx.fillText('A  G A L L E R Y  B Y  J F E E L G O O D', 512, 224);
+  ctx.fillText('A   G A L L E R Y   B Y   J F E E L G O O D', 512, 224);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
