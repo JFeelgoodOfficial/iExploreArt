@@ -19,17 +19,20 @@ static host (GitHub Pages, Netlify, etc.).
 | **E** — view painting / talk to curator | tap — view / talk |
 | **Shift** — walk faster · **Esc** — pause | |
 
-## Adding your real artwork photos
+## The artwork
 
-The paintings currently on the walls are generated placeholders. To hang real
-work:
+The walls hold JFeelgood's real work — 17 pieces, stored as `.webp` in
+**`assets/art/`** and hung via **`data/artworks.js`**. Each `size` is set to the
+photo's true aspect ratio so nothing is stretched. `year`, `medium`, `price`,
+and `description` are editable placeholders — fill them in per piece and point
+each `buyUrl` at the work's page on minicuration.com.
 
-1. Drop your `.webp` (or `.jpg`/`.png`) files into **`assets/art/`**.
-2. Open **`data/artworks.js`** and, for each piece, set
-   `image: "assets/art/your-file.webp"` on the matching entry.
-   While `image` is `null` a placeholder is generated.
-3. Update `title`, `description`, `price`, and — importantly — `buyUrl` to the
-   piece's page on minicuration.com.
+To add or swap a piece:
+
+1. Drop your `.webp` (or `.jpg`/`.png`) file into **`assets/art/`**.
+2. Open **`data/artworks.js`** and set `image: "assets/art/your-file.webp"` on
+   the matching entry. While `image` is `null` a placeholder is generated.
+3. Update `title`, `description`, `price`, and `buyUrl`.
 
 The artwork keeps its manifest width; height adapts to the photo's aspect ratio
 automatically. Slot positions (`G-…` ground floor, `M-…` mezzanine, `C-…`
