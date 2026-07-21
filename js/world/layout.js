@@ -65,8 +65,9 @@ export const BENCHES = [
 export const PLINTHS = [
   { x: 9, z: 2.6, s: 0.55 },
   { x: 15, z: 2.6, s: 0.55 },
-  { x: 18.6, z: 10.6, s: 0.55 },
 ];
+// LED equalizer sculpture — stands in the corner where a plinth used to be.
+export const EQUALIZER = { x: 18.6, z: 10.6 };
 export const POTS = [
   { x: 0.8, z: 0.8 }, { x: 23.2, z: 13.3 }, { x: 23.3, z: 0.6 },
 ];
@@ -163,6 +164,8 @@ export function buildColliders() {
   for (const b of BENCHES) c.push(...rect(b.x - b.w / 2, b.z - b.d / 2, b.x + b.w / 2, b.z + b.d / 2, 0));
   for (const p of PLINTHS) c.push(...rect(p.x - p.s / 2, p.z - p.s / 2, p.x + p.s / 2, p.z + p.s / 2, 0));
   for (const p of POTS) c.push(...rect(p.x - 0.35, p.z - 0.35, p.x + 0.35, p.z + 0.35, 0));
+  // LED equalizer footprint (AABB over the rotated pedestal)
+  c.push(...rect(EQUALIZER.x - 0.85, EQUALIZER.z - 0.9, EQUALIZER.x + 0.85, EQUALIZER.z + 0.9, 0));
   // stair balustrade: solid wall from floor to ramp height + rail, all levels
   c.push(seg(STAIR.x0, STAIR.entryZ, STAIR.x0, STAIR_VOID.z1, 'all'));
   // mezzanine railings (level = mezz only, ground floor walks beneath/through)

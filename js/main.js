@@ -13,6 +13,7 @@ import { buildCityView } from './world/CityView.js';
 import { buildCourtyard } from './world/Courtyard.js';
 import { buildWallFountain } from './world/WallFountain.js';
 import { buildDetails } from './world/Details.js';
+import { buildLedEqualizer } from './world/led-equalizer.js';
 import { buildMusic } from './audio/Music.js';
 import { Curator } from './curator/Curator.js';
 import { tickWind } from './world/wind.js';
@@ -66,6 +67,7 @@ const courtyard = buildCourtyard(scene, materials, tier);
 const fountain = buildWallFountain(scene, camera, materials, tier, { volume: 0.75 });
 const music = buildMusic(camera);
 const details = buildDetails(scene, materials, tier);
+const equalizer = buildLedEqualizer(scene, materials, { sound: music.sound });
 const curator = new Curator(scene, materials, ui, player, { manager: assets.manager, renderer, tier });
 interaction.register(curator.interactables);
 
@@ -129,6 +131,7 @@ renderer.setAnimationLoop(() => {
   tickWind(t);
   city.update(t);
   details.update(t);
+  equalizer.update(t);
   fountain.update(t);
   curator.update(dt, t);
   if (effects) effects.render();
@@ -190,4 +193,4 @@ window.addEventListener('resize', () => {
 });
 
 // debug/testing handle (harmless in production)
-window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music };
+window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music, equalizer };
