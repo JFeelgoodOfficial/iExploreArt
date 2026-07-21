@@ -98,6 +98,36 @@ body.touch .desktop-hint { display: none; }
 }
 #prompt b { color: #f0c987; }
 
+/* ---------- audio controls ---------- */
+#audio-controls {
+  position: fixed; z-index: 20; display: flex; gap: 0.55rem;
+  top: calc(1rem + env(safe-area-inset-top));
+  right: calc(1rem + env(safe-area-inset-right));
+  pointer-events: auto;
+}
+.audio-btn {
+  width: 42px; height: 42px; padding: 0; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  border: 1.5px solid rgba(253,251,247,0.35); background: rgba(30,26,23,0.28);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  color: #fdfbf7; transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+.audio-btn:hover { background: rgba(30,26,23,0.42); }
+.audio-btn:active { transform: scale(0.94); }
+.audio-btn svg { width: 22px; height: 22px; display: block; }
+.audio-btn svg .glyph { stroke: currentColor; }
+.audio-btn svg .wave { stroke: currentColor; opacity: 0.9; }
+.audio-btn svg .slash { stroke: #f0a08a; opacity: 0; }
+/* muted: dim the icon, hide the speaker waves, reveal the diagonal slash */
+.audio-btn.muted { opacity: 0.72; }
+.audio-btn.muted svg .wave { opacity: 0; }
+.audio-btn.muted svg .slash { opacity: 1; }
+
+@media (max-width: 640px) {
+  .audio-btn { width: 48px; height: 48px; }
+  .audio-btn svg { width: 25px; height: 25px; }
+}
+
 /* ---------- pause ---------- */
 .panel {
   background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow);

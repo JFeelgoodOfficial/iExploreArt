@@ -144,7 +144,10 @@ export function buildLedEqualizer(scene, mats, opts = {}) {
   const levels = new Float32Array(COLS);
   const peaks = new Float32Array(COLS);
   function updateLevels(t) {
-    const spec = (analyser && o.sound && o.sound.isPlaying)
+    // The analyser taps the music's post-gain output, so a muted track
+    // (volume ~0) reads as flat. Treat that like "not playing" and fall back
+    // to the idle sine sweep so the bars keep breathing while music is muted.
+    const spec = (analyser && o.sound && o.sound.isPlaying && o.sound.getVolume() > 0.001)
       ? analyser.getFrequencyData()
       : null;
     for (let c = 0; c < COLS; c++) {

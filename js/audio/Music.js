@@ -32,13 +32,17 @@ export function buildMusic(camera, opts = {}) {
   const sound = new THREE.Audio(listener);
   const ctx = listener.context;
   let ready = false, wantsPlay = false;
+  // Track the desired volume separately: the audio controller may mute (set 0)
+  // before the buffer finishes decoding, and we must not have the loader below
+  // reset it back to the default when it applies the freshly-decoded buffer.
+  let curVol = o.volume;
 
   new THREE.AudioLoader().load(
     o.url,
     (buffer) => {
       sound.setBuffer(buffer);
       sound.setLoop(o.loop);
-      sound.setVolume(o.volume);
+      sound.setVolume(curVol);
       ready = true;
       if (wantsPlay) start();          // a gesture already fired while loading
     },
@@ -47,18 +51,30 @@ export function buildMusic(camera, opts = {}) {
   );
 
   // Auto-start on the first interaction (browsers require a user gesture).
+  // On mobile the buffer often isn't decoded yet when the entering tap fires,
+  // so we resume the context in-gesture and defer the actual play; when the
+  // context is still suspended at play time (common on iOS) we resume first
+  // and play once that resolves, rather than starting into a silent context.
   function start() {
     if (ctx.state !== 'running') ctx.resume();   // must run inside the gesture
     if (!ready) { wantsPlay = true; return; }     // buffer not decoded yet
-    if (!sound.isPlaying) sound.play();
+    play();
     remove();
+  }
+  function play() {
+    if (sound.isPlaying) return;
+    if (ctx.state !== 'running') ctx.resume().then(() => { if (!sound.isPlaying) sound.play(); });
+    else sound.play();
   }
   const evs = ['pointerdown', 'keydown', 'touchend', 'click'];
   const remove = () => evs.forEach((e) => window.removeEventListener(e, start));
   evs.forEach((e) => window.addEventListener(e, start, { passive: true }));
 
-  function setVolume(v) { sound.setVolume(v); }
+  function setVolume(v) { curVol = v; sound.setVolume(v); }
   function dispose() { if (sound.isPlaying) sound.stop(); remove(); }
 
-  return { sound, setVolume, dispose };
+  // `started` is true once the entering gesture has fired; the audio controller
+  // uses it to know whether music should be resumed after the page returns from
+  // the background (iOS suspends the context there).
+  return { sound, setVolume, dispose, play, get started() { return ready ? sound.isPlaying : wantsPlay; } };
 }
