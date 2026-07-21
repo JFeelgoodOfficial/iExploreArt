@@ -56,6 +56,10 @@ export class UI {
   showPause(show) { this.el.pause.hidden = !show; }
   _resume() { this.showPause(false); this.controls.lock(); }
 
+  // true when a full-screen overlay (info/dialogue panel or the pause screen)
+  // covers the canvas — the render loop throttles behind it.
+  isObscured() { return !!this.activePanel || !this.el.pause.hidden; }
+
   openArtwork(art) {
     this.activePanel = 'info';
     this.controls.unlock();

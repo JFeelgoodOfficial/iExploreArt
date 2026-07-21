@@ -135,7 +135,15 @@ export function buildCityView(scene, renderer) {
 
   scene.add(group);
 
+  // The city only shows through the north window; skip the cloud/bird churn
+  // whenever it isn't on screen. nearMesh always draws when the city is
+  // visible, so its onBeforeRender marks the city as seen this frame.
+  let seen = false;
+  nearMesh.onBeforeRender = () => { seen = true; };
+
   function update(t) {
+    if (!seen) return;
+    seen = false;
     for (const c of clouds) {
       c.position.x += c.userData.speed * 0.016;
       if (c.position.x > 420) c.position.x = -420;
