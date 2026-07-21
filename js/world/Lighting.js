@@ -48,7 +48,8 @@ export function setupLighting(scene, renderer, tier) {
   };
 
   // under-mezzanine ceilings (west + east wings) — soft, grazing washes
-  addSpot(3.5, 3.7, 4.0, 1.0, 1.2, 4.0, 26, 0.75, true);   // west art wall
+  // (the west art wall / Pride spot was removed — that wall now reads on the
+  // ambient + hemisphere + atrium washes, without a hard shadowed beam)
   addSpot(3.5, 3.7, 11.5, 2.2, 0.8, 12.2, 26, 0.8);        // reception
   addSpot(20.5, 3.7, 11.0, 23.4, 1.3, 11.5, 26, 0.75);     // east art wall
   // atrium height, washing the freestanding wall + centre floor

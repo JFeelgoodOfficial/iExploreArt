@@ -15,6 +15,7 @@ import { buildWallFountain } from './world/WallFountain.js';
 import { buildDetails } from './world/Details.js';
 import { buildLedEqualizer } from './world/led-equalizer.js';
 import { buildMusic } from './audio/Music.js';
+import { buildAudioControls } from './audio/AudioControls.js';
 import { Curator } from './curator/Curator.js';
 import { tickWind } from './world/wind.js';
 import { Interaction } from './Interaction.js';
@@ -70,6 +71,8 @@ const details = buildDetails(scene, materials, tier);
 const equalizer = buildLedEqualizer(scene, materials, { sound: music.sound });
 const curator = new Curator(scene, materials, ui, player, { manager: assets.manager, renderer, tier });
 interaction.register(curator.interactables);
+// Music + ambient-sound mute toggles, plus the mobile Web Audio unlock.
+const audio = buildAudioControls({ music, fountain, camera });
 
 let entered = false;
 let ready = false;
@@ -95,6 +98,8 @@ enterBtn.addEventListener('click', () => {
   if (enterBtn.disabled) return;
   entered = true;
   loadingEl.classList.add('fade-out');
+  audio.unlock();      // resume + prime the AudioContext inside this gesture (mobile)
+  audio.reveal();      // show the music / sound mute buttons
   ui.enter();
   controls.lock();
 });
@@ -193,4 +198,4 @@ window.addEventListener('resize', () => {
 });
 
 // debug/testing handle (harmless in production)
-window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music, equalizer };
+window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music, equalizer, audio };
