@@ -59,6 +59,12 @@ export function buildLedEqualizer(scene, mats, opts = {}) {
 
   // ---------- LED grid ----------
   const geo = new THREE.BoxGeometry(SEG_W, SEG_H, SEG_D);
+  // This three.js build zeroes vColor via `vColor *= color` before applying the
+  // per-instance color, and BoxGeometry has no color attribute (so it defaults
+  // to black). Give every vertex white so the color set by setColorAt() below
+  // survives to the fragment instead of being multiplied to zero.
+  const whites = new Float32Array(geo.attributes.position.count * 3).fill(1);
+  geo.setAttribute('color', new THREE.BufferAttribute(whites, 3));
   const mat = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
   const grid = new THREE.InstancedMesh(geo, mat, COLS * ROWS);
   grid.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
