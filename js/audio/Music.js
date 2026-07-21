@@ -57,8 +57,12 @@ export function buildMusic(camera, opts = {}) {
   const remove = () => evs.forEach((e) => window.removeEventListener(e, start));
   evs.forEach((e) => window.addEventListener(e, start, { passive: true }));
 
+  // Explicit start/unlock — same as the gesture path, callable from the sound
+  // toggle so a manual tap reliably resumes a blocked context and plays.
+  function resume() { start(); }
+
   function setVolume(v) { sound.setVolume(v); }
   function dispose() { if (sound.isPlaying) sound.stop(); remove(); }
 
-  return { sound, setVolume, dispose };
+  return { sound, setVolume, resume, dispose };
 }

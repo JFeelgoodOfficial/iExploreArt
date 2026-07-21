@@ -98,6 +98,26 @@ body.touch .desktop-hint { display: none; }
 }
 #prompt b { color: #f0c987; }
 
+/* Sound toggle — tappable HUD control (the #hud layer is pointer-events:none). */
+#sound-btn {
+  position: absolute; top: 14px; right: 14px;
+  width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  padding: 0; color: #fdfbf7; cursor: pointer;
+  background: rgba(30, 26, 23, 0.55);
+  border: 1px solid rgba(253, 251, 247, 0.22); border-radius: 50%;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  pointer-events: auto; -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+#sound-btn:hover { background: rgba(30, 26, 23, 0.75); }
+#sound-btn:active { transform: scale(0.92); }
+#sound-btn:focus-visible { outline: 2px solid #f0c987; outline-offset: 2px; }
+#sound-btn .slash { opacity: 0; }
+#sound-btn.is-muted { color: rgba(253, 251, 247, 0.6); }
+#sound-btn.is-muted .waves { opacity: 0; }
+#sound-btn.is-muted .slash { opacity: 1; }
+body.touch #sound-btn { top: 16px; right: 16px; width: 48px; height: 48px; }
+
 /* ---------- pause ---------- */
 .panel {
   background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow);

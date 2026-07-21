@@ -185,6 +185,7 @@ export function buildWallFountain(scene, camera, mats = {}, tier = {}, opts = {}
 
   // ── sound: a soft, spatial, looping water loop ────────────────────────────
   let sound = null;
+  let resume = () => {};   // no-op unless spatial audio is wired below
   if (o.sound && camera) {
     try {
       let listener = camera.children.find((c) => c.isAudioListener);
@@ -210,6 +211,7 @@ export function buildWallFountain(scene, camera, mats = {}, tier = {}, opts = {}
       const evs = ['pointerdown', 'keydown', 'touchend', 'click'];
       const remove = () => evs.forEach((e) => window.removeEventListener(e, start));
       evs.forEach((e) => window.addEventListener(e, start, { passive: true }));
+      resume = start;   // let the sound toggle unlock + start this explicitly
     } catch (e) {
       console.warn('[WallFountain] audio unavailable:', e);
     }
@@ -241,7 +243,7 @@ export function buildWallFountain(scene, camera, mats = {}, tier = {}, opts = {}
     scene.remove(group);
   }
 
-  return { group, update, setVolume, dispose, sound };
+  return { group, update, setVolume, resume, dispose, sound };
 }
 
 // ── geometry helper ───────────────────────────────────────────────────────

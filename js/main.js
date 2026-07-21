@@ -95,7 +95,53 @@ enterBtn.addEventListener('click', () => {
   loadingEl.classList.add('fade-out');
   ui.enter();
   controls.lock();
+  // Belt-and-suspenders on top of each module's own gesture listeners.
+  music.resume();
+  fountain.resume();
 });
+
+// --- sound toggle ----------------------------------------------------------
+// Mute both sources via their setVolume (no dependency on master volume). The
+// button tap is a guaranteed user gesture, so it also resumes/unlocks a blocked
+// AudioContext and (re)starts playback — the reliable path when autoplay was
+// denied (e.g. some mobile browsers). Desktop can also toggle with the M key
+// while pointer-locked, when the HUD button isn't clickable.
+// The AudioListener lives on each sound (three's AudioContext is a shared
+// singleton, so either listener's context resumes all audio).
+const listener = (music.sound && music.sound.listener)
+  || (fountain.sound && fountain.sound.listener) || null;
+const MUSIC_VOL = 0.3, FOUNTAIN_VOL = 0.75;
+const soundBtn = document.getElementById('sound-btn');
+let muted = localStorage.getItem('iea-muted') === '1';
+
+function applyAudio() {
+  music.setVolume(muted ? 0 : MUSIC_VOL);
+  fountain.setVolume(muted ? 0 : FOUNTAIN_VOL);
+  if (soundBtn) {
+    soundBtn.classList.toggle('is-muted', muted);
+    soundBtn.setAttribute('aria-pressed', String(!muted));
+  }
+  try { localStorage.setItem('iea-muted', muted ? '1' : '0'); } catch (e) { /* private mode */ }
+}
+
+function toggleSound() {
+  const ctx = listener && listener.context;
+  if (ctx && ctx.state !== 'running') {
+    // Audio was never unlocked — treat this tap as "turn on", not a toggle.
+    ctx.resume();
+    muted = false;
+  } else {
+    muted = !muted;
+  }
+  if (!muted) { music.resume(); fountain.resume(); }
+  applyAudio();
+}
+
+if (soundBtn) soundBtn.addEventListener('click', toggleSound);
+window.addEventListener('keydown', (e) => {
+  if ((e.code === 'KeyM' || e.key === 'm' || e.key === 'M') && !e.repeat && entered) toggleSound();
+});
+applyAudio();   // honour the saved preference from the start
 
 lighting.bake();
 
@@ -190,4 +236,4 @@ window.addEventListener('resize', () => {
 });
 
 // debug/testing handle (harmless in production)
-window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music };
+window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music, listener, toggleSound };
