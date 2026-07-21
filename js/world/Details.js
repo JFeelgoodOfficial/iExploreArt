@@ -107,10 +107,33 @@ export function buildDetails(scene, mats, tier) {
   }
   const moteGeo = new THREE.BufferGeometry();
   moteGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const motes = new THREE.Points(moteGeo, new THREE.PointsMaterial({
+  moteGeo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
+  // Drift lives in the vertex shader (driven by one uTime uniform) instead of a
+  // per-frame CPU loop that re-uploaded the whole position buffer every frame.
+  // The offsets below are the closed-form integral of the old per-frame motion
+  // (amplitude = frame-increment × 60fps ÷ angular rate), zeroed at t=0 so the
+  // look is identical — now also frame-rate independent.
+  const moteUniforms = { uTime: { value: 0 } };
+  const moteMat = new THREE.PointsMaterial({
     map: moteTexture(), size: 0.035, transparent: true, opacity: 0.5,
     blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
-  }));
+  });
+  moteMat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = moteUniforms.uTime;
+    shader.vertexShader = 'attribute float aSeed;\nuniform float uTime;\n' + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+      {
+        float s = aSeed;
+        transformed.x += 0.225 * (cos(s) - cos(0.24 * uTime + s));
+        float yo = 0.247 * (sin(0.17 * uTime + s * 1.7) - sin(s * 1.7)) - 0.024 * uTime;
+        transformed.y = mod(transformed.y + yo, 6.5);
+        transformed.z += 0.24 * (cos(s * 2.3) - cos(0.2 * uTime + s * 2.3));
+      }`
+    );
+  };
+  const motes = new THREE.Points(moteGeo, moteMat);
   motes.name = 'dust-motes';
   group.add(motes);
 
@@ -121,15 +144,7 @@ export function buildDetails(scene, mats, tier) {
   scene.add(group);
 
   function update(t) {
-    const pos = moteGeo.attributes.position;
-    for (let i = 0; i < moteCount; i++) {
-      const s = seeds[i];
-      pos.array[i * 3] += Math.sin(t * 0.24 + s) * 0.0009;
-      pos.array[i * 3 + 1] += Math.cos(t * 0.17 + s * 1.7) * 0.0007 - 0.0004;
-      if (pos.array[i * 3 + 1] < 0) pos.array[i * 3 + 1] = 6.5;
-      pos.array[i * 3 + 2] += Math.sin(t * 0.2 + s * 2.3) * 0.0008;
-    }
-    pos.needsUpdate = true;
+    moteUniforms.uTime.value = t;
   }
 
   return { group, update };

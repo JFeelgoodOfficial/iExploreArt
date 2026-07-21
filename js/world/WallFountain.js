@@ -215,8 +215,17 @@ export function buildWallFountain(scene, camera, mats = {}, tier = {}, opts = {}
     }
   }
 
+  // Skip the per-frame uniform churn whenever the fountain isn't actually on
+  // screen. The reveal mesh always draws when the fountain is visible, so its
+  // onBeforeRender marks the fountain as seen this frame. Animation is driven
+  // by absolute clock time, so resuming after occlusion never pops.
+  let seen = false;
+  reveal.onBeforeRender = () => { seen = true; };
+
   // ── per-frame update — pass the elapsed clock time, like details.update(t) ─
   function update(t) {
+    if (!seen) return;
+    seen = false;
     curtainMat.uniforms.uTime.value = t;
     poolMat.uniforms.uTime.value = t;
     film.material.uniforms.uTime.value = t;

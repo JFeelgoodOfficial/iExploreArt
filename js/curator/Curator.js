@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CURATOR_POS } from '../world/layout.js';
 import { DIALOGUE } from '../../data/dialogue.js';
 import { ARTWORKS } from '../../data/artworks.js';
+import { queueUpload } from '../utils/texqueue.js';
 
 // Mira, the curator: a photographic billboard behind the reception desk that
 // always turns to face the visitor, with a breathing idle, plus the
@@ -18,10 +19,14 @@ const PORTRAIT_H = 1.70;   // meters; full standing height, head top ≈1.70m
 const PORTRAIT_Y0 = 0.0;   // feet on the floor
 
 export class Curator {
-  constructor(scene, mats, ui, player) {
+  constructor(scene, mats, ui, player, opts = {}) {
     this.ui = ui;
     this.player = player;
     ui.curator = this;
+    const { manager, renderer, tier } = opts;
+    const aniso = renderer
+      ? Math.min(tier?.anisotropy ?? 8, renderer.capabilities.getMaxAnisotropy())
+      : (tier?.anisotropy ?? 8);
 
     const g = new THREE.Group();
     g.name = 'curator';
@@ -81,12 +86,15 @@ export class Curator {
     this._lookWeight = 0;
     this.billboard = null;
 
-    // portrait billboard; on failure the primitive figure above stays
-    new THREE.TextureLoader().load(
+    // portrait billboard; on failure the primitive figure above stays.
+    // Routed through the shared LoadingManager so it gates entry and its GPU
+    // upload is paced with the rest of the collection.
+    new THREE.TextureLoader(manager).load(
       PORTRAIT_URL,
       (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
-        tex.anisotropy = 8; // renderer clamps to hardware max
+        tex.anisotropy = aniso;
+        queueUpload(tex);
         // The portrait carries its own soft studio lighting, so it renders
         // unlit — the reception spotlight would otherwise clip her pale dress
         // past the bloom threshold and halo her out. A gentle grey multiply

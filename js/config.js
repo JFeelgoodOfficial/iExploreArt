@@ -12,6 +12,12 @@ export const BRAND = {
 
 export const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
+// Opt-in dynamic-resolution governor. Off by default: the fixed per-tier
+// pixel ratio plus the steady-state optimisations hold frame time on target
+// hardware, and stepping the ratio mid-session is itself a brief hitch and a
+// visible resolution shift. Flip on if a struggling device needs the fallback.
+export const ADAPTIVE_DPR = false;
+
 export function detectTier() {
   if (IS_TOUCH) return TIERS.low;
   return TIERS.high;

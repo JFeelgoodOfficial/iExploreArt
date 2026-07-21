@@ -3,18 +3,29 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ARTWORKS } from '../../data/artworks.js';
 import { SLOTS } from '../world/layout.js';
 import { generatePainting } from './placeholder.js';
+import { queueUpload } from '../utils/texqueue.js';
 
 // Hangs the collection: frame + canvas + brass placard per manifest entry.
 // All frames merge into one mesh; each canvas is its own mesh (unique
 // texture) and doubles as the interactable the raycaster hits.
 
-export function buildArtworks(scene, mats, manager) {
+export function buildArtworks(scene, mats, manager, renderer, tier) {
   const slotById = Object.fromEntries(SLOTS.map(s => [s.id, s]));
   const group = new THREE.Group();
   group.name = 'artworks';
   const frameGeos = [];
   const placardGeos = [];
   const interactables = [];
+  const aniso = renderer
+    ? Math.min(tier?.anisotropy ?? 8, renderer.capabilities.getMaxAnisotropy())
+    : (tier?.anisotropy ?? 8);
+  // ImageBitmapLoader decodes off the main thread; the pre-flipped bitmap plus
+  // flipY:false reproduces the default TextureLoader orientation exactly, so
+  // the shaped-crop offset/repeat math below is unchanged. TextureLoader stays
+  // as the fallback for browsers without createImageBitmap.
+  const useBitmap = typeof createImageBitmap === 'function';
+  const bmpLoader = useBitmap ? new THREE.ImageBitmapLoader(manager) : null;
+  if (bmpLoader) bmpLoader.setOptions({ imageOrientation: 'flipY', colorSpaceConversion: 'none' });
   const texLoader = new THREE.TextureLoader(manager);
 
   for (const art of ARTWORKS) {
@@ -42,24 +53,33 @@ export function buildArtworks(scene, mats, manager) {
       alphaTest: art.transparent ? 0.06 : 0,
     });
     if (art.image) {
-      canvasMat.map = texLoader.load(
-        art.image,
-        (t) => {
-          t.colorSpace = THREE.SRGBColorSpace;
-          t.anisotropy = 8;
-          if (shaped) {
-            // crop the sampled region to the opaque bounding box
-            t.offset.set(bb[0], 1 - bb[3]);
-            t.repeat.set(bb[2] - bb[0], bb[3] - bb[1]);
-            t.needsUpdate = true;
-          }
-          // keep manifest width, adapt height to the sampled region's aspect
-          const aspect = (t.image.width * (bb[2] - bb[0])) / (t.image.height * (bb[3] - bb[1]));
-          canvasMesh.scale.y = (w / aspect) / h;
-        },
-        undefined,
-        () => { canvasMat.map = generatePainting(art.seed, art.palette, w / h); canvasMat.needsUpdate = true; }
-      );
+      // shared once the pixels are in hand, whichever loader delivered them
+      const applyTexture = (t, imgW, imgH) => {
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = aniso;
+        if (shaped) {
+          // crop the sampled region to the opaque bounding box
+          t.offset.set(bb[0], 1 - bb[3]);
+          t.repeat.set(bb[2] - bb[0], bb[3] - bb[1]);
+        }
+        t.needsUpdate = true;
+        canvasMat.map = t;
+        canvasMat.needsUpdate = true;
+        // keep manifest width, adapt height to the sampled region's aspect
+        const aspect = (imgW * (bb[2] - bb[0])) / (imgH * (bb[3] - bb[1]));
+        canvasMesh.scale.y = (w / aspect) / h;
+        queueUpload(t); // paced GPU upload, not on first draw
+      };
+      const onError = () => { canvasMat.map = generatePainting(art.seed, art.palette, w / h); canvasMat.needsUpdate = true; };
+      if (bmpLoader) {
+        bmpLoader.load(art.image, (bitmap) => {
+          const t = new THREE.Texture(bitmap);
+          t.flipY = false; // bitmap is already flipped via imageOrientation
+          applyTexture(t, bitmap.width, bitmap.height);
+        }, undefined, onError);
+      } else {
+        texLoader.load(art.image, (t) => applyTexture(t, t.image.width, t.image.height), undefined, onError);
+      }
     } else {
       canvasMat.map = generatePainting(art.seed, art.palette, w / h);
     }
