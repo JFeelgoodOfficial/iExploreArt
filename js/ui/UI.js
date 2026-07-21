@@ -67,8 +67,16 @@ export class UI {
     this.el.infoTitle.textContent = art.title;
     this.el.infoMeta.textContent = [art.year, art.medium, 'JFeelgood'].filter(Boolean).join(' · ');
     this.el.infoDesc.textContent = art.description;
-    this.el.infoPrice.textContent = art.price;
-    this.el.infoBuy.href = art.buyUrl;
+    // price / buy link are optional — hide them when a piece has none
+    this.el.infoPrice.textContent = art.price || '';
+    this.el.infoPrice.hidden = !art.price;
+    if (art.buyUrl) {
+      this.el.infoBuy.href = art.buyUrl;
+      this.el.infoBuy.hidden = false;
+    } else {
+      this.el.infoBuy.removeAttribute('href');
+      this.el.infoBuy.hidden = true;
+    }
     this.el.info.hidden = false;
   }
 
