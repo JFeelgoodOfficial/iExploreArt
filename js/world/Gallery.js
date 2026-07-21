@@ -59,10 +59,11 @@ export function buildGallery(scene, mats) {
     box('wood', rw, 0.03, rd, (r.x0 + r.x1) / 2, M - 0.015, (r.z0 + r.z1) / 2);
     // slim steel fascia along the slab edge reads as structure
   }
-  // fascia strips on the atrium-facing edges
-  box('steel', 0.06, S + 0.1, 11.2, 7 - 0.03, M - S / 2 - 0.03, 5.6);
-  box('steel', 0.06, S + 0.1, 11.2, 17 + 0.03, M - S / 2 - 0.03, 5.6);
-  box('steel', 10.06, S + 0.1, 0.06, 12, M - S / 2 - 0.03, 11.2 + 0.03);
+  // fascia strips on the atrium-facing edges — nudged ~1cm proud of the slab
+  // edge so the steel face wins the depth test (no z-fighting with the plaster).
+  box('steel', 0.06, S + 0.1, 11.2, 7 - 0.02, M - S / 2 - 0.03, 5.6);
+  box('steel', 0.06, S + 0.1, 11.2, 17 + 0.02, M - S / 2 - 0.03, 5.6);
+  box('steel', 10.06, S + 0.1, 0.06, 12, M - S / 2 - 0.03, 11.2 + 0.02);
 
   // ---- roof with skylight --------------------------------------------------
   const sk = SKYLIGHT;
