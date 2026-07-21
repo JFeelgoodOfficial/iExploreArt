@@ -51,6 +51,23 @@ export function buildLedEqualizer(scene, mats, opts = {}) {
   group.add(pedestal);
   const pedTopY = pedH;
 
+  // "SR" monogram on the room-facing (+Z) side of the base. The PNG is a black
+  // shape on a transparent background, so alphaTest drops the background and only
+  // the black shape shows over the white plaster.
+  const logoMat = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.5, depthWrite: false });
+  const logoW = pedW * 0.5, logoH = logoW * (393 / 726); // preserve the source aspect
+  const logo = new THREE.Mesh(new THREE.PlaneGeometry(logoW, logoH), logoMat);
+  logo.position.set(0, pedH / 2, pedD / 2 + 0.01);       // just proud of the front face
+  logo.visible = false;                                  // reveal once decoded (no white flash)
+  group.add(logo);
+  new THREE.TextureLoader().load('assets/image/sr-logo.png', (t) => {
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    logoMat.map = t;
+    logoMat.needsUpdate = true;
+    logo.visible = true;
+  });
+
   // blue glow spill on the pedestal top (world-space intensity/distance —
   // these don't scale with the group, so tune them for the final ~0.2 scale)
   const spill = new THREE.PointLight(0x40b8ff, 1.5, 3, 2);
