@@ -2,12 +2,13 @@ import * as THREE from 'three';
 
 // ---------------------------------------------------------------------------
 // LedEqualizer — a spectrum-analyser sculpture that stands where the corner
-// plinth used to be. A grid of emissive LED segments rises and falls with the
-// gallery's background music: an InstancedMesh (COLS×ROWS boxes) painted each
-// frame from a THREE.AudioAnalyser tapping the shared THREE.Audio. Columns map
-// low→high frequency left→right; each lights bottom-up with a bright tip and a
-// falling peak marker. Before the (gesture-gated) music starts, a gentle sine
-// wave keeps the bars alive.
+// plinth used to be. A grid of LED segments rises and falls with the gallery's
+// background music: an InstancedMesh (COLS×ROWS boxes) painted each frame from a
+// THREE.AudioAnalyser tapping the shared THREE.Audio. Segments read black when
+// off and light up blue when active — columns map low→high frequency left→right,
+// each lighting bottom-up with a bright blue tip and a falling peak marker.
+// Before the (gesture-gated) music starts, a gentle sine wave keeps the bars
+// alive.
 //
 //   import { buildLedEqualizer } from './world/led-equalizer.js';
 //   const equalizer = buildLedEqualizer(scene, materials, { sound: music.sound });
@@ -41,9 +42,9 @@ export function buildLedEqualizer(scene, mats, opts = {}) {
   const group = new THREE.Group();
   group.name = 'led-equalizer';
 
-  // pedestal — reuses the gallery's dark marble so the LEDs pop against it
+  // pedestal — a white plaster base so the black grid and blue LEDs pop
   const pedH = 3.0, pedW = panelW * 0.78, pedD = panelW * 0.5;
-  const pedestal = new THREE.Mesh(new THREE.BoxGeometry(pedW, pedH, pedD), mats.marble);
+  const pedestal = new THREE.Mesh(new THREE.BoxGeometry(pedW, pedH, pedD), mats.plaster);
   pedestal.position.y = pedH / 2;
   pedestal.castShadow = true;
   pedestal.receiveShadow = true;
@@ -82,22 +83,9 @@ export function buildLedEqualizer(scene, mats, opts = {}) {
   grid.instanceMatrix.needsUpdate = true;
   group.add(grid);
 
-  // per-row base color: blue (bottom) -> cyan (mid) -> magenta/pink (top)
-  function rowColor(r) {
-    const t = r / (ROWS - 1);
-    const col = new THREE.Color();
-    if (t < 0.62) {                    // blue -> cyan
-      col.setHSL(0.60 - (t / 0.62) * 0.12, 1.0, 0.5);
-    } else {                          // cyan -> magenta/pink
-      const u = (t - 0.62) / 0.38;
-      col.setHSL(0.50 + u * 0.35, 1.0, 0.55);
-    }
-    return col;
-  }
-  const rowBase = Array.from({ length: ROWS }, (_, r) => rowColor(r));
-
+  // every lit segment is the same blue; off segments are black
+  const BLUE = new THREE.Color().setHSL(0.60, 1.0, 0.5);
   const color = new THREE.Color();
-  const DIM = 0.05;
   function paint(levels, peaks) {
     for (let i = 0; i < COLS * ROWS; i++) {
       const c = colOf[i], r = rowOf[i];
@@ -110,9 +98,9 @@ export function buildLedEqualizer(scene, mats, opts = {}) {
       } else if (Math.abs(r - peak) < 0.7) {
         b = 1.7;                                 // falling peak marker
       } else {
-        b = DIM;                                 // resting
+        b = 0;                                   // resting = off (black)
       }
-      color.copy(rowBase[r]).multiplyScalar(b);
+      color.copy(BLUE).multiplyScalar(b);
       grid.setColorAt(i, color);
     }
     grid.instanceColor.needsUpdate = true;
