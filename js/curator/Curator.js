@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CURATOR_POS } from '../world/layout.js';
 import { DIALOGUE } from '../../data/dialogue.js';
 import { ARTWORKS } from '../../data/artworks.js';
+import { RESIDENCIES, RESIDENCY_FLOOR_NAMES } from '../../data/residencies.js';
 import { queueUpload } from '../utils/texqueue.js';
 
 // Mira, the curator: a photographic billboard behind the reception desk that
@@ -199,6 +200,33 @@ export class Curator {
       if (a.type === 'artwork') {
         const art = ARTWORKS.find(w => w.id === a.id);
         if (art) { this.ui.closePanel(); this.ui.openArtwork(art); }
+        return;
+      }
+      if (a.type === 'residencyList') {
+        const residents = RESIDENCIES.filter(r => r.floor === a.floor);
+        const where = RESIDENCY_FLOOR_NAMES[a.floor] || 'the courtyard';
+        const choices = residents.map(r => ({
+          label: `${r.artist} — Room ${r.number}`,
+          action: { type: 'residency', number: r.number },
+        }));
+        choices.push({ label: 'Back.', next: 'residency' });
+        this.ui.showDialogueNode(
+          `Nine residencies open onto ${where}. Ask me about any of them:`,
+          choices,
+          (c) => this._choose(c)
+        );
+        return;
+      }
+      if (a.type === 'residency') {
+        const r = RESIDENCIES.find(x => x.number === a.number);
+        if (r) {
+          const where = RESIDENCY_FLOOR_NAMES[r.floor] || 'the courtyard';
+          this.ui.showDialogueNode(
+            `${r.artist} is in Room ${r.number}, on ${where} of the courtyard. Look for their name on the door — though the studio itself isn’t open to visitors just yet.`,
+            [{ label: 'Back.', next: 'residency' }, { label: 'Thank you.', next: 'start' }],
+            (c) => this._choose(c)
+          );
+        }
         return;
       }
     }

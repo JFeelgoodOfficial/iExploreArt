@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { findResidency } from '../../data/residencies.js';
 
 // ===========================================================================
 // CourtyardRoom.js
@@ -65,11 +66,11 @@ export function courtyardGround(x, z, prevY = 0) {
 // Per-storey arcade tuning: bay count, pier width, arch spring/apex, and the
 // balustrade height across the opening (0 = open, walkable, ground floor).
 const STOREYS = [
-  { base: 0.0, bays: 4, pier: 0.55, spring: 2.6, apex: 4.02, rail: 0.0, door: 2.4 },
-  { base: 4.4, bays: 4, pier: 0.55, spring: 2.5, apex: 3.9, rail: 0.98, door: 2.2 },
-  { base: 8.8, bays: 8, pier: 0.34, spring: 1.75, apex: 3.0, rail: 0.9, door: 2.1 },
+  { base: 0.0, bays: 4, pier: 0.34, spring: 2.6, apex: 4.02, rail: 0.0, door: 2.4 },
+  { base: 4.4, bays: 4, pier: 0.34, spring: 2.5, apex: 3.9, rail: 0.98, door: 2.2 },
+  { base: 8.8, bays: 8, pier: 0.22, spring: 1.75, apex: 3.0, rail: 0.9, door: 2.1 },
 ];
-const SCREEN_T = 0.5;   // arcade screen thickness
+const SCREEN_T = 0.4;   // arcade screen thickness (thinner arches → more open views)
 
 // ===========================================================================
 // Wind (world/wind.js clone — swap for the shared one on integration)
@@ -473,15 +474,19 @@ export function buildCourtyardRoom(scene, mats, tier) {
   }
 
   // --- wooden doors on every hallway back wall, every storey ----------------
+  // Every door is an artist residency: numbered, with a placard naming the
+  // resident (data/residencies.js). The rooms behind them aren't built yet.
   const doorRadius = CR.wallIn - 0.02;
-  for (const st of STOREYS) {
+  STOREYS.forEach((st, fl) => {
     for (const side of SIDES) {
       if (side === 'W') continue;   // the West wall carries the elevator — no doors
       for (const u of [-4.5, 0, 4.5]) {
         buildDoor(u, st.base, st.door, side, doorRadius, woodGeos, darkGeos, brassGeos);
+        const res = findResidency(fl, side, u);
+        if (res) group.add(buildResidencyPlacard(res, u, st.base, st.door, side, doorRadius));
       }
     }
-  }
+  });
 
   // --- glass gable roof + rafters ------------------------------------------
   buildRoof(group, M, stoneGeos, darkGeos, hi);
@@ -583,6 +588,46 @@ function buildDoor(u, baseY, h, side, r, wood, dark, brass) {
   for (const g of leaves) wood.push(toSide(g.translate(0, baseY, 0), side, r, u));
   for (const g of panels) dark.push(toSide(g.translate(0, baseY, 0), side, r, u));
   for (const g of handles) brass.push(toSide(g.translate(0, baseY, 0), side, r, u));
+}
+
+// A residency nameplate: a brass plaque on a door bearing its room number and the
+// resident artist's name. Placed like a door leaf (authored facing +Z, then set on
+// the wall side with toSide), just proud of the door so it faces the hallway. Each
+// carries its own canvas texture, so it's an individual mesh — not merged.
+function buildResidencyPlacard(res, u, baseY, h, side, r) {
+  const g = new THREE.PlaneGeometry(0.62, 0.31);
+  g.translate(0, baseY + h * 0.62, 0.22);   // centred on the door, proud of the leaves
+  toSide(g, side, r, u);
+  const mat = new THREE.MeshStandardMaterial({
+    map: residencyPlacardTex(res.number, res.artist), roughness: 0.5, metalness: 0.15,
+  });
+  const m = new THREE.Mesh(g, mat);
+  m.name = `residency-${res.number}`;
+  return m;
+}
+
+// Canvas texture for a residency nameplate: a numbered brass disc beside the
+// resident's name. Same conventions as liftPanelTex (sRGB, anisotropy, Georgia).
+function residencyPlacardTex(number, name) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#2a2622'; ctx.fillRect(0, 0, 512, 256);
+  ctx.strokeStyle = '#c9b48a'; ctx.lineWidth = 8; ctx.strokeRect(12, 12, 488, 232);
+  // numbered disc on the left
+  ctx.fillStyle = '#e7dcc5'; ctx.beginPath(); ctx.arc(104, 128, 68, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2a2622'; ctx.font = 'bold 52px Georgia';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(number), 104, 132);
+  // "RESIDENCY" eyebrow + artist name on the right
+  const cx = 336, maxW = 300;
+  ctx.fillStyle = '#c9b48a'; ctx.font = 'bold 22px Georgia';
+  ctx.fillText('RESIDENCY', cx, 84);
+  ctx.fillStyle = '#e7dcc5';
+  let fs = 40;                                   // shrink the name until it fits
+  do { ctx.font = `${fs}px Georgia`; } while (ctx.measureText(name).width > maxW && (fs -= 2) > 18);
+  ctx.fillText(name, cx, 148);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
 }
 
 // ---------------------------------------------------------------------------
