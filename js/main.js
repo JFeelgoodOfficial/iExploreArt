@@ -142,7 +142,7 @@ const rooms = createRoomManager({
   galleryLayer: [...galleryChildren],
   courtyardLayer,
   galleryTargets,
-  courtyardTargets: [courtyardDoorHit],
+  courtyardTargets: [courtyardDoorHit, courtyardRoom.lift.panel],
   gallerySpawn: { x: 1.8, z: 9.5, yaw: -Math.PI / 2 }, // just inside the west door, facing the hall
   courtyardSpawn: courtyardRoom.spawn,
   gallerySegments: buildGalleryColliders(),
@@ -155,6 +155,10 @@ const rooms = createRoomManager({
 
 galleryDoorHit.userData.door = { label: 'enter the courtyard', onEnter: () => rooms.enterCourtyard() };
 courtyardDoorHit.userData.door = { label: 'return to the gallery', onEnter: () => rooms.enterGallery() };
+
+// Elevator panel: press E → pick a floor → the lift rides there.
+const lift = courtyardRoom.lift;
+lift.panel.userData.lift = { open: () => ui.openLift(lift.labels, lift.currentIndex(), (i) => lift.selectFloor(i)) };
 
 let entered = false;
 let ready = false;
@@ -189,6 +193,7 @@ enterBtn.addEventListener('click', () => {
 lighting.bake();
 
 // --- frame loop ---
+const NO_INTENT = { forward: 0, strafe: 0, running: false };
 const clock = new THREE.Clock();
 let frame = 0;
 renderer.setAnimationLoop(() => {
@@ -212,7 +217,9 @@ renderer.setAnimationLoop(() => {
     return;
   }
 
-  player.update(dt, controls.intent);
+  // Freeze walking while the elevator is travelling so you can't step out of
+  // the cabin mid-ride (the cabin carries you between floors).
+  player.update(dt, courtyardRoom.liftMoving ? NO_INTENT : controls.intent);
   interaction.enabled = !ui.activePanel;
   interaction.update(dt);
   tickWind(t);

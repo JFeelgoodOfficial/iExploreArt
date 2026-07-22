@@ -54,6 +54,8 @@ export class Interaction {
       this.ui.prompt(`${key} — speak with the curator`);
     } else if (obj.userData.door) {
       this.ui.prompt(`${key} — ${obj.userData.door.label}`);
+    } else if (obj.userData.lift) {
+      this.ui.prompt(`${key} — use the lift`);
     }
   }
 
@@ -64,6 +66,7 @@ export class Interaction {
     if (obj.userData.artwork) { this.ui.openArtwork(obj.userData.artwork); return true; }
     if (obj.userData.curator) { this.ui.openDialogue(); return true; }
     if (obj.userData.door) { obj.userData.door.onEnter(); return true; }
+    if (obj.userData.lift) { obj.userData.lift.open(); return true; }
     return false;
   }
 }

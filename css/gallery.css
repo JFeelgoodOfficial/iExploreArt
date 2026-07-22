@@ -185,6 +185,19 @@ body.touch .desktop-hint { display: none; }
 #dialogue-choices button:hover { background: rgba(47,111,115,0.08); border-color: var(--accent); }
 #dialogue-choices button .arrow { color: var(--accent-2); margin-right: 0.5rem; }
 
+/* elevator floor picker — reuses the dialogue card styling */
+#lift-text { font-family: "Cormorant Garamond", serif; font-size: 1.25rem; line-height: 1.45; margin: 0 0 1.1rem; }
+#lift-choices { display: flex; flex-direction: column; gap: 0.45rem; }
+#lift-choices button {
+  font: 500 0.9rem "Inter", sans-serif; text-align: left;
+  background: none; border: 1px solid var(--line); border-radius: 10px;
+  color: var(--ink); padding: 0.6rem 0.9rem; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+#lift-choices button:hover { background: rgba(47,111,115,0.08); border-color: var(--accent); }
+#lift-choices button .arrow { color: var(--accent-2); margin-right: 0.5rem; }
+#lift-choices button.here { border-color: var(--accent); color: var(--accent); }
+
 /* ---------- touch controls ---------- */
 #joystick {
   position: fixed; z-index: 15; width: 118px; height: 118px; border-radius: 50%;
