@@ -38,43 +38,26 @@ export const CR = {
   floors: [0, 4.4, 8.8],
 };
 
-// ---- switchback stair, in the West hallway (x -9..-6), stacked per storey --
-// Two lanes running in Z, joined by a landing at the north end. Outer lane
-// (against the perimeter wall) climbs to the mid landing; inner lane climbs
-// from the landing up to the next floor. Identical shaft repeats each storey.
-export const ST = {
-  x0: -9, x1: -6,
-  laneDiv: -7.5,               // wall between the two flights
-  outer: [-8.85, -7.55],       // outer lane x-range (climbs first)
-  inner: [-7.45, -6.15],       // inner lane x-range (climbs second)
-  fz0: -4, fz1: 4,             // flight run in Z
-  landN0: -5, landN1: -4,      // north (mid) landing
-  landS0: 4, landS1: 5,        // south landing (floor level, lane crossover)
-  steps: 11,                   // visible steps per flight
-};
+// ---- corner elevator (NW), the only connector between the three storeys -----
+// Footprint nested into the North+West perimeter corner. `liftY` is the single
+// source of truth for the player's floor: since the lift is the only way to
+// change storeys, the player's walking height always equals liftY, so the shaft
+// footprint is always flush with their level — no fall-through, even with the
+// hole cut through the ring slabs for the cabin to travel.
+export const LIFT = { x0: -8.7, z0: -8.7, x1: -6.5, z1: -6.5 };
+const LIFT_SPEED = 2.4;      // m/s cabin travel
+let liftY = 0;               // current cabin height (= player floor height)
+let liftTargetY = 0;         // requested floor height
+let liftMoving = false;
 
-// Height of the stair surface within storey `i` (base = i*FH). The climb lane
-// alternates each storey (outer, inner, outer…) so arrival lands exactly on
-// the next storey's entry lane — the ascent is one unbroken switchback.
-function stairHeightAt(x, z, i) {
-  const base = i * CR.FH, mid = base + CR.FH / 2, top = base + CR.FH;
-  const climbOuter = i % 2 === 0;
-  const inClimb = climbOuter ? (x <= ST.laneDiv) : (x > ST.laneDiv);
-  if (z >= ST.landN0 && z <= ST.landN1) return mid;          // north mid-landing
-  if (z >= ST.landS0) return inClimb ? base : top;           // south: entry lane low, other high
-  const t = THREE.MathUtils.clamp((ST.fz1 - z) / (ST.fz1 - ST.fz0), 0, 1); // 0 at south, 1 at north
-  return inClimb ? base + t * (CR.FH / 2)                    // entry lane climbs S->N to mid
-                 : top - t * (CR.FH / 2);                    // other lane descends N->S from top
-}
-
-function inStair(x, z) { return x > ST.x0 && x < ST.x1 && z > ST.landN0 - 0.01 && z < ST.landS1 + 0.01; }
+function inLift(x, z) { return x > LIFT.x0 && x < LIFT.x1 && z > LIFT.z0 && z < LIFT.z1; }
 function inRing(x, z) { const m = Math.max(Math.abs(x), Math.abs(z)); return m > CR.R - 0.05 && m < CR.wallIn + 0.05; }
 
 // Analytic ground height, prevY-driven (layout.js trick): the storey a player
-// is on is inferred from height, so the same XZ carries all three levels and
-// the stair is the one continuous connector.
+// is on is inferred from height, so the same XZ carries all three levels. The
+// elevator (returning liftY) is now the one connector between them.
 export function courtyardGround(x, z, prevY = 0) {
-  if (inStair(x, z)) return stairHeightAt(x, z, prevY > CR.floors[1] - 0.6 ? 1 : 0);
+  if (inLift(x, z)) return liftY;
   if (inRing(x, z)) return CR.floors[prevY > 6.6 ? 2 : prevY > 2.2 ? 1 : 0];
   return 0;  // garden / ground
 }
@@ -477,23 +460,9 @@ export function buildCourtyardRoom(scene, mats, tier) {
   }
 
   // --- ring slabs (floor of storeys 2 & 3 / ceiling below) ------------------
-  // The West strip is split to leave a stairwell void (z -5..5) for the stair.
-  for (let fl = 1; fl <= 2; fl++) {
-    const y = CR.floors[fl];
-    const o = CR.wallIn, iN = CR.R - 0.1;
-    const slab = [
-      new THREE.BoxGeometry(o * 2, CR.slabT, o - iN).translate(0, y - CR.slabT / 2, -(o + iN) / 2),
-      new THREE.BoxGeometry(o * 2, CR.slabT, o - iN).translate(0, y - CR.slabT / 2, (o + iN) / 2),
-      new THREE.BoxGeometry(o - iN, CR.slabT, iN * 2).translate((o + iN) / 2, y - CR.slabT / 2, 0),
-      // west end pieces flanking the stairwell void
-      new THREE.BoxGeometry(o - iN, CR.slabT, iN - 5).translate(-(o + iN) / 2, y - CR.slabT / 2, -(iN + 5) / 2),
-      new THREE.BoxGeometry(o - iN, CR.slabT, iN - 5).translate(-(o + iN) / 2, y - CR.slabT / 2, (iN + 5) / 2),
-    ].map(worldUV);
-    stoneGeos.push(...slab);
-  }
-
-  // --- switchback stair in the West hallway --------------------------------
-  buildStairs(stoneGeos);
+  // Complete hallway rings on each upper floor, with a rectangular hole cut at
+  // the NW corner for the elevator shaft (the North strip is split around it).
+  for (let fl = 1; fl <= 2; fl++) stoneGeos.push(...ringSlab(CR.floors[fl]));
 
   // --- perimeter hallway walls ---------------------------------------------
   for (const side of SIDES) {
@@ -507,6 +476,7 @@ export function buildCourtyardRoom(scene, mats, tier) {
   const doorRadius = CR.wallIn - 0.02;
   for (const st of STOREYS) {
     for (const side of SIDES) {
+      if (side === 'W') continue;   // the West wall carries the elevator — no doors
       for (const u of [-4.5, 0, 4.5]) {
         buildDoor(u, st.base, st.door, side, doorRadius, woodGeos, darkGeos, brassGeos);
       }
@@ -527,15 +497,54 @@ export function buildCourtyardRoom(scene, mats, tier) {
   // --- garden planting ------------------------------------------------------
   const flora = buildGarden(group, M, tier, rand);
 
+  // --- corner elevator cabin + butterflies ----------------------------------
+  const cabin = buildLiftCabin(M);
+  cabin.position.y = liftY;
+  group.add(cabin);
+  const butterflies = buildButterflies(group, tier, rand);
+
   scene.add(group);
+
+  // Ride animation: ease liftY toward the requested floor; the cabin mesh and
+  // (via courtyardGround) the player both follow it.
+  let lastT = 0;
+  function update(t) {
+    const dt = Math.min(0.05, Math.max(0, t - lastT));
+    lastT = t;
+    tickWind(t);
+    if (liftMoving) {
+      const dir = Math.sign(liftTargetY - liftY);
+      liftY += dir * LIFT_SPEED * dt;
+      if (dir === 0 || (dir > 0 && liftY >= liftTargetY) || (dir < 0 && liftY <= liftTargetY)) {
+        liftY = liftTargetY;
+        liftMoving = false;
+      }
+      cabin.position.y = liftY;
+    }
+    butterflies.update(t);
+  }
+
+  function selectFloor(i) {
+    liftTargetY = CR.floors[i];
+    liftMoving = liftTargetY !== liftY;
+  }
 
   return {
     group,
     spawn: { x: 1.5, z: 7.1, yaw: 0 },  // south walkway, down a bay axis into the garden
     colliders: buildColliders(),
-    groundHeight: courtyardGround,       // analytic 3-level walk (stair connector)
-    update: (t) => { tickWind(t); },
+    groundHeight: courtyardGround,       // analytic 3-level walk (elevator connector)
+    update,
     flora,
+    butterflies,
+    lift: {
+      panel: cabin.userData.panel,
+      floors: CR.floors,
+      labels: ['Ground floor', 'Second floor', 'Third floor'],
+      selectFloor,
+      currentIndex: () => CR.floors.reduce((best, f, i) => Math.abs(f - liftY) < Math.abs(CR.floors[best] - liftY) ? i : best, 0),
+    },
+    get liftMoving() { return liftMoving; },
   };
 }
 
@@ -577,43 +586,152 @@ function buildDoor(u, baseY, h, side, r, wood, dark, brass) {
 }
 
 // ---------------------------------------------------------------------------
-// Switchback stair geometry: two storeys of steps (ground->2, 2->3), each a
-// climb-lane flight to a mid landing, then a return flight in the other lane
-// up to the next floor. Climb-lane alternates so it matches courtyardGround().
-function buildStairs(stoneGeos) {
-  const td = (ST.fz1 - ST.fz0) / ST.steps;         // tread depth
-  const riser = (CR.FH / 2) / ST.steps;            // step rise
-  const sh = riser + 0.32;                         // step block height
-  const step = (xr, z0, z1, yTop) => {
-    const g = new THREE.BoxGeometry(xr[1] - xr[0], sh, z1 - z0);
-    worldUV(g); g.translate((xr[0] + xr[1]) / 2, yTop - sh / 2, (z0 + z1) / 2);
-    return g;
+// A complete hallway floor ring at height y (outer square `o`, inner `iN`),
+// with a rectangular hole cut at the NW corner for the elevator shaft. The
+// North strip is split into four pieces around the hole.
+function ringSlab(y) {
+  const o = CR.wallIn, iN = CR.R - 0.1, t = CR.slabT, yc = y - t / 2;
+  const boxes = [];
+  const strip = (x0, z0, x1, z1) => {
+    if (x1 - x0 <= 0 || z1 - z0 <= 0) return;
+    boxes.push(new THREE.BoxGeometry(x1 - x0, t, z1 - z0).translate((x0 + x1) / 2, yc, (z0 + z1) / 2));
   };
-  const plat = (x0, z0, x1, z1, yTop, h = 0.3) => {
-    const g = new THREE.BoxGeometry(x1 - x0, h, z1 - z0);
-    worldUV(g); g.translate((x0 + x1) / 2, yTop - h / 2, (z0 + z1) / 2);
-    return g;
-  };
-  for (let i = 0; i < 2; i++) {
-    const base = i * CR.FH, mid = base + CR.FH / 2, top = base + CR.FH;
-    const climbOuter = i % 2 === 0;
-    const entry = climbOuter ? ST.outer : ST.inner;
-    const other = climbOuter ? ST.inner : ST.outer;
-    for (let k = 0; k < ST.steps; k++) {                 // flight A (entry lane, S->N)
-      const zHi = ST.fz1 - k * td;
-      stoneGeos.push(step(entry, zHi - td, zHi, base + (k + 1) * riser));
-    }
-    stoneGeos.push(plat(ST.x0 + 0.12, ST.landN0, ST.x1 - 0.12, ST.landN1, mid));  // mid landing
-    for (let k = 0; k < ST.steps; k++) {                 // flight B (other lane, N->S)
-      const zLo = ST.fz0 + k * td;
-      stoneGeos.push(step(other, zLo, zLo + td, mid + (k + 1) * riser));
-    }
-    stoneGeos.push(plat(entry[0], ST.landS0 - 0.5, entry[1], ST.landS1, base + 0.02, 0.34)); // entry platform
-    stoneGeos.push(plat(other[0], ST.landS0 - 0.5, other[1], ST.landS1, top, 0.34));         // arrival platform
-    const dv = new THREE.BoxGeometry(0.12, CR.FH + 0.3, ST.landS1 - ST.fz0);                 // lane divider
-    worldUV(dv); dv.translate(ST.laneDiv, base + (CR.FH + 0.3) / 2 - 0.15, (ST.landS1 + ST.fz0) / 2);
-    stoneGeos.push(dv);
+  strip(-o, iN, o, o);            // south strip
+  strip(iN, -iN, o, iN);         // east strip
+  strip(-o, -iN, -iN, iN);       // west strip (now whole — no stairwell void)
+  // north strip, split around the lift-shaft hole
+  strip(-o, -o, LIFT.x0, -iN);            // west of hole
+  strip(LIFT.x1, -o, o, -iN);             // east of hole
+  strip(LIFT.x0, -o, LIFT.x1, LIFT.z0);   // north of hole
+  strip(LIFT.x0, LIFT.z1, LIFT.x1, -iN);  // south of hole
+  return boxes.map(worldUV);
+}
+
+// ---------------------------------------------------------------------------
+// Elevator cabin: a small wood-panelled car in the NW corner. It rides in Y
+// (set each frame to liftY). The back two sides sit against the perimeter walls
+// (already solid via the keep-in box); the East side is a solid wall carrying
+// the button panel, and the South side is a partial wall leaving a doorway.
+function buildLiftCabin(M) {
+  const g = new THREE.Group();
+  g.name = 'liftCabin';
+  const cx = (LIFT.x0 + LIFT.x1) / 2, cz = (LIFT.z0 + LIFT.z1) / 2;
+  const w = LIFT.x1 - LIFT.x0, d = LIFT.z1 - LIFT.z0, H = 2.6;
+  const wall = M.woodDark, floorMat = M.stone;
+
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, d), floorMat);
+  floor.position.set(cx, -0.06, cz); floor.receiveShadow = true; g.add(floor);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), wall);
+  roof.position.set(cx, H, cz); g.add(roof);
+  const north = new THREE.Mesh(new THREE.BoxGeometry(w, H, 0.08), wall);
+  north.position.set(cx, H / 2, LIFT.z0 + 0.04); g.add(north);
+  const west = new THREE.Mesh(new THREE.BoxGeometry(0.08, H, d), wall);
+  west.position.set(LIFT.x0 + 0.04, H / 2, cz); g.add(west);
+  const east = new THREE.Mesh(new THREE.BoxGeometry(0.08, H, d), wall);
+  east.position.set(LIFT.x1 - 0.04, H / 2, cz); g.add(east);
+  const southW = new THREE.Mesh(new THREE.BoxGeometry(1.0, H, 0.08), wall);  // partial → doorway
+  southW.position.set(LIFT.x0 + 0.5, H / 2, LIFT.z1 - 0.04); g.add(southW);
+
+  // button panel on the East wall, facing into the cabin (-X)
+  const panel = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.5, 0.92),
+    new THREE.MeshStandardMaterial({ map: liftPanelTex(), roughness: 0.5, metalness: 0.1 })
+  );
+  panel.position.set(LIFT.x1 - 0.09, 1.35, cz);
+  panel.rotation.y = -Math.PI / 2;
+  panel.name = 'liftPanel';
+  g.add(panel);
+  g.userData.panel = panel;
+  return g;
+}
+
+function liftPanelTex() {
+  const [c, ctx] = cv(256);
+  ctx.fillStyle = '#2a2622'; ctx.fillRect(0, 0, 256, 256);
+  ctx.fillStyle = '#c9b48a'; ctx.strokeStyle = '#c9b48a'; ctx.lineWidth = 4;
+  ctx.strokeRect(8, 8, 240, 240);
+  ctx.textAlign = 'center'; ctx.font = 'bold 30px Georgia';
+  ctx.fillText('LIFT', 128, 44);
+  const rows = [['3', 'Third'], ['2', 'Second'], ['1', 'Ground']];
+  for (let i = 0; i < 3; i++) {
+    const cy = 96 + i * 54;
+    ctx.fillStyle = '#e7dcc5'; ctx.beginPath(); ctx.arc(58, cy, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a2622'; ctx.font = 'bold 30px Georgia'; ctx.textAlign = 'center';
+    ctx.fillText(rows[i][0], 58, cy + 10);
+    ctx.fillStyle = '#e7dcc5'; ctx.font = '22px Georgia'; ctx.textAlign = 'left';
+    ctx.fillText(rows[i][1] + ' floor', 92, cy + 8);
   }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
+// ---------------------------------------------------------------------------
+// Butterflies: a handful of two-winged sprites that wander smooth looping
+// paths over the (now open) garden, yaw toward their heading, and flap.
+function buildButterflies(group, tier, rand) {
+  const n = (tier && tier.name === 'low') ? 6 : 11;
+  const mat = new THREE.MeshStandardMaterial({
+    map: butterflyTex(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.85,
+  });
+  const flyers = [];
+  for (let i = 0; i < n; i++) {
+    const b = new THREE.Group();
+    // body
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.02, 0.16, 6),
+      new THREE.MeshStandardMaterial({ color: 0x201810, roughness: 1 }));
+    body.rotation.x = Math.PI / 2; b.add(body);
+    // wings — each plane's inner edge sits on the body centreline, laid flat,
+    // hinged so the outer tip flaps up/down about the body (Z) axis.
+    const hingeL = new THREE.Group(), hingeR = new THREE.Group();
+    const wingR = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.3).translate(0.12, 0, 0), mat);
+    wingR.rotation.x = -Math.PI / 2;
+    const wingL = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.3).translate(-0.12, 0, 0), mat);
+    wingL.rotation.x = -Math.PI / 2;
+    hingeR.add(wingR); hingeL.add(wingL); b.add(hingeL, hingeR);
+    group.add(b);
+    flyers.push({
+      b, hingeL, hingeR,
+      cx: (rand() - 0.5) * 5, cz: (rand() - 0.5) * 5,
+      r1: 1.6 + rand() * 1.8, r2: 0.6 + rand() * 0.8,
+      s1: 0.3 + rand() * 0.3, s2: 0.7 + rand() * 0.6,
+      p1: rand() * 6.28, p2: rand() * 6.28, p3: rand() * 6.28,
+      yBase: 0.7 + rand() * 1.1, yAmp: 0.25 + rand() * 0.5,
+      flap: 7 + rand() * 5, flapPh: rand() * 6.28,
+      px: 0, pz: 0,
+    });
+  }
+  function update(t) {
+    for (const f of flyers) {
+      const x = f.cx + Math.sin(t * f.s1 + f.p1) * f.r1 + Math.sin(t * f.s2 + f.p2) * f.r2;
+      const z = f.cz + Math.cos(t * f.s1 * 0.9 + f.p3) * f.r1 + Math.cos(t * f.s2 + f.p1) * f.r2;
+      const y = f.yBase + Math.sin(t * f.s2 * 0.8 + f.p2) * f.yAmp;
+      f.b.position.set(x, y, z);
+      const dx = x - f.px, dz = z - f.pz;
+      if (dx * dx + dz * dz > 1e-6) f.b.rotation.y = Math.atan2(dx, dz);
+      f.px = x; f.pz = z;
+      const flap = 0.15 + 0.85 * (0.5 + 0.5 * Math.sin(t * f.flap + f.flapPh));
+      f.hingeR.rotation.z = -flap;
+      f.hingeL.rotation.z = flap;
+    }
+  }
+  return { flyers, update };
+}
+
+function butterflyTex() {
+  const [c, ctx] = cv(128);
+  ctx.clearRect(0, 0, 128, 128);
+  // one wing filling the canvas (the quad is a single wing); warm orange, dark rim + spots
+  ctx.fillStyle = '#e08a2c';
+  ctx.beginPath(); ctx.ellipse(64, 64, 52, 40, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 7; ctx.strokeStyle = '#2a1c10';
+  ctx.beginPath(); ctx.ellipse(64, 64, 52, 40, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#2a1c10';
+  ctx.beginPath(); ctx.arc(86, 48, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(86, 82, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#f6d17a';
+  ctx.beginPath(); ctx.arc(50, 64, 6, 0, Math.PI * 2); ctx.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
 
 // ---------------------------------------------------------------------------
@@ -633,19 +751,18 @@ function buildRoof(group, M, stoneGeos, darkGeos, hi) {
   // ridge beam
   const rb = new THREE.BoxGeometry(half * 2 + 0.4, 0.3, 0.3); worldUV(rb);
   rb.translate(0, ridge, 0); darkGeos.push(rb);
-  // rafters running up each slope, spaced along X -> parallel shadow bars
+  // rafters lying ALONG each slope, spaced across X. Each beam runs from the
+  // eave up to the ridge; the two sides' top ends meet at the ridge line (z≈0),
+  // completing the pitch. `ang` is the shallow slope tilt from horizontal.
   const n = 13;
   for (let i = 0; i <= n; i++) {
     const x = -half + (2 * half / n) * i;
     for (const dir of [-1, 1]) {
-      const raf = new THREE.BoxGeometry(0.12, 0.2, slopeLen);
-      raf.rotateX(dir * (Math.PI / 2 - ang) - dir * Math.PI / 2 + dir * Math.PI / 2); // = slope tilt
-      // simpler: recompute cleanly
-      raf.rotation && null;
       const g = new THREE.BoxGeometry(0.12, 0.2, slopeLen);
-      g.rotateX(-dir * (Math.PI / 2 - ang));
-      g.translate(x, (eave + ridge) / 2 + 0.16, dir * half / 2);
-      worldUV(g); darkGeos.push(g);
+      worldUV(g);
+      g.rotateX(dir * ang);                              // tilt onto the slope
+      g.translate(x, (eave + ridge) / 2 + 0.12, dir * half / 2);
+      darkGeos.push(g);
     }
   }
   // gable in-fill triangles at X = ±half (plaster-toned stone)
@@ -669,10 +786,8 @@ function buildGarden(group, M, tier, rand) {
   ];
   const soilGeos = [];
   const beds = [
-    [-4.5, -5.5, -1.0, -4.0], [1.0, -5.5, 4.5, -4.0],
-    [-4.5, 4.0, -1.0, 5.5], [1.0, 4.0, 4.5, 5.5],
-    [-5.5, -4.5, -4.0, -1.0], [-5.5, 1.0, -4.0, 4.5],
-    [4.0, -4.5, 5.5, -1.0], [4.0, 1.0, 5.5, 4.5],
+    [-5.7, -5.7, -3.2, -3.2], [3.2, -5.7, 5.7, -3.2],   // NW, NE corner beds
+    [-5.7, 3.2, -3.2, 5.7], [3.2, 3.2, 5.7, 5.7],       // SW, SE corner beds
   ];
   for (const [x0, z0, x1, z1] of beds) {
     const g = new THREE.BoxGeometry(x1 - x0, 0.24, z1 - z0);
@@ -761,10 +876,8 @@ export function buildColliders() {
 
   // garden beds + palms — ground only
   const beds = [
-    [-4.5, -5.5, -1.0, -4.0], [1.0, -5.5, 4.5, -4.0],
-    [-4.5, 4.0, -1.0, 5.5], [1.0, 4.0, 4.5, 5.5],
-    [-5.5, -4.5, -4.0, -1.0], [-5.5, 1.0, -4.0, 4.5],
-    [4.0, -4.5, 5.5, -1.0], [4.0, 1.0, 5.5, 4.5],
+    [-5.7, -5.7, -3.2, -3.2], [3.2, -5.7, 5.7, -3.2],   // NW, NE corner beds
+    [-5.7, 3.2, -3.2, 5.7], [3.2, 3.2, 5.7, 5.7],       // SW, SE corner beds
   ];
   for (const [x0, z0, x1, z1] of beds) add(x0, z0, x1, z1, 0);
   for (const [px, pz] of [[-4.8, -4.8], [4.8, -4.8], [-4.8, 4.8], [4.8, 4.8]]) add(px - 0.3, pz - 0.3, px + 0.3, pz + 0.3, 0);
@@ -778,11 +891,11 @@ export function buildColliders() {
     add(-6 - b, -6, -6 + b, 6, lvl);           // W edge
   }
 
-  // stair: lane divider (all levels) forces the switchback path;
-  // per-floor blockers keep you off the non-entry lane's high south platform.
-  add(ST.laneDiv - 0.1, ST.fz0, ST.laneDiv + 0.1, ST.landS1, 'all');
-  add(ST.laneDiv, ST.fz1 - 0.6, ST.inner[1], ST.landS1, 0);   // ground: inner south solid
-  add(ST.outer[0], ST.fz1 - 0.6, ST.laneDiv, ST.landS1, 1);   // floor 2: outer south solid
+  // elevator cabin: solid East wall + a partial South wall leaving a doorway on
+  // the +X end. The North & West sides are covered by the perimeter keep-in box.
+  // 'all' levels — the cabin is always at the player's floor (liftY invariant).
+  add(LIFT.x1 - 0.06, LIFT.z0, LIFT.x1 + 0.06, LIFT.z1, 'all');          // east wall
+  add(LIFT.x0, LIFT.z1 - 0.06, LIFT.x0 + 1.0, LIFT.z1 + 0.06, 'all');    // south wall (doorway past x0+1.0)
   return c;
 }
 

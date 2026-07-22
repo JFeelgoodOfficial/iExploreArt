@@ -23,6 +23,8 @@ export class UI {
       dialogue: document.getElementById('dialogue'),
       dialogueText: document.getElementById('dialogue-text'),
       dialogueChoices: document.getElementById('dialogue-choices'),
+      lift: document.getElementById('lift-panel'),
+      liftChoices: document.getElementById('lift-choices'),
     };
 
     document.getElementById('resume-btn').addEventListener('click', () => this._resume());
@@ -89,6 +91,22 @@ export class UI {
     this.curator.startConversation();
   }
 
+  // Elevator floor picker: a button per floor; picking one rides the lift.
+  openLift(labels, currentIndex, onSelect) {
+    this.activePanel = 'lift';
+    this.controls.unlock();
+    this.prompt(null);
+    this.el.liftChoices.innerHTML = '';
+    labels.forEach((label, i) => {
+      const btn = document.createElement('button');
+      if (i === currentIndex) btn.classList.add('here');
+      btn.innerHTML = `<span class="arrow">▲</span>${label}${i === currentIndex ? ' — you are here' : ''}`;
+      btn.addEventListener('click', () => { this.closePanel(); onSelect(i); });
+      this.el.liftChoices.appendChild(btn);
+    });
+    this.el.lift.hidden = false;
+  }
+
   // called by the curator's dialogue runner for each node
   showDialogueNode(text, choices, onChoose) {
     this.el.dialogueText.textContent = text;
@@ -104,6 +122,7 @@ export class UI {
   closePanel() {
     this.el.info.hidden = true;
     this.el.dialogue.hidden = true;
+    this.el.lift.hidden = true;
     this.activePanel = null;
     if (!IS_TOUCH) this.controls.lock();
   }
