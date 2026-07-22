@@ -4,6 +4,8 @@
 //   action: {type:'link', url}       → open external page
 //   action: {type:'artworkList', floor}  → expand collection into choices
 //   action: {type:'artwork', id}     → open that artwork's panel
+//   action: {type:'residencyList', floor}  → list resident artists on a courtyard floor
+//   action: {type:'residency', number}     → tell which room that artist is in
 //   next: null            → end conversation
 
 export const DIALOGUE = {
@@ -13,6 +15,7 @@ export const DIALOGUE = {
       { label: 'Tell me about this gallery.', next: 'gallery' },
       { label: 'Who is JFeelgood?', next: 'artist' },
       { label: 'Tell me about the works on display.', next: 'collection' },
+      { label: 'I’m looking for a resident artist.', next: 'residency' },
       { label: 'How do I purchase a piece?', next: 'purchase' },
       { label: 'Just looking, thank you.', next: 'bye' },
     ],
@@ -57,6 +60,22 @@ export const DIALOGUE = {
   collectionList: {
     // text is set dynamically by the runner
     text: 'Here’s what hangs there:',
+    choices: [], // filled dynamically; runner appends a Back choice
+  },
+
+  residency: {
+    text: 'The courtyard doors are our artist residencies — each numbered, with the resident’s name on the placard. The rooms aren’t open to visitors yet, but I can tell you exactly where an artist is working. Which floor are they on?',
+    choices: [
+      { label: 'The ground floor.', action: { type: 'residencyList', floor: 0 } },
+      { label: 'The second floor.', action: { type: 'residencyList', floor: 1 } },
+      { label: 'The third floor.', action: { type: 'residencyList', floor: 2 } },
+      { label: 'Back.', next: 'start' },
+    ],
+  },
+
+  residencyList: {
+    // text + choices are set dynamically by the runner
+    text: 'Here are the residents:',
     choices: [], // filled dynamically; runner appends a Back choice
   },
 
