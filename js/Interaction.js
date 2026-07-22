@@ -18,6 +18,10 @@ export class Interaction {
 
   register(meshes) { this.targets.push(...meshes); }
 
+  // Replace the whole target set — used by the room switch so only the active
+  // room's interactables are hittable (a hidden group's meshes still raycast).
+  setTargets(list) { this.targets = list; this._setHovered(null); }
+
   update(dt) {
     this._accum += dt;
     if (this._accum < 0.1) return;
@@ -48,6 +52,8 @@ export class Interaction {
       this.ui.prompt(`${key} — view “${obj.userData.artwork.title}”`);
     } else if (obj.userData.curator) {
       this.ui.prompt(`${key} — speak with the curator`);
+    } else if (obj.userData.door) {
+      this.ui.prompt(`${key} — ${obj.userData.door.label}`);
     }
   }
 
@@ -57,6 +63,7 @@ export class Interaction {
     if (!obj) return false;
     if (obj.userData.artwork) { this.ui.openArtwork(obj.userData.artwork); return true; }
     if (obj.userData.curator) { this.ui.openDialogue(); return true; }
+    if (obj.userData.door) { obj.userData.door.onEnter(); return true; }
     return false;
   }
 }

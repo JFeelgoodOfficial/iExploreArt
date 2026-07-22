@@ -4,7 +4,14 @@ import { PLAYER } from '../config.js';
 // Circle-vs-segment sliding collision in the XZ plane, with level-gated
 // segments so one XZ line can block the mezzanine but not the floor below.
 
-const SEGMENTS = buildColliders();
+// The player occupies one room at a time. `active` holds that room's collider
+// segments + analytic ground function; RoomManager swaps it on a door entry.
+// Defaults to the gallery so nothing changes until a switch happens.
+let active = { segments: buildColliders(), ground: groundHeight };
+
+export function setActiveRoom({ segments, ground }) {
+  active = { segments, ground };
+}
 
 export function resolveMovement(pos, dx, dz, walkY) {
   let x = pos.x + dx;
@@ -12,7 +19,7 @@ export function resolveMovement(pos, dx, dz, walkY) {
   const r = PLAYER.radius;
 
   for (let iter = 0; iter < 3; iter++) {
-    for (const s of SEGMENTS) {
+    for (const s of active.segments) {
       if (s.level !== 'all' && Math.abs(walkY - s.level) > 0.6) continue;
       const ax = s.a[0], az = s.a[1], bx = s.b[0], bz = s.b[1];
       const abx = bx - ax, abz = bz - az;
@@ -34,5 +41,5 @@ export function resolveMovement(pos, dx, dz, walkY) {
 }
 
 export function sampleGround(x, z, prevY) {
-  return groundHeight(x, z, prevY);
+  return active.ground(x, z, prevY);
 }

@@ -20,6 +20,19 @@ export class Player {
     this._applyCamera();
   }
 
+  // Instant relocation (room switch). Both room spawns sit on ground height 0,
+  // so smoothY resets to 0 — no vertical ease glitch on arrival.
+  teleport(x, z, yaw) {
+    this.position.set(x, 0, z);
+    this.walkY = 0;
+    this.smoothY = 0;
+    this.yaw = yaw;
+    this.pitch = 0;
+    this.bobPhase = 0;
+    this.bobAmount = 0;
+    this._applyCamera();
+  }
+
   look(dYaw, dPitch) {
     this.yaw -= dYaw;
     this.pitch = THREE.MathUtils.clamp(this.pitch - dPitch, -Math.PI / 2 + 0.05, Math.PI / 2 - 0.05);
