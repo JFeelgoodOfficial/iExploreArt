@@ -36,13 +36,16 @@ export function buildGallery(scene, mats) {
   box('plaster', W - GLASS_S.x1, R, T, (W + GLASS_S.x1) / 2, R / 2, D + half);
   box('plaster', GLASS_S.x1 - GLASS_S.x0, R - GLASS_S.y1, T, (GLASS_S.x0 + GLASS_S.x1) / 2, (R + GLASS_S.y1) / 2, D + half);
 
-  // West / East walls.
-  box('plaster', T, R, D, -half, R / 2, D / 2);
+  // West wall: split around the lift opening (z 8.5..10.5), with a lintel over
+  // it. The opening is a real walk-through now — the cabin sits just behind it.
+  box('plaster', T, R, DOOR.z0, -half, R / 2, DOOR.z0 / 2);
+  box('plaster', T, R, D - DOOR.z1, -half, R / 2, (D + DOOR.z1) / 2);
+  box('plaster', T, R - DOOR.h, DOOR.z1 - DOOR.z0, -half, (R + DOOR.h) / 2, (DOOR.z0 + DOOR.z1) / 2);
+  // East wall.
   box('plaster', T, R, D, W + half, R / 2, D / 2);
 
-  // Entry door on the west wall (visual recess + dark panel + frame).
+  // Lift portal on the west wall: a steel surround around the opening.
   const doorW = DOOR.z1 - DOOR.z0;
-  box('woodDark', 0.08, DOOR.h, doorW - 0.16, 0.06, DOOR.h / 2, (DOOR.z0 + DOOR.z1) / 2);
   box('steel', 0.1, 0.08, doorW, 0.06, DOOR.h + 0.04, (DOOR.z0 + DOOR.z1) / 2);
   box('steel', 0.1, DOOR.h + 0.08, 0.08, 0.06, (DOOR.h + 0.08) / 2, DOOR.z0);
   box('steel', 0.1, DOOR.h + 0.08, 0.08, 0.06, (DOOR.h + 0.08) / 2, DOOR.z1);

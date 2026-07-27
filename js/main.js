@@ -12,6 +12,10 @@ import { buildArtworks } from './art/Artworks.js';
 import { buildCityView } from './world/CityView.js';
 import { buildCourtyard } from './world/Courtyard.js';
 import { buildCourtyardRoom, setupCourtyardLighting, CR } from './world/CourtyardRoom.js';
+import { buildReceptionLift } from './world/ReceptionLift.js';
+import { buildNouveauRoom, HALL } from './world/nouveau.js';
+import { buildRococoRoom, ROOM as ROCOCO, LIFT as ROCOCO_LIFT } from './world/rococo.js';
+import { RESIDENCIES } from '../data/residencies.js';
 import { createRoomManager } from './RoomManager.js';
 import { groundHeight as galleryGround, buildColliders as buildGalleryColliders } from './world/layout.js';
 import { buildWallFountain } from './world/WallFountain.js';
@@ -91,27 +95,46 @@ function doorHitbox(w, h, x, y, z, rotY, name) {
   return m;
 }
 
-// Gallery → courtyard: west wall next to the curator, facing +X into the room.
-const galleryDoorHit = doorHitbox(1.7, 2.2, 0.15, 1.2, 9.5, Math.PI / 2, 'door-to-courtyard');
-scene.add(galleryDoorHit);
-interaction.register([galleryDoorHit]);
+// The reception lift: the door beside the curator is now an elevator, and the
+// only way to an artist residency. Built before the gallery snapshot so the
+// cabin belongs to the gallery layer.
+const lift = buildReceptionLift(scene, materials);
+interaction.register([lift.panel]);
 
 // Snapshot everything currently in the scene as the gallery "layer", and the
-// current interaction targets (artworks + curator + this door).
+// current interaction targets (artworks + curator + the lift panel).
 const galleryChildren = new Set(scene.children);
 const galleryTargets = interaction.targets.slice();
 
-// Build the courtyard room + its own lighting; whatever they add is its layer.
-const courtyardRoom = buildCourtyardRoom(scene, materials, tier);
-const crLights = setupCourtyardLighting(scene, renderer, tier);
+const rooms = createRoomManager({ scene, player, interaction });
 
-// Courtyard → gallery: the south-wall ground door nearest the spawn, facing
-// −Z toward the garden (the way the player came in).
-const courtyardDoorHit = doorHitbox(1.6, 2.2, 0, 1.2, 8.8, Math.PI, 'door-to-gallery');
-scene.add(courtyardDoorHit);
+// Every residency room is built inside captureLayer so that whatever it adds to
+// the scene — geometry, lights, its return-door hitbox — is hidden with it.
+// A stray scene.add() after the capture would float visibly in every room.
+const seg = (ax, az, bx, bz, level = 'all') => ({ a: [ax, az], b: [bx, bz], level });
+const rect = (x0, z0, x1, z1) =>
+  [seg(x0, z0, x1, z0), seg(x1, z0, x1, z1), seg(x1, z1, x0, z1), seg(x0, z1, x0, z0)];
 
-const courtyardLayer = scene.children.filter((o) => !galleryChildren.has(o));
-for (const o of courtyardLayer) o.visible = false;
+// Every residency's way back: an invisible plane by the spawn, facing the way
+// the visitor arrived. Hub and spoke — you ride up, you walk back.
+function returnDoor(x, y, z, rotY) {
+  const hit = doorHitbox(2.0, 2.3, x, y, z, rotY, 'door-to-reception');
+  hit.userData.door = { label: 'return to reception', onEnter: () => rooms.enter('gallery') };
+  scene.add(hit);
+  return hit;
+}
+
+// --- the courtyard --------------------------------------------------------
+const { value: cy, layer: courtyardLayer } = rooms.captureLayer(() => {
+  const room = buildCourtyardRoom(scene, materials, tier);
+  const lights = setupCourtyardLighting(scene, renderer, tier);
+  // South hallway wall by the spawn, facing −Z toward the garden. Offset to
+  // x = 2.25 — the pictures hang at x ∈ {−4.5, 0, 4.5}, and a door hitbox laid
+  // over one of them would prompt "return to reception" while you look at art.
+  const door = returnDoor(2.25, 1.2, 8.8, Math.PI);
+  return { room, lights, door };
+});
+const courtyardRoom = cy.room;
 
 // Courtyard colliders are AABBs whose `level` is a storey INDEX; the collision
 // system wants segments whose level is a walking HEIGHT. Convert, then add a
@@ -137,28 +160,122 @@ function courtyardCollisionSegments() {
   return segs;
 }
 
-const rooms = createRoomManager({
-  scene, player, interaction, lighting, crLights,
-  galleryLayer: [...galleryChildren],
-  courtyardLayer,
-  galleryTargets,
-  courtyardTargets: [courtyardDoorHit, courtyardRoom.lift.panel],
-  gallerySpawn: { x: 1.8, z: 9.5, yaw: -Math.PI / 2 }, // just inside the west door, facing the hall
-  courtyardSpawn: courtyardRoom.spawn,
-  gallerySegments: buildGalleryColliders(),
-  galleryGround,
-  courtyardSegments: courtyardCollisionSegments(),
-  courtyardGround: courtyardRoom.groundHeight,
-  galleryBackground: scene.background,               // whatever CityView left it (null)
-  courtyardBackground: new THREE.Color(0xbcd3e0),    // soft daylit sky through the glass roof
+// --- Nouveau and Rococo, built on first visit ------------------------------
+// Both generate a lot of procedural canvas texture, and rococo in particular is
+// an order of magnitude more expensive to build than the whole courtyard. Doing
+// that at boot blocks the main thread well past the loading screen's own 12 s
+// watchdog, so instead each is built the first time someone rides to it —
+// behind the lift's opaque veil, where a stalled frame doesn't show.
+//
+// Both are ground-floor only for now: flat floors, a keep-in wall, no internal
+// vertical travel. Rococo's glass lift is dressing — its cage is fenced off
+// rather than wired, so nobody can ride into a storey that isn't built.
+const FLAT = () => 0;
+const residencyRooms = {};   // id -> the builder's room object, once built
+
+const ROOM_FACTORIES = {
+  nouveau: () => {
+    const room = buildNouveauRoom(scene, { shadowSize: tier.shadowSize, anisotropy: tier.anisotropy });
+    const door = returnDoor(0, 1.25, 5.2, Math.PI);
+    const R = HALL.A - 1.0;   // keep-in ring, just inside the bay walls
+    return {
+      room,
+      def: {
+        targets: [door],
+        spawn: { x: 0, z: 4.2, yaw: 0 },   // NB: room.spawn.y is an eye height, not a floor
+        segments: Array.from({ length: 18 }, (_, i) => {
+          const a = (i / 18) * Math.PI * 2, b = ((i + 1) / 18) * Math.PI * 2;
+          return seg(Math.sin(a) * R, Math.cos(a) * R, Math.sin(b) * R, Math.cos(b) * R);
+        }),
+        ground: FLAT,
+        background: new THREE.Color(0x1a1712),
+        bake: () => { renderer.shadowMap.needsUpdate = true; },
+      },
+    };
+  },
+
+  rococo: () => {
+    const room = buildRococoRoom(scene, { tier });
+    const door = returnDoor(0, 1.25, ROCOCO.z1 - 0.14, Math.PI);
+    return {
+      room,
+      def: {
+        targets: [door],
+        spawn: { x: 0, z: 4.2, yaw: 0 },
+        segments: [
+          ...rect(ROCOCO.x0 + 0.6, ROCOCO.z0 + 0.6, ROCOCO.x1 - 0.6, ROCOCO.z1 - 0.6),
+          ...rect(ROCOCO_LIFT.x - ROCOCO_LIFT.w / 2 - 0.15, ROCOCO_LIFT.z - ROCOCO_LIFT.d / 2 - 0.15,
+                  ROCOCO_LIFT.x + ROCOCO_LIFT.w / 2 + 0.15, ROCOCO_LIFT.z + ROCOCO_LIFT.d / 2 + 0.15),
+        ],
+        ground: FLAT,
+        background: new THREE.Color(0xdfeaf4),
+        bake: () => { renderer.shadowMap.needsUpdate = true; },
+      },
+    };
+  },
+};
+
+async function ensureRoom(id) {
+  if (rooms.has(id) || !ROOM_FACTORIES[id]) return;
+  // Let the veil paint before the build takes the main thread for several seconds.
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const { value, layer } = rooms.captureLayer(ROOM_FACTORIES[id]);
+  residencyRooms[id] = value.room;
+  rooms.define(id, { layer, ...value.def });
+}
+
+// --- register every room --------------------------------------------------
+rooms.define('gallery', {
+  layer: [...galleryChildren],
+  targets: galleryTargets,
+  spawn: lift.spawn,                    // you arrive standing in the cabin
+  segments: [...buildGalleryColliders(), ...lift.colliders],
+  // The cabin floor overrides the gallery's own ground while you're inside it,
+  // so the car carries you up. Composed here to keep layout.js free of lift state.
+  ground: (x, z, prevY) => lift.groundAt(x, z) ?? galleryGround(x, z, prevY),
+  background: scene.background,         // whatever CityView left it (null)
+  bake: () => lighting.bake(),
+  onEnter: () => lift.reset(),          // cabin back on the ground before the spawn lands in it
 });
 
-galleryDoorHit.userData.door = { label: 'enter the courtyard', onEnter: () => rooms.enterCourtyard() };
-courtyardDoorHit.userData.door = { label: 'return to the gallery', onEnter: () => rooms.enterGallery() };
+rooms.define('courtyard', {
+  layer: courtyardLayer,
+  targets: [cy.door, courtyardRoom.lift.panel],
+  spawn: courtyardRoom.spawn,
+  segments: courtyardCollisionSegments(),
+  ground: courtyardRoom.groundHeight,
+  background: new THREE.Color(0xbcd3e0),  // soft daylit sky through the glass roof
+  bake: () => cy.lights.bake(),
+});
 
-// Elevator panel: press E → pick a floor → the lift rides there.
-const lift = courtyardRoom.lift;
-lift.panel.userData.lift = { open: () => ui.openLift(lift.labels, lift.currentIndex(), (i) => lift.selectFloor(i)) };
+// Collision.js seeds its active room at module load, so the gallery's real
+// segments + the cabin ground override only go live once this runs.
+rooms.start('gallery');
+
+// Reception lift: press E inside the cabin → pick a residency → it rides up and
+// arrives behind the veil.
+lift.onVeil = (on) => ui.veil(on);
+lift.onArrive = async (id) => {
+  await ensureRoom(id);              // first visit: build it behind the veil
+  rooms.enter(id);
+  // Recompile with the destination's lights visible while the veil is still up
+  // (renderer.compile gathers lights from visible objects only).
+  if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
+};
+lift.panel.userData.lift = {
+  label: 'call the lift',
+  open: () => ui.openLift(
+    lift.labels, -1,
+    (i) => lift.ride(RESIDENCIES[i]),
+    { speaker: 'Reception lift', title: 'Which residency?' }
+  ),
+};
+
+// The courtyard's own lift stays a floors-only lift within that room.
+const cyLift = courtyardRoom.lift;
+cyLift.panel.userData.lift = {
+  open: () => ui.openLift(cyLift.labels, cyLift.currentIndex(), (i) => cyLift.selectFloor(i)),
+};
 
 let entered = false;
 let ready = false;
@@ -205,6 +322,11 @@ renderer.setAnimationLoop(() => {
   // loading screen, so drawing a painting for the first time never hitches.
   drainUploads(renderer, 1);
 
+  // The reception lift drives its own ride/fade state machine. Tick it above
+  // the throttle early-return, or pausing mid-ride would strand it forever, and
+  // above player.update so the cabin floor this frame is what ground sampling sees.
+  lift.update(dt);
+
   // Behind a blurred full-screen overlay the gallery is barely visible; render
   // it a quarter as often to drop the render+backdrop-blur double cost. Never
   // throttle before entry — the loading screen needs frames to drain uploads.
@@ -217,10 +339,11 @@ renderer.setAnimationLoop(() => {
     return;
   }
 
-  // Freeze walking while the elevator is travelling so you can't step out of
+  // Freeze walking while either elevator is travelling so you can't step out of
   // the cabin mid-ride (the cabin carries you between floors).
-  player.update(dt, courtyardRoom.liftMoving ? NO_INTENT : controls.intent);
-  interaction.enabled = !ui.activePanel;
+  const riding = courtyardRoom.liftMoving || lift.busy;
+  player.update(dt, riding ? NO_INTENT : controls.intent);
+  interaction.enabled = !ui.activePanel && !riding;
   interaction.update(dt);
   tickWind(t);
   city.update(t);
@@ -228,6 +351,7 @@ renderer.setAnimationLoop(() => {
   equalizer.update(t);
   fountain.update(t);
   courtyardRoom.update(t);   // foliage wind (cheap; harmless while hidden)
+  residencyRooms[rooms.current]?.lights?.update(dt);   // candle / lamp flicker
   curator.update(dt, t);
   if (effects) effects.render();
   else renderer.render(scene, camera);
@@ -288,4 +412,4 @@ window.addEventListener('resize', () => {
 });
 
 // debug/testing handle (harmless in production)
-window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music, equalizer, audio, rooms, courtyardRoom };
+window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music, equalizer, audio, rooms, courtyardRoom, lift, residencyRooms, ensureRoom };

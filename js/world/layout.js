@@ -51,7 +51,9 @@ export const FREE_WALL = { x0: 10, x1: 14, z0: 6.8, z1: 7.2, h: 3.2 };
 
 // Reception desk against the west wall, south of the entry door.
 export const DESK = { x0: 1.6, x1: 2.4, z0: 10.8, z1: 13.2, h: 1.08 };
-export const DOOR = { z0: 8.5, z1: 10.5, h: 2.4 };  // visual only, west wall
+// West-wall opening onto the reception lift. Walk-through — the cabin is built
+// behind it by js/world/ReceptionLift.js.
+export const DOOR = { z0: 8.5, z1: 10.5, h: 2.4 };
 
 export const SPAWN = { x: 2.6, z: 9.5, yaw: -Math.PI / 2 }; // facing east (+X)
 
@@ -141,8 +143,11 @@ function rect(x0, z0, x1, z1, level = 'all') {
 
 export function buildColliders() {
   const c = [];
-  // perimeter — the south wall opens onto the courtyard through the door
-  c.push(seg(0, 0, 24, 0), seg(24, 0, 24, 14), seg(0, 14, 0, 0));
+  // perimeter — the south wall opens onto the courtyard through the door, and
+  // the west wall onto the reception lift
+  c.push(seg(0, 0, 24, 0), seg(24, 0, 24, 14));
+  c.push(seg(0, 14, 0, DOOR.z1), seg(0, DOOR.z0, 0, 0));
+  c.push(seg(0, DOOR.z0, 0, DOOR.z1, ROOM.mezzY)); // west balcony can't walk out over the lift
   c.push(seg(0, 14, S_DOOR.x0, 14), seg(S_DOOR.x1, 14, 24, 14));
   c.push(seg(S_DOOR.x0, 14, S_DOOR.x1, 14, ROOM.mezzY)); // bridge can't walk out over the door
   // courtyard room

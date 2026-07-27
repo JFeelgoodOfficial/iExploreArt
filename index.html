@@ -60,7 +60,7 @@
       <div class="pause-controls">
         <p><b>W A S D</b> / arrows — walk &nbsp;·&nbsp; <b>mouse</b> — look around</p>
         <p><b>E</b> — view a painting / talk to the curator &nbsp;·&nbsp; <b>Shift</b> — walk faster</p>
-        <p>Find the stairs by the east wall for the upper floor. The curator at the front desk can tell you about every piece.</p>
+        <p>Find the stairs by the east wall for the upper floor, and the lift beside the front desk for the artist residencies. The curator can tell you about every piece.</p>
       </div>
       <button id="resume-btn" class="btn primary">Return to the gallery</button>
     </div>
@@ -89,14 +89,17 @@
     </div>
   </div>
 
-  <!-- Elevator floor picker -->
+  <!-- Elevator picker: floors in the courtyard, residencies at reception -->
   <div id="lift-panel" class="dialogue" hidden>
     <div class="dialogue-card">
-      <p class="speaker">Lift</p>
+      <p class="speaker" id="lift-speaker">Lift</p>
       <p id="lift-text">Select a floor</p>
       <div id="lift-choices"></div>
     </div>
   </div>
+
+  <!-- Ride veil: the opaque wipe the lift arrives behind -->
+  <div id="veil" aria-hidden="true"></div>
 
   <script type="module" src="js/main.js"></script>
 </body>

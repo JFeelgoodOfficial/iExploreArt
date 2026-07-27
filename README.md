@@ -7,6 +7,10 @@ floor, and speak with Mira, the curator at the reception desk — who can tell t
 story behind every piece and route purchases through
 [minicuration.com](https://minicuration.com).
 
+Beside the reception desk a lift rides up to the **artist residencies** — three
+further rooms, listed in `data/residencies.js`: an arcaded courtyard palazzo, an
+Art Nouveau domed hall, and a Rococo gallery.
+
 Everything is static files — no build step, no server. Open `index.html` from any
 static host (GitHub Pages, Netlify, etc.).
 
@@ -48,12 +52,18 @@ index.html            entry + UI overlays (import map, no bundler)
 css/gallery.css       brand-styled UI
 data/artworks.js      ← the collection manifest you edit
 data/dialogue.js      ← the curator's conversation tree
+data/residencies.js   ← the artist residencies the reception lift serves
 js/
-  main.js             bootstrap + frame loop
+  main.js             bootstrap, room registry wiring + frame loop
+  RoomManager.js      room switching: visibility, colliders, targets, spawn
   world/layout.js     floor plan: dimensions, painting slots, colliders, stairs
   world/Gallery.js    the building (merged geometry)
   world/CityView.js   procedural 3D city + sky outside the north window
   world/Courtyard.js  the open-air room: tree, flowers, display wall
+  world/ReceptionLift.js  the lift by the front desk — the hub for room travel
+  world/CourtyardRoom.js  residency: arcaded palazzo around a garden
+  world/nouveau.js        residency: domed hall in leaded glass (built on first visit)
+  world/rococo.js         residency: gilt hall under a painted ceiling (ditto)
   world/Lighting.js   sun, spots, baked shadows
   art/                frames, placards, placeholder painting generator
   curator/Curator.js  portrait billboard, idle animation, dialogue runner
