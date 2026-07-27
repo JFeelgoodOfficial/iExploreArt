@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { findResidency } from '../../data/residencies.js';
+import { generatePainting } from '../art/placeholder.js';
+
+// Palettes cycled across the hallway pictures, so no two neighbours match.
+const ART_PALETTES = ['teal', 'terracotta', 'ink', 'mixed'];
 
 // ===========================================================================
 // CourtyardRoom.js
@@ -322,20 +325,24 @@ function worldUV(g) {
   return g;
 }
 
-// one arcade bay: a wall slab with a pointed (ogee) arch cut through it.
-// Authored in local XY (x across the bay, y up), extruded along Z.
-function bayPanel(bw, fh, t, pier, spring, apex) {
-  const hw = bw / 2, iw = hw - pier;
+// One arcade bay, piers removed: only the band above the springing line, with
+// the pointed (ogee) arch intrados cut out of its underside. Authored in local
+// XY (x across the bay, y up), extruded along Z.
+//
+// The old version drew a full-bay slab and punched an arch-shaped hole through
+// it — the "columns" were just the material left over at the bay edges. Tracing
+// the band as one closed outline instead removes the piers without a degenerate
+// hole touching the shape's boundary. Neighbouring bays share the point
+// (±hw, spring), so the arcade now reads as one continuous scalloped run.
+function bayPanel(bw, fh, t, _pier, spring, apex) {
+  const hw = bw / 2;
   const s = new THREE.Shape();
-  s.moveTo(-hw, 0); s.lineTo(hw, 0); s.lineTo(hw, fh); s.lineTo(-hw, fh); s.closePath();
-  const hole = new THREE.Path();               // clockwise
-  hole.moveTo(-iw, 0);
-  hole.lineTo(iw, 0);
-  hole.lineTo(iw, spring);
-  hole.quadraticCurveTo(iw, apex, 0, apex);
-  hole.quadraticCurveTo(-iw, apex, -iw, spring);
-  hole.lineTo(-iw, 0);
-  s.holes.push(hole);
+  s.moveTo(-hw, spring);
+  s.quadraticCurveTo(-hw, apex, 0, apex);     // intrados, left half
+  s.quadraticCurveTo(hw, apex, hw, spring);   // intrados, right half
+  s.lineTo(hw, fh);
+  s.lineTo(-hw, fh);
+  s.closePath();
   const g = new THREE.ExtrudeGeometry(s, { depth: t, bevelEnabled: false, curveSegments: 22 });
   g.translate(0, 0, -t / 2);
   // planar UVs in world scale
@@ -393,7 +400,7 @@ export function buildCourtyardRoom(scene, mats, tier) {
     steel: mats.steel || new THREE.MeshStandardMaterial({ color: 0x3a3a40, roughness: 0.5, metalness: 0.7 }),
   };
 
-  const stoneGeos = [], plasterGeos = [], woodGeos = [], darkGeos = [], brassGeos = [];
+  const stoneGeos = [], plasterGeos = [], darkGeos = [], brassGeos = [];
 
   // --- base slab + garden floor + walkway ring ------------------------------
   const baseSlab = new THREE.Mesh(new THREE.BoxGeometry(CR.half * 2, 0.3, CR.half * 2), M.stone);
@@ -432,8 +439,11 @@ export function buildCourtyardRoom(scene, mats, tier) {
         stoneGeos.push(g);
       }
     }
-    // plinth, impost band (at spring), cornice (at storey top)
-    stoneGeos.push(...ringBand(CR.R, st.base, st.base + 0.35, SCREEN_T + 0.18, 12.9));
+    // plinth, impost band (at spring), cornice (at storey top). The ground
+    // floor skips the plinth: with the piers gone the arcade is walked straight
+    // through, and a 0.35 m kerb across every opening would read as a trip.
+    // Upper storeys keep it — it sits under the balustrade.
+    if (st.rail > 0) stoneGeos.push(...ringBand(CR.R, st.base, st.base + 0.35, SCREEN_T + 0.18, 12.9));
     stoneGeos.push(...ringBand(CR.R, st.base + st.spring - 0.16, st.base + st.spring + 0.14, SCREEN_T + 0.22, 12.9));
     stoneGeos.push(...ringBand(CR.R, st.base + CR.FH - 0.36, st.base + CR.FH, SCREEN_T + 0.28, 13.1));
 
@@ -473,17 +483,17 @@ export function buildCourtyardRoom(scene, mats, tier) {
     plasterGeos.push(g);
   }
 
-  // --- wooden doors on every hallway back wall, every storey ----------------
-  // Every door is an artist residency: numbered, with a placard naming the
-  // resident (data/residencies.js). The rooms behind them aren't built yet.
-  const doorRadius = CR.wallIn - 0.02;
-  STOREYS.forEach((st, fl) => {
+  // --- hanging space on every hallway back wall, every storey ---------------
+  // These were residency doors until a residency became a whole room (see
+  // data/residencies.js). The wall positions are unchanged — each door is now
+  // a framed picture, hung as a placeholder until real work goes up.
+  const hangRadius = CR.wallIn - 0.02;
+  let hung = 0;
+  STOREYS.forEach((st) => {
     for (const side of SIDES) {
-      if (side === 'W') continue;   // the West wall carries the elevator — no doors
+      if (side === 'W') continue;   // the West wall carries the elevator — no art
       for (const u of [-4.5, 0, 4.5]) {
-        buildDoor(u, st.base, st.door, side, doorRadius, woodGeos, darkGeos, brassGeos);
-        const res = findResidency(fl, side, u);
-        if (res) group.add(buildResidencyPlacard(res, u, st.base, st.door, side, doorRadius));
+        group.add(buildArtFrame(hung++, u, st.base, side, hangRadius, darkGeos, brassGeos));
       }
     }
   });
@@ -495,7 +505,6 @@ export function buildCourtyardRoom(scene, mats, tier) {
   addMesh(group, mergeM(stoneGeos), M.stone, true, true);
   addMesh(group, mergeM(plasterGeos), M.plaster, true, true);
   if (balusterGeos.length) addMesh(group, mergeM(balusterGeos), M.stone, true, false);
-  addMesh(group, mergeM(woodGeos), M.wood, true, false);
   addMesh(group, mergeM(darkGeos), M.woodDark, true, false);
   addMesh(group, mergeM(brassGeos), M.brass, false, false);
 
@@ -560,74 +569,42 @@ function addMesh(group, geo, mat, cast, receive) {
   return m;
 }
 
-// ---------------------------------------------------------------------------
-function buildDoor(u, baseY, h, side, r, wood, dark, brass) {
-  const w = 1.6;
-  // frame surround
-  const fr = [
-    new THREE.BoxGeometry(w + 0.4, 0.28, 0.34).translate(0, h + 0.14, 0),   // lintel
-    new THREE.BoxGeometry(0.24, h + 0.28, 0.34).translate(-(w / 2 + 0.14), (h + 0.28) / 2, 0),
-    new THREE.BoxGeometry(0.24, h + 0.28, 0.34).translate((w / 2 + 0.14), (h + 0.28) / 2, 0),
-  ];
-  // two leaves, slightly proud of the wall
-  const leaves = [
-    new THREE.BoxGeometry(w / 2 - 0.03, h - 0.06, 0.09).translate(-(w / 4), (h - 0.06) / 2 + 0.03, 0.14),
-    new THREE.BoxGeometry(w / 2 - 0.03, h - 0.06, 0.09).translate((w / 4), (h - 0.06) / 2 + 0.03, 0.14),
-  ];
-  // recessed rail panels (darker) on each leaf
-  const panels = [];
-  for (const sx of [-1, 1]) for (const py of [0.32, 0.68]) {
-    panels.push(new THREE.BoxGeometry(w / 2 - 0.22, h * 0.26, 0.04).translate(sx * w / 4, h * py, 0.19));
-  }
-  // handles
-  const handles = [
-    new THREE.CylinderGeometry(0.045, 0.045, 0.1, 8).rotateX(Math.PI / 2).translate(-0.12, h * 0.45, 0.22),
-    new THREE.CylinderGeometry(0.045, 0.045, 0.1, 8).rotateX(Math.PI / 2).translate(0.12, h * 0.45, 0.22),
-  ];
-  for (const g of fr) dark.push(toSide(g.translate(0, baseY, 0), side, r, u));
-  for (const g of leaves) wood.push(toSide(g.translate(0, baseY, 0), side, r, u));
-  for (const g of panels) dark.push(toSide(g.translate(0, baseY, 0), side, r, u));
-  for (const g of handles) brass.push(toSide(g.translate(0, baseY, 0), side, r, u));
-}
+// A framed picture on a hallway wall, standing where a residency door used to.
+// Authored facing +Z along local +X, then set on the wall side with toSide, the
+// same as every other thing on the ring.
+//
+// The frame bars and backing board go into the shared merge buckets so they cost
+// no extra draw calls; the canvas keeps its own mesh because each carries a
+// unique generated texture.
+const ART_W = 1.5, ART_H = 1.9, ART_Y = 1.62, ART_BAR = 0.09;
 
-// A residency nameplate: a brass plaque on a door bearing its room number and the
-// resident artist's name. Placed like a door leaf (authored facing +Z, then set on
-// the wall side with toSide), just proud of the door so it faces the hallway. Each
-// carries its own canvas texture, so it's an individual mesh — not merged.
-function buildResidencyPlacard(res, u, baseY, h, side, r) {
-  const g = new THREE.PlaneGeometry(0.62, 0.31);
-  g.translate(0, baseY + h * 0.62, 0.22);   // centred on the door, proud of the leaves
+function buildArtFrame(index, u, baseY, side, r, dark, brass) {
+  const y = baseY + ART_Y;
+  const fw = ART_W + ART_BAR * 2, fh = ART_H + ART_BAR * 2;
+  // four bars + a backing board, all just proud of the wall
+  const bars = [
+    new THREE.BoxGeometry(fw, ART_BAR, 0.08).translate(0, y + ART_H / 2 + ART_BAR / 2, 0.09),
+    new THREE.BoxGeometry(fw, ART_BAR, 0.08).translate(0, y - ART_H / 2 - ART_BAR / 2, 0.09),
+    new THREE.BoxGeometry(ART_BAR, ART_H, 0.08).translate(-(ART_W / 2 + ART_BAR / 2), y, 0.09),
+    new THREE.BoxGeometry(ART_BAR, ART_H, 0.08).translate(ART_W / 2 + ART_BAR / 2, y, 0.09),
+  ];
+  for (const g of bars) dark.push(toSide(g, side, r, u));
+  dark.push(toSide(new THREE.BoxGeometry(fw, fh, 0.02).translate(0, y, 0.055), side, r, u));
+  // a small brass plate below, where a door's placard used to sit
+  brass.push(toSide(new THREE.BoxGeometry(0.18, 0.11, 0.012).translate(0, y - ART_H / 2 - 0.22, 0.075), side, r, u));
+
+  const g = new THREE.PlaneGeometry(ART_W, ART_H);
+  g.translate(0, y, 0.115);
   toSide(g, side, r, u);
   const mat = new THREE.MeshStandardMaterial({
-    map: residencyPlacardTex(res.number, res.artist), roughness: 0.5, metalness: 0.15,
+    map: generatePainting(index * 37 + 11, ART_PALETTES[index % ART_PALETTES.length], ART_W / ART_H),
+    roughness: 0.86,
+    metalness: 0,
   });
   const m = new THREE.Mesh(g, mat);
-  m.name = `residency-${res.number}`;
+  m.name = `courtyard-art-${index}`;
+  m.castShadow = false; m.receiveShadow = true;
   return m;
-}
-
-// Canvas texture for a residency nameplate: a numbered brass disc beside the
-// resident's name. Same conventions as liftPanelTex (sRGB, anisotropy, Georgia).
-function residencyPlacardTex(number, name) {
-  const c = document.createElement('canvas'); c.width = 512; c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#2a2622'; ctx.fillRect(0, 0, 512, 256);
-  ctx.strokeStyle = '#c9b48a'; ctx.lineWidth = 8; ctx.strokeRect(12, 12, 488, 232);
-  // numbered disc on the left
-  ctx.fillStyle = '#e7dcc5'; ctx.beginPath(); ctx.arc(104, 128, 68, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#2a2622'; ctx.font = 'bold 52px Georgia';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(String(number), 104, 132);
-  // "RESIDENCY" eyebrow + artist name on the right
-  const cx = 336, maxW = 300;
-  ctx.fillStyle = '#c9b48a'; ctx.font = 'bold 22px Georgia';
-  ctx.fillText('RESIDENCY', cx, 84);
-  ctx.fillStyle = '#e7dcc5';
-  let fs = 40;                                   // shrink the name until it fits
-  do { ctx.font = `${fs}px Georgia`; } while (ctx.measureText(name).width > maxW && (fs -= 2) > 18);
-  ctx.fillText(name, cx, 148);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
-  return t;
 }
 
 // ---------------------------------------------------------------------------
@@ -909,14 +886,9 @@ function buildGarden(group, M, tier, rand) {
 export function buildColliders() {
   const c = [];
   const add = (x0, z0, x1, z1, level = 'all') => c.push({ x0, z0, x1, z1, level });
-  const pier = 0.45;
-  const boundaries = [-6, -3, 0, 3, 6];
-  for (const side of SIDES) for (const u of boundaries) {
-    let x, z;
-    if (side === 'N') { x = u; z = -CR.R; } else if (side === 'S') { x = u; z = CR.R; }
-    else if (side === 'E') { x = CR.R; z = u; } else { x = -CR.R; z = u; }
-    add(x - pier, z - pier, x + pier, z + pier);            // colonnade piers (all levels)
-  }
+  // The colonnade piers are gone (see bayPanel) — no colliders on the arcade
+  // line, so the ground floor walks freely between hallway and garden. Upper
+  // storeys are still fenced by the balustrade colliders further down.
   for (const sx of [-CR.R, CR.R]) for (const sz of [-CR.R, CR.R]) add(sx - 0.45, sz - 0.45, sx + 0.45, sz + 0.45);
 
   // garden beds + palms — ground only

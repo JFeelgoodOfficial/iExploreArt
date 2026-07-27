@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CURATOR_POS } from '../world/layout.js';
 import { DIALOGUE } from '../../data/dialogue.js';
 import { ARTWORKS } from '../../data/artworks.js';
-import { RESIDENCIES, RESIDENCY_FLOOR_NAMES } from '../../data/residencies.js';
+import { RESIDENCIES, findResidency } from '../../data/residencies.js';
 import { queueUpload } from '../utils/texqueue.js';
 
 // Mira, the curator: a photographic billboard behind the reception desk that
@@ -14,6 +14,9 @@ import { queueUpload } from '../utils/texqueue.js';
 // receptionist.png: 341x1052 alpha cutout — a full-body standing portrait,
 // feet at floor level. She stands in the nook behind the reception desk, so
 // the desk naturally occludes her lower legs from the visitor's viewpoint.
+const ORDINALS = ['ground', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth'];
+function ordinal(n) { return ORDINALS[n] || `${n}th`; }
+
 const PORTRAIT_URL = 'assets/image/receptionist.png';
 const PORTRAIT_ASPECT = 341 / 1052;
 const PORTRAIT_H = 1.70;   // meters; full standing height, head top ≈1.70m
@@ -203,27 +206,25 @@ export class Curator {
         return;
       }
       if (a.type === 'residencyList') {
-        const residents = RESIDENCIES.filter(r => r.floor === a.floor);
-        const where = RESIDENCY_FLOOR_NAMES[a.floor] || 'the courtyard';
-        const choices = residents.map(r => ({
-          label: `${r.artist} — Room ${r.number}`,
-          action: { type: 'residency', number: r.number },
+        const choices = RESIDENCIES.map(r => ({
+          label: `${r.artist} — ${r.name}`,
+          action: { type: 'residency', id: r.id },
         }));
-        choices.push({ label: 'Back.', next: 'residency' });
+        choices.push({ label: 'Back.', next: 'start' });
         this.ui.showDialogueNode(
-          `Nine residencies open onto ${where}. Ask me about any of them:`,
+          `Three artists are in residence. Ask me about any of them:`,
           choices,
           (c) => this._choose(c)
         );
         return;
       }
       if (a.type === 'residency') {
-        const r = RESIDENCIES.find(x => x.number === a.number);
+        const r = findResidency(a.id);
         if (r) {
-          const where = RESIDENCY_FLOOR_NAMES[r.floor] || 'the courtyard';
           this.ui.showDialogueNode(
-            `${r.artist} is in Room ${r.number}, on ${where} of the courtyard. Look for their name on the door — though the studio itself isn’t open to visitors just yet.`,
-            [{ label: 'Back.', next: 'residency' }, { label: 'Thank you.', next: 'start' }],
+            `${r.artist} works in ${r.name}, up on the ${ordinal(r.floor)} floor — ${r.blurb}. Take the lift just there, behind me, and press ${r.floor}.`,
+            [{ label: 'Who else is in residence?', action: { type: 'residencyList' } },
+             { label: 'Thank you.', next: 'start' }],
             (c) => this._choose(c)
           );
         }

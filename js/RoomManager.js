@@ -1,61 +1,71 @@
 import { setActiveRoom } from './world/Collision.js';
 
-// Switches the player between the gallery and the courtyard room. Both rooms
-// share one Three.js scene, so a "room" is really a set of scene children whose
-// visibility we toggle, plus the collision data + interaction targets that go
-// live while the player is inside it.
+// Switches the player between rooms. Every room shares one Three.js scene, so a
+// "room" is really a set of scene children whose visibility we toggle, plus the
+// collision data + interaction targets that go live while the player is inside.
 //
-// Gallery content is added to the scene by many builders (not one parent
-// group), so each room is described by a flat list of the top-level objects
-// that belong to it. Interaction targets are swapped explicitly rather than
-// filtered by visibility, because a hidden group's child meshes still raycast.
+// Room content is added to the scene by many builders (not one parent group),
+// so each room is described by a flat list of the top-level objects that belong
+// to it. Interaction targets are swapped explicitly rather than filtered by
+// visibility, because a hidden group's child meshes still raycast.
+//
+//   const rooms = createRoomManager({ scene, player, interaction });
+//   rooms.define('gallery', { layer, targets, spawn, segments, ground, ... });
+//   rooms.start('gallery');   // apply without moving the player
+//   rooms.enter('rococo');
 
-export function createRoomManager(opts) {
-  const {
-    scene, player, interaction, lighting, crLights,
-    galleryLayer, courtyardLayer,
-    galleryTargets, courtyardTargets,
-    gallerySpawn, courtyardSpawn,
-    gallerySegments, galleryGround,
-    courtyardSegments, courtyardGround,
-    galleryBackground, courtyardBackground,
-  } = opts;
+// Run a builder and return both its value and whatever it added to the scene.
+// Build EVERYTHING that belongs to a room inside the callback — including its
+// door hitboxes and its lights — or it won't be hidden along with the room.
+export function captureLayer(scene, build) {
+  const before = new Set(scene.children);
+  const value = build();
+  return { value, layer: scene.children.filter((o) => !before.has(o)) };
+}
 
-  let current = 'gallery';
+export function createRoomManager({ scene, player, interaction }) {
+  const rooms = new Map();
+  let current = null;
 
   function show(layer, visible) {
     for (const obj of layer) obj.visible = visible;
   }
 
-  function enterCourtyard() {
-    if (current === 'courtyard') return;
-    current = 'courtyard';
-    show(galleryLayer, false);
-    show(courtyardLayer, true);
-    // Enclosed daylit room under a glass roof — give it a sky, not the gallery's
-    // null (black) clear that would otherwise show through the glazing.
-    scene.background = courtyardBackground;
-    setActiveRoom({ segments: courtyardSegments, ground: courtyardGround });
-    interaction.setTargets(courtyardTargets);
-    player.teleport(courtyardSpawn.x, courtyardSpawn.z, courtyardSpawn.yaw);
-    crLights.bake();   // shadowMap.autoUpdate is off — re-bake for the new room
+  // def: { layer, targets, spawn, segments, ground, background?, bake?, onEnter? }
+  // `bake` re-bakes that room's shadows: shadowMap.autoUpdate is off (see
+  // Lighting.js), so every room switch has to ask for one fresh render.
+  function define(id, def) {
+    rooms.set(id, { targets: [], background: null, ...def });
+    if (id !== current) show(def.layer, false);
+    return rooms.get(id);
   }
 
-  function enterGallery() {
-    if (current === 'gallery') return;
-    current = 'gallery';
-    show(courtyardLayer, false);
-    show(galleryLayer, true);
-    scene.background = galleryBackground;
-    setActiveRoom({ segments: gallerySegments, ground: galleryGround });
-    interaction.setTargets(galleryTargets);
-    player.teleport(gallerySpawn.x, gallerySpawn.z, gallerySpawn.yaw);
-    lighting.bake();
+  function apply(id, teleport) {
+    const next = rooms.get(id);
+    if (!next) throw new Error(`RoomManager: unknown room "${id}"`);
+    if (current) show(rooms.get(current).layer, false);
+    show(next.layer, true);
+    current = id;                      // set before onEnter, so a re-entrant enter() no-ops
+    scene.background = next.background;
+    setActiveRoom({ segments: next.segments, ground: next.ground });
+    interaction.setTargets(next.targets);
+    // onEnter runs BEFORE the teleport: the gallery uses it to drop the lift
+    // cabin back to ground level, and the spawn sits inside that cabin. Run it
+    // after, and the first ground sample would yank the player up the shaft.
+    next.onEnter?.();
+    if (teleport) player.teleport(next.spawn.x, next.spawn.z, next.spawn.yaw);
+    next.bake?.();
   }
 
   return {
-    enterCourtyard,
-    enterGallery,
+    define,
+    captureLayer: (build) => captureLayer(scene, build),
+    has: (id) => rooms.has(id),
+    enter(id) { if (id !== current) apply(id, true); },
+    // Boot: make a room live without relocating the player. Collision.js seeds
+    // its active room at module load, so without this the gallery's real
+    // segments and ground function would never be installed.
+    start(id) { apply(id, false); },
     get current() { return current; },
   };
 }

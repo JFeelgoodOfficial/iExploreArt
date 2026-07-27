@@ -24,7 +24,10 @@ export class UI {
       dialogueText: document.getElementById('dialogue-text'),
       dialogueChoices: document.getElementById('dialogue-choices'),
       lift: document.getElementById('lift-panel'),
+      liftSpeaker: document.getElementById('lift-speaker'),
+      liftText: document.getElementById('lift-text'),
       liftChoices: document.getElementById('lift-choices'),
+      veil: document.getElementById('veil'),
     };
 
     document.getElementById('resume-btn').addEventListener('click', () => this._resume());
@@ -56,6 +59,10 @@ export class UI {
   }
 
   showPause(show) { this.el.pause.hidden = !show; }
+
+  // Full-screen wipe used by the lift between rooms. A pure CSS transition —
+  // the caller times the room switch, so nothing here waits on transitionend.
+  veil(on) { this.el.veil.classList.toggle('on', !!on); }
   _resume() { this.showPause(false); this.controls.lock(); }
 
   // true when a full-screen overlay (info/dialogue panel or the pause screen)
@@ -91,11 +98,15 @@ export class UI {
     this.curator.startConversation();
   }
 
-  // Elevator floor picker: a button per floor; picking one rides the lift.
-  openLift(labels, currentIndex, onSelect) {
+  // Elevator picker: a button per destination; picking one rides the lift.
+  // currentIndex of -1 means "you aren't anywhere in this list" — the reception
+  // lift, whose destinations are other rooms rather than floors of this one.
+  openLift(labels, currentIndex, onSelect, opts = {}) {
     this.activePanel = 'lift';
     this.controls.unlock();
     this.prompt(null);
+    this.el.liftSpeaker.textContent = opts.speaker || 'Lift';
+    this.el.liftText.textContent = opts.title || 'Select a floor';
     this.el.liftChoices.innerHTML = '';
     labels.forEach((label, i) => {
       const btn = document.createElement('button');

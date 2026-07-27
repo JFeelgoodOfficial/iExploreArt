@@ -4,7 +4,7 @@ import {
   damaskMaterial, panelOrnament, cartouche, bandMaterial, flutingMaterial,
   plasterMaterial, giltMaterial, frescoMaterial, parquetMaterial, marbleMaterial,
   placeholderArt,
-} from './js/rococo-surfaces.js';
+} from './rococo-surfaces.js';
 
 // ---------------------------------------------------------------------------
 // A rococo double-height gallery hall, after the Musikzimmer at Schloss
