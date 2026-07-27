@@ -273,8 +273,36 @@ lift.panel.userData.lift = {
 
 // The courtyard's own lift stays a floors-only lift within that room.
 const cyLift = courtyardRoom.lift;
+
+// ...plus a way out. Picking the Feature Hall rides the cabin down to the
+// ground floor first and only then fades out, so you always leave the way you
+// arrived rather than stepping out of a lift stopped on the third storey.
+const HALL_LABEL = 'Feature Hall — reception';
+const EXIT_VEIL_MS = 550;   // matches the #veil transition in css/gallery.css
+let leavingCourtyard = false;
+
+async function returnToFeatureHall() {
+  if (leavingCourtyard) return;
+  leavingCourtyard = true;                    // freezes walking for the whole exit
+  cyLift.selectFloor(0);
+  await new Promise((resolve) => {
+    const tick = () => (courtyardRoom.liftMoving ? requestAnimationFrame(tick) : resolve());
+    requestAnimationFrame(tick);
+  });
+  ui.veil(true);
+  await new Promise((r) => setTimeout(r, EXIT_VEIL_MS));
+  rooms.enter('gallery');
+  ui.veil(false);
+  leavingCourtyard = false;
+}
+
 cyLift.panel.userData.lift = {
-  open: () => ui.openLift(cyLift.labels, cyLift.currentIndex(), (i) => cyLift.selectFloor(i)),
+  open: () => ui.openLift(
+    [...cyLift.labels, HALL_LABEL],
+    cyLift.currentIndex(),
+    (i) => (i < cyLift.labels.length ? cyLift.selectFloor(i) : returnToFeatureHall()),
+    { speaker: 'Courtyard lift', title: 'Where to?' }
+  ),
 };
 
 let entered = false;
@@ -341,7 +369,7 @@ renderer.setAnimationLoop(() => {
 
   // Freeze walking while either elevator is travelling so you can't step out of
   // the cabin mid-ride (the cabin carries you between floors).
-  const riding = courtyardRoom.liftMoving || lift.busy;
+  const riding = courtyardRoom.liftMoving || lift.busy || leavingCourtyard;
   player.update(dt, riding ? NO_INTENT : controls.intent);
   interaction.enabled = !ui.activePanel && !riding;
   interaction.update(dt);

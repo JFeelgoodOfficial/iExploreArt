@@ -667,22 +667,33 @@ function buildLiftCabin(M) {
   return g;
 }
 
+// Three floor buttons plus a lobby button back to the Feature Hall, set apart
+// below a rule so it reads as leaving rather than as a fourth storey.
 function liftPanelTex() {
   const [c, ctx] = cv(256);
   ctx.fillStyle = '#2a2622'; ctx.fillRect(0, 0, 256, 256);
   ctx.fillStyle = '#c9b48a'; ctx.strokeStyle = '#c9b48a'; ctx.lineWidth = 4;
   ctx.strokeRect(8, 8, 240, 240);
-  ctx.textAlign = 'center'; ctx.font = 'bold 30px Georgia';
-  ctx.fillText('LIFT', 128, 44);
-  const rows = [['3', 'Third'], ['2', 'Second'], ['1', 'Ground']];
+  ctx.textAlign = 'center'; ctx.font = 'bold 26px Georgia';
+  ctx.fillText('LIFT', 128, 38);
+  const rows = [['3', 'Third floor'], ['2', 'Second floor'], ['1', 'Ground floor']];
   for (let i = 0; i < 3; i++) {
-    const cy = 96 + i * 54;
-    ctx.fillStyle = '#e7dcc5'; ctx.beginPath(); ctx.arc(58, cy, 22, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#2a2622'; ctx.font = 'bold 30px Georgia'; ctx.textAlign = 'center';
-    ctx.fillText(rows[i][0], 58, cy + 10);
-    ctx.fillStyle = '#e7dcc5'; ctx.font = '22px Georgia'; ctx.textAlign = 'left';
-    ctx.fillText(rows[i][1] + ' floor', 92, cy + 8);
+    const cy = 80 + i * 46;
+    ctx.fillStyle = '#e7dcc5'; ctx.beginPath(); ctx.arc(52, cy, 19, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a2622'; ctx.font = 'bold 25px Georgia'; ctx.textAlign = 'center';
+    ctx.fillText(rows[i][0], 52, cy + 9);
+    ctx.fillStyle = '#e7dcc5'; ctx.font = '19px Georgia'; ctx.textAlign = 'left';
+    ctx.fillText(rows[i][1], 82, cy + 7);
   }
+  // separator, then the way out
+  ctx.strokeStyle = '#7a6b4e'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(30, 197); ctx.lineTo(226, 197); ctx.stroke();
+  const ly = 222;
+  ctx.fillStyle = '#c9b48a'; ctx.beginPath(); ctx.arc(52, ly, 19, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2a2622'; ctx.font = 'bold 21px Georgia'; ctx.textAlign = 'center';
+  ctx.fillText('L', 52, ly + 8);
+  ctx.fillStyle = '#e7dcc5'; ctx.font = '17px Georgia'; ctx.textAlign = 'left';
+  ctx.fillText('Feature Hall', 82, ly + 6);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return t;
 }
