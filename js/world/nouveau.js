@@ -404,11 +404,38 @@ function buildVestibule(M, lights) {
   for (const sx of [-1, 1]) {
     solid(0.08, 0.3, D, sx * (VEST.x - 0.04), 3.62, cz, friezeM);
     for (const dz of [-1.4, 0.4, 2.0]) {
+      // the west wall's first two panels give way to the lift doors
+      if (sx === -1 && dz !== 2.0) continue;
       const inl = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 2.0), M.inlay);
       inl.position.set(sx * (VEST.x - 0.07), 2.5, cz + dz);
       inl.rotation.y = -sx * Math.PI / 2;
       g.add(inl);
     }
+  }
+
+  // front wall, either side of the portal — the hall's entry bay only spans
+  // x ∈ ±1.5, so without these the vestibule would open onto a void
+  for (const sx of [-1, 1]) {
+    wall(3.2, VEST.h, sx * 2.7, VEST.h / 2, VEST.z0, 0, upperM);
+    solid(3.2, 1.12, 0.12, sx * 2.7, 0.56, VEST.z0 + 0.06, dadoM);
+    solid(3.2, 0.12, 0.2, sx * 2.7, 1.18, VEST.z0 + 0.1, M.brass);
+    solid(3.2, 0.3, 0.08, sx * 2.7, 3.62, VEST.z0 + 0.05, friezeM);
+  }
+
+  // the lift back to reception, set into the west wall opposite the stair.
+  // Shut mahogany leaves behind a brass surround; the ride itself is an
+  // invisible hitbox + veiled room switch wired up in main.js.
+  {
+    const LX = -VEST.x, LZ = 8.5;                       // wall plane / door centre
+    solid(0.24, 0.18, 1.8, LX + 0.12, 2.49, LZ, M.brassDeep);                  // lintel
+    for (const sz of [-1, 1]) solid(0.24, 2.4, 0.16, LX + 0.12, 1.2, LZ + sz * 0.74, M.brassDeep);
+    for (const sz of [-1, 1]) solid(0.06, 2.36, 0.68, LX + 0.18, 1.18, LZ + sz * 0.35, M.mahoganyDoor);
+    solid(0.05, 2.36, 0.06, LX + 0.2, 1.18, LZ, M.brass);                      // meeting stile
+    solid(0.08, 0.32, 0.18, LX + 0.04, 1.45, LZ + 1.05, M.brass);              // call plate
+    const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.02, 12), M.opal);
+    btn.rotation.z = Math.PI / 2;
+    btn.position.set(LX + 0.09, 1.45, LZ + 1.05);
+    g.add(btn);
   }
   // the doorway upstairs, at the head of the flight
   const top = STAIR.rise * STAIR.steps;
@@ -505,8 +532,9 @@ function buildStair(M, lights) {
   const topY = steps * rise;
   const [lx, lz] = at(rMid + 0.3, rad(steps));
   const backZ = VEST.z1 - 0.12;
-  const landing = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.14, backZ - lz + 1.0), M.mahoganyFine);
-  landing.position.set(2.6, topY - 0.07, (lz - 0.5 + backZ) / 2);
+  // runs flush to the east wall so there's no slot to fall through beside it
+  const landing = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.14, backZ - lz + 1.0), M.mahoganyFine);
+  landing.position.set(2.95, topY - 0.07, (lz - 0.5 + backZ) / 2);
   landing.castShadow = true; landing.receiveShadow = true;
   g.add(landing);
   // corbels carrying it
@@ -791,4 +819,77 @@ function mergeStatics(root, skip) {
     for (const m of b.list) { m.parent?.remove(m); doomed.push(m); }
   }
   for (const m of doomed) m.geometry.dispose();
+}
+
+// ---------------------------------------------------------------------------
+// Walkability. The collision system wants 2-D segments plus an analytic ground
+// function (see js/world/Collision.js); these describe the hall, the stair hall
+// beyond the portal, and the helical flight up to the landing. main.js feeds
+// them into the room definition.
+
+const TOPY = STAIR.steps * STAIR.rise;                 // 2.96 — the landing height
+export const LANDING = { y: TOPY, doorX: 2.6, doorZ: VEST.z1 - 0.14 };
+
+export function nouveauGround(x, z, prevY = 0) {
+  // The helical ramp over the tread annulus.
+  const dx = x - STAIR.cx, dz = z - STAIR.cz, r = Math.hypot(dx, dz);
+  let ramp = null;
+  if (r > STAIR.rIn - 0.06 && r < STAIR.rOut + 0.15) {
+    const t = (Math.atan2(dz, dx) * 180 / Math.PI - STAIR.a0) / (STAIR.steps * STAIR.da);
+    if (t > 0 && t < 1.03) ramp = Math.min(TOPY, (t * STAIR.steps + 1) * STAIR.rise);
+  }
+  // The landing slab overhangs the last few treads, so the flight wins wherever
+  // it is defined and the walker is already on it — stepping onto the landing
+  // early would be a 0.3 m hop. The plateau takes over once the climb tops out.
+  const onLanding = x > 1.6 && z > 10.05;
+  if (ramp !== null && Math.abs(prevY - ramp) < 1.2) {
+    return onLanding && ramp > TOPY - 0.02 ? TOPY : ramp;
+  }
+  // prevY gate: a ground-floor visitor walking beneath the landing stays at 0.
+  if (onLanding && prevY > 1.6) return TOPY;
+  return 0;
+}
+
+export function nouveauSegments() {
+  const seg = (ax, az, bx, bz, level = 'all') => ({ a: [ax, az], b: [bx, bz], level });
+  const P = (aDeg, r) => [STAIR.cx + Math.cos(aDeg * Math.PI / 180) * r, STAIR.cz + Math.sin(aDeg * Math.PI / 180) * r];
+  const s = [];
+  const arc = (r, a0, a1, step, level) => {
+    for (let a = a0; a < a1; a += step) {
+      const [ax, az] = P(a, r), [bx, bz] = P(Math.min(a1, a + step), r);
+      s.push(seg(ax, az, bx, bz, level));
+    }
+  };
+
+  // hall keep-in ring: the old 18-gon at R = 5, minus the two segments that
+  // faced the portal on +Z
+  const R = HALL.A - 1.0;
+  for (let i = 1; i <= 16; i++) {
+    const a = (i / 18) * Math.PI * 2, b = ((i + 1) / 18) * Math.PI * 2;
+    s.push(seg(Math.sin(a) * R, Math.cos(a) * R, Math.sin(b) * R, Math.cos(b) * R));
+  }
+  // funnel from the ring ends through the portal jambs
+  s.push(seg(1.71, 4.70, 1.0, 5.9), seg(1.0, 5.9, 1.0, 6.5));
+  s.push(seg(-1.0, 6.5, -1.0, 5.9), seg(-1.0, 5.9, -1.71, 4.70));
+
+  // stair-hall shell (inset from the visual walls, matching the hall's margin)
+  s.push(seg(1.0, 6.5, 4.15, 6.5));            // front, east of the portal
+  s.push(seg(4.15, 6.5, 4.15, 11.45));         // east wall
+  s.push(seg(4.15, 11.45, -4.05, 11.45));      // back wall (upstairs door is interact-only)
+  s.push(seg(-4.05, 11.45, -4.05, 6.5));       // west wall, along the lift front
+  s.push(seg(-4.05, 6.5, -1.0, 6.5));          // front, west of the portal
+
+  // the flight: outer chords hold a climber in (open at the foot, where the
+  // drop is a single step); the level-0 stretch under the top treads only
+  // exists for ground-floor visitors, so a climber crosses onto the landing
+  arc(2.45, -95, 15, 22, 'all');
+  arc(2.45, 15, 55, 20, 0);
+  arc(0.86, -105, 55, 26, 'all');              // the inner well / newel core
+  { const [ax, az] = P(55, 0.86), [bx, bz] = P(55, 2.45); s.push(seg(ax, az, bx, bz, 0)); }
+
+  // landing fall guards, live only at landing height
+  s.push(seg(1.6, 10.35, 1.6, 11.45, TOPY));               // west edge balustrade
+  s.push(seg(2.15, 9.98, 1.6, 10.35, TOPY));               // gap back to the stair head
+  s.push(seg(3.35, 10.11, 4.3, 10.11, TOPY));              // south edge, east of the flight
+  return s;
 }
