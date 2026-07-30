@@ -1,4 +1,5 @@
 import { IS_TOUCH } from '../config.js';
+import { GALLERY_INFO } from '../../data/artworks.js';
 
 // All DOM overlay state: HUD prompt, artwork panel, curator dialogue,
 // pause screen, and the pointer-lock handshakes between them.
@@ -74,7 +75,10 @@ export class UI {
     this.controls.unlock();
     this.prompt(null);
     this.el.infoTitle.textContent = art.title;
-    this.el.infoMeta.textContent = [art.year, art.medium, 'JFeelgood'].filter(Boolean).join(' · ');
+    // the house artist unless the piece names its own — the residency halls hang
+    // visiting artists, whose works carry `artist` and `series`
+    this.el.infoMeta.textContent = [art.year, art.medium, art.series, art.artist || GALLERY_INFO.artist]
+      .filter(Boolean).join(' · ');
     this.el.infoDesc.textContent = art.description;
     // price / buy link are optional — hide them when a piece has none
     this.el.infoPrice.textContent = art.price || '';

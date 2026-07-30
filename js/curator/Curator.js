@@ -16,6 +16,9 @@ import { queueUpload } from '../utils/texqueue.js';
 // the desk naturally occludes her lower legs from the visitor's viewpoint.
 const ORDINALS = ['ground', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth'];
 function ordinal(n) { return ORDINALS[n] || `${n}th`; }
+// she speaks; she doesn't read out digits
+const CARDINALS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+function count(n) { return CARDINALS[n] || `${n}`; }
 
 const PORTRAIT_URL = 'assets/image/receptionist.png';
 const PORTRAIT_ASPECT = 341 / 1052;
@@ -211,8 +214,13 @@ export class Curator {
           action: { type: 'residency', id: r.id },
         }));
         choices.push({ label: 'Back.', next: 'start' });
+        // one artist can hold more than one room, so count people, not rooms
+        const names = new Set(RESIDENCIES.map(r => r.artist));
+        const who = names.size === RESIDENCIES.length
+          ? `${count(names.size)} artists are in residence`
+          : `${count(names.size)} artists are in residence across ${count(RESIDENCIES.length)} rooms`;
         this.ui.showDialogueNode(
-          `Three artists are in residence. Ask me about any of them:`,
+          `${who[0].toUpperCase()}${who.slice(1)}. Ask me about any of them:`,
           choices,
           (c) => this._choose(c)
         );

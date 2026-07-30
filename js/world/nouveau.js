@@ -4,6 +4,8 @@ import {
   leadedGlassMaterial, mosaicFloorMaterial, mahoganyMaterial, brassMaterial, ironMaterial,
   opalMaterial, friezeMaterial, inlayMaterial, stuccoMaterial, greenMarbleMaterial, nouveauArt,
 } from './nouveau-surfaces.js';
+import { fitToSlot } from '../art/fit.js';
+import { loadArtTexture } from '../art/load.js';
 
 // ---------------------------------------------------------------------------
 // An art nouveau picture hall, after Horta's Hôtel van Eetvelde: a nine-sided
@@ -11,8 +13,15 @@ import {
 // canted facets of leaded glass, brass colonnettes carrying a glazed dome,
 // green mosaic paving, and a curved mahogany stair in the hall beyond.
 //
-//   const room = buildNouveauRoom(scene, { shadowSize: 1024 });
+//   const room = buildNouveauRoom(scene, { shadowSize: 1024, art: NOUVEAU_HANG });
 //   room.setImage(0, 'assets/art/lily.webp');
+//
+// `art` is an array indexed by slot (data/residency-artworks.js), with a null
+// wherever a bay should keep its generated canvas. Each entry's true pixel size
+// is contain-fitted into PICT below, so every mahogany frame is cut to its own
+// picture rather than the picture being stretched to a shared frame. Sizes have
+// to be settled before buildFrame extrudes the moulding — mergeStatics() batches
+// the mouldings away immediately afterwards.
 //
 // The file also registers <nouveau-hall>, a self-contained walkthrough viewer.
 // ---------------------------------------------------------------------------
@@ -33,7 +42,14 @@ HALL.crownY = HALL.domeCY + HALL.domeR;
 // the entrance occupies the bay on the +z axis; the rest carry pictures
 const ENTRY_BAY = 0;
 const PORTAL = { w: 2.2, springY: 2.9, r: 1.1 };
-const PICT = { w: 1.72, h: 2.1, y: 2.44 };
+// The largest picture a bay can carry; pictures are contain-fitted inside it.
+// Neither dimension has room to grow. The marquetry strips' inner edges stand at
+// u ±0.94, and the moulding on a 1.66 frame reaches ±0.97, so it covers the
+// outer 0.03 of each strip — half what the old fixed 1.72 covered. That is a
+// solid moulding in front of a flat inlay plane, not z-fighting; clearing it
+// completely would mean 1.60, which is not worth 4% off every picture. Below,
+// the brass plate under a 2.1-tall frame already reaches the bead at y 1.15.
+const PICT = { w: 1.66, h: 2.1, y: 2.44 };
 // the stair hall beyond the portal
 export const VEST = { x: 4.3, z0: 6.4, z1: 11.6, h: 4.7 };
 const STAIR = { cx: 1.6, cz: 9.2, rIn: 0.95, rOut: 2.5, rRail: 2.32, steps: 16, a0: -105, da: 10, rise: 0.185 };
@@ -71,6 +87,11 @@ function span(p, q) {
 
 export function buildNouveauRoom(scene, opts = {}) {
   const tier = { shadowSize: 1024, anisotropy: 8, ...opts };
+  const hangList = opts.art || [];
+  // main.js clamps anisotropy against the renderer's real ceiling; fall back to
+  // the tier's own numbers when the room is built standalone.
+  const aniso = opts.anisotropy ?? tier.anisotropy ?? 8;
+  const maxEdge = opts.artMaxEdge ?? tier.artMaxEdge ?? 0;
   const group = new THREE.Group();
   group.name = 'nouveau-hall';
   const { segs, poly } = plan();
@@ -146,7 +167,9 @@ export function buildNouveauRoom(scene, opts = {}) {
   group.add(floor);
 
   // ---- walls, bay by bay --------------------------------------------------
+  // Bay 0 is the portal, so slot index = bay − 1.
   const slots = [];
+  const interactables = [];
   for (const s of segs) {
     const L = s.len;
     const isEntry = s.kind === 'bay' && s.index === ENTRY_BAY;
@@ -185,11 +208,17 @@ export function buildNouveauRoom(scene, opts = {}) {
         m.position.set(mx, 2.74, mz); m.rotation.y = s.ry;
         group.add(m);
       }
-      const f = buildFrame(M, PICT.w, PICT.h, slots.length);
+      // this bay's picture sets the frame's size — the bay only sets the ceiling
+      const art = hangList[slots.length] || null;
+      const [pw, ph] = art
+        ? fitToSlot(art.px[0] / art.px[1], PICT.w, PICT.h)
+        : [PICT.w, PICT.h];
+      const f = buildFrame(M, pw, ph, slots.length, art, aniso, maxEdge);
       const [fx, fz] = atWall(s, 0, 0.06);
       f.position.set(fx, PICT.y, fz); f.rotation.y = s.ry;
       group.add(f);
       slots.push(f.userData.slot);
+      if (art) interactables.push(f.userData.slot.mesh);
       continue;
     }
 
@@ -241,10 +270,16 @@ export function buildNouveauRoom(scene, opts = {}) {
   }
 
   mergeStatics(group, new Set());
+
+  // ---- hang the collection ------------------------------------------------
+  // After the merge: the canvases keep their own materials so they survive it,
+  // and the textures land asynchronously through the frame loop's upload queue.
+  hangList.forEach((art, i) => { if (art) slots[i]?.setImage(art.image); });
+
   scene.add(group);
 
   return {
-    group, slots, lights, HALL, VEST, glassMats,
+    group, slots, interactables, lights, HALL, VEST, glassMats,
     spawn: { x: 0, y: 1.66, z: 4.2 },
     radius: HALL.A - 1.05,
     setImage(i, url) { slots[i] && slots[i].setImage(url); },
@@ -578,7 +613,9 @@ function buildStair(M, lights) {
 }
 
 // ---------------------------------------------------------------------------
-function buildFrame(M, w, h, index) {
+// A mahogany picture frame with a brass bead, a canvas and an inlay crest.
+// `w`/`h` are the picture's own metres — no two bays need to match.
+function buildFrame(M, w, h, index, art = null, aniso = 8, maxEdge = 0) {
   const g = new THREE.Group();
   g.name = `picture-${index}`;
   const t = 0.11, d = 0.1;
@@ -614,13 +651,21 @@ function buildFrame(M, w, h, index) {
   beadMesh.castShadow = true;
   g.add(beadMesh);
 
+  // An empty bay draws its generated canvas at the frame's own aspect. A hung
+  // bay skips the generator and waits at a dark canvas colour; setImage clears
+  // the tint, since `color` multiplies `map`.
   const artMat = new THREE.MeshStandardMaterial({
-    map: nouveauArt(index), roughness: 0.55, metalness: 0, envMapIntensity: 0.55,
+    map: art ? null : nouveauArt(index, 512, Math.round(512 * h / w)),
+    color: art ? 0x322a22 : 0xffffff,
+    roughness: 0.55, metalness: 0, envMapIntensity: 0.55,
   });
-  const art = new THREE.Mesh(new THREE.PlaneGeometry(w, h), artMat);
-  art.position.z = 0.045;
-  art.receiveShadow = true;
-  g.add(art);
+  const canvas = new THREE.Mesh(new THREE.PlaneGeometry(w, h), artMat);
+  canvas.position.z = 0.045;
+  canvas.receiveShadow = true;
+  canvas.name = `picture-canvas-${index}`;
+  // the one field js/Interaction.js needs to make it hoverable and viewable
+  if (art) canvas.userData.artwork = art;
+  g.add(canvas);
 
   const crest = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.8, 0.34), M.inlay);
   crest.position.set(0, h / 2 + t + 0.2, 0.06);
@@ -630,12 +675,13 @@ function buildFrame(M, w, h, index) {
   g.add(plate);
 
   g.userData.slot = {
-    index, mesh: art, material: artMat, width: w, height: h,
+    index, mesh: canvas, material: artMat, artwork: art, width: w, height: h,
     setImage(url) {
-      new THREE.TextureLoader().load(url, (tx) => {
-        tx.colorSpace = THREE.SRGBColorSpace;
-        tx.anisotropy = 8;
-        artMat.map = tx; artMat.needsUpdate = true;
+      loadArtTexture(url, { anisotropy: aniso, px: art?.px, maxEdge }, (tx) => {
+        artMat.map = tx;
+        if (artMat.emissiveMap) artMat.emissiveMap = tx;   // a hover may have bound the old map
+        artMat.color.setHex(0xffffff);                     // drop the waiting tint
+        artMat.needsUpdate = true;
       });
     },
     setTexture(tx) { artMat.map = tx; artMat.needsUpdate = true; },
