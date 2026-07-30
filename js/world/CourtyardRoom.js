@@ -554,7 +554,7 @@ export function buildCourtyardRoom(scene, mats, tier) {
     lift: {
       panel: cabin.userData.panel,
       floors: CR.floors,
-      labels: ['Ground floor', 'Second floor', 'Third floor'],
+      labels: ['Floor 1', 'Floor 2', 'Floor 3'],
       selectFloor,
       currentIndex: () => CR.floors.reduce((best, f, i) => Math.abs(f - liftY) < Math.abs(CR.floors[best] - liftY) ? i : best, 0),
     },
@@ -672,16 +672,17 @@ function liftPanelTex() {
   ctx.fillStyle = '#2a2622'; ctx.fillRect(0, 0, 256, 256);
   ctx.fillStyle = '#c9b48a'; ctx.strokeStyle = '#c9b48a'; ctx.lineWidth = 4;
   ctx.strokeRect(8, 8, 240, 240);
-  ctx.textAlign = 'center'; ctx.font = 'bold 30px Georgia';
-  ctx.fillText('LIFT', 128, 44);
-  const rows = [['3', 'Third'], ['2', 'Second'], ['1', 'Ground']];
-  for (let i = 0; i < 3; i++) {
-    const cy = 96 + i * 54;
-    ctx.fillStyle = '#e7dcc5'; ctx.beginPath(); ctx.arc(58, cy, 22, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#2a2622'; ctx.font = 'bold 30px Georgia'; ctx.textAlign = 'center';
-    ctx.fillText(rows[i][0], 58, cy + 10);
-    ctx.fillStyle = '#e7dcc5'; ctx.font = '22px Georgia'; ctx.textAlign = 'left';
-    ctx.fillText(rows[i][1] + ' floor', 92, cy + 8);
+  ctx.textAlign = 'center'; ctx.font = 'bold 28px Georgia';
+  ctx.fillText('LIFT', 128, 40);
+  // Top-down like a real panel; the starred row rides back to reception.
+  const rows = [['3', 'Floor 3'], ['2', 'Floor 2'], ['1', 'Floor 1'], ['★', 'Reception Hall']];
+  for (let i = 0; i < 4; i++) {
+    const cy = 78 + i * 48;
+    ctx.fillStyle = '#e7dcc5'; ctx.beginPath(); ctx.arc(52, cy, 19, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a2622'; ctx.font = 'bold 26px Georgia'; ctx.textAlign = 'center';
+    ctx.fillText(rows[i][0], 52, cy + 9);
+    ctx.fillStyle = '#e7dcc5'; ctx.font = '20px Georgia'; ctx.textAlign = 'left';
+    ctx.fillText(rows[i][1], 84, cy + 7);
   }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return t;

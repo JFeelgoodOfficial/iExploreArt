@@ -41,7 +41,7 @@ export function buildReceptionLift(scene, mats) {
     shell: mats.woodDark,
     ceil: mats.plasterWarm || mats.plaster,
     floor: mats.marble || mats.concrete,
-    leaf: mats.steel,
+    leaf: mats.bronze || mats.brass,
     brass: mats.brass,
   };
 
@@ -67,7 +67,8 @@ export function buildReceptionLift(scene, mats) {
   box(d, 0.08, DOOR_W, cx, -0.04, CAB_CZ, M.floor, car);
   box(d, 0.08, DOOR_W, cx, CAB.h + 0.04, CAB_CZ, M.ceil, car);
   // a brass reveal where the walls meet the floor, and a ceiling light disc
-  box(d, 0.06, DOOR_W - 0.02, cx, 0.03, CAB_CZ, M.brass, car);
+  // (stops short of the door plane so the leaves don't clip through it)
+  box(d - 0.14, 0.06, DOOR_W - 0.02, cx - 0.07, 0.03, CAB_CZ, M.brass, car);
   // Kept deliberately dim: the gallery's hemisphere and ambient lights already
   // reach inside the cabin (they aren't occluded by its walls), so anything
   // brighter blows the interior out and the call panel stops being legible.
@@ -85,7 +86,11 @@ export function buildReceptionLift(scene, mats) {
   // ---- the doors: two leaves that part at the opening ---------------------
   const leafW = DOOR_W / 2;
   const leaves = [-1, 1].map((s) => {
-    const m = box(0.07, CAB.h - 0.04, leafW, -0.035, (CAB.h - 0.04) / 2, CAB_CZ + s * leafW / 2, M.leaf, car);
+    // Recessed a touch behind the wall face at x = 0: when the leaves slide
+    // open they sit in front of the gallery's west wall, and a face at x = 0
+    // would be coplanar with the plaster and z-fight (flickering patches
+    // either side of the opening, seen from the reception desk).
+    const m = box(0.07, CAB.h - 0.04, leafW, -0.05, (CAB.h - 0.04) / 2, CAB_CZ + s * leafW / 2, M.leaf, car);
     m.userData.side = s;
     m.userData.shut = m.position.z;
     return m;
