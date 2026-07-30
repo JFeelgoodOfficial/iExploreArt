@@ -16,7 +16,8 @@ import { buildReceptionLift } from './world/ReceptionLift.js';
 import { buildNouveauRoom, nouveauGround, nouveauSegments, LANDING } from './world/nouveau.js';
 import { buildRococoRoom, ROOM as ROCOCO, LIFT as ROCOCO_LIFT } from './world/rococo.js';
 import { RESIDENCIES } from '../data/residencies.js';
-import { ROCOCO_HANG, NOUVEAU_HANG } from '../data/residency-artworks.js';
+import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
+import { PLINTH } from './world/rococo-plinth.js';
 import { createRoomManager } from './RoomManager.js';
 import { groundHeight as galleryGround, buildColliders as buildGalleryColliders } from './world/layout.js';
 import { buildWallFountain } from './world/WallFountain.js';
@@ -114,6 +115,21 @@ const rooms = createRoomManager({ scene, player, interaction });
 // A stray scene.add() after the capture would float visibly in every room.
 const seg = (ax, az, bx, bz, level = 'all') => ({ a: [ax, az], b: [bx, bz], level });
 
+// A closed ring of colliders around a freestanding object, so you walk round it
+// instead of through it. `r` is measured to the flat of each side.
+function ringSegments(cx, cz, r, sides = 8, level = 'all') {
+  const pt = (i) => {
+    const a = (i / sides) * Math.PI * 2 + Math.PI / sides;
+    return [cx + Math.cos(a) * r, cz + Math.sin(a) * r];
+  };
+  const out = [];
+  for (let i = 0; i < sides; i++) {
+    const [ax, az] = pt(i), [bx, bz] = pt(i + 1);
+    out.push(seg(ax, az, bx, bz, level));
+  }
+  return out;
+}
+
 // Every residency's way back: an invisible plane by the spawn, facing the way
 // the visitor arrived. Hub and spoke — you ride up, you walk back.
 function returnDoor(x, y, z, rotY) {
@@ -202,7 +218,7 @@ const ROOM_FACTORIES = {
   },
 
   rococo: () => {
-    const room = buildRococoRoom(scene, { tier, ...artOpts, art: ROCOCO_HANG });
+    const room = buildRococoRoom(scene, { tier, ...artOpts, art: ROCOCO_HANG, plinthArt: INTO_BLOOM });
     const door = returnDoor(0, 1.25, ROCOCO.z1 - 0.14, Math.PI);
     const el = room.elevator;
     const G = ROCOCO.galleryY;
@@ -255,6 +271,9 @@ const ROOM_FACTORIES = {
           seg(5.9, -3.9, 5.9, ROCOCO_LIFT.deckCut, G),
           seg(5.9, ROCOCO_LIFT.deckCut, 5.9, CABZ0, G),  // sill's open west edge
           shaftGuard,
+          // the table at the centre: an octagon around the corner the panel
+          // sweeps as it turns, so a rectangle spinning inside it never clips
+          ...ringSegments(PLINTH.x, PLINTH.z, room.plinth.reach + 0.08, 8, 0),
         ],
         ground,
         background: new THREE.Color(0xdfeaf4),
@@ -438,6 +457,8 @@ renderer.setAnimationLoop(() => {
   equalizer.update(t);
   fountain.update(t);
   courtyardRoom.update(t);   // foliage wind (cheap; harmless while hidden)
+  // the rococo table's slow turn — only while you're in the room to see it
+  if (rooms.current === 'rococo') residencyRooms.rococo?.plinth?.update(dt);
   residencyRooms[rooms.current]?.lights?.update(dt);   // candle / lamp flicker
   curator.update(dt, t);
   if (effects) effects.render();
