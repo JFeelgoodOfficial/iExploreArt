@@ -63,6 +63,13 @@ To hang something else, edit the array and drop the `.webp` into
 out.webp` matches how the rest were encoded). Filenames may contain spaces;
 they're `encodeURI`'d at load.
 
+Not everything hangs. *Into Bloom* lies flat on a slowly turning stone table in
+the middle of the Rococo Hall — `INTO_BLOOM` in the same file, built by
+**`js/world/rococo-plinth.js`**. Its panel is an extrusion of the artwork's
+outline; give that entry an `outline` (normalised points, like `outline` in
+`data/artworks.js`) and the table is cut to that silhouette instead of the
+photograph's own rectangle.
+
 One Nouveau entry carries `wide: true`. A landscape work in a standard bay fits
 to something much shorter than its neighbours, so a wide bay gives up its two
 marquetry inlay strips and lets the frame span the bay instead. It's marked per
@@ -93,6 +100,7 @@ js/
   world/CourtyardRoom.js  residency: arcaded palazzo around a garden
   world/nouveau.js        residency: domed hall in leaded glass (built on first visit)
   world/rococo.js         residency: gilt hall under a painted ceiling (ditto)
+  world/rococo-plinth.js  the turning table at the centre of that hall
   world/Lighting.js   sun, spots, baked shadows
   art/                frames, placards, placeholder painting generator,
                       aspect-fitting (fit.js) + photo loading (load.js)

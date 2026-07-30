@@ -83,8 +83,9 @@ export const ROCOCO_HANG = [
 // Willis 3' would otherwise fit to 1.66 × 0.93 and read as a letterbox floating
 // in a 3.2 m mahogany field.
 //
-// 'Into Bloom' is deliberately NOT hung. The file is still in the folder; leave
-// it there and leave it out of this list.
+// 'Into Bloom' is deliberately NOT on this wall — it is shown flat, on the
+// turning table in the middle of the Rococo Hall. See INTO_BLOOM below. Leave
+// it out of this list.
 export const NOUVEAU_HANG = [
   /* 0 bay 1 */ null,
   /* 1 bay 2 */ spring('ec-i-saw-this', 'I Saw This', 'I Saw This.webp', [1557, 1975]),
@@ -95,3 +96,17 @@ export const NOUVEAU_HANG = [
   /* 6 bay 7 */ spring('ec-as-the-world-was-falling-apart', 'As the World was Falling Apart', 'As the World was Falling Apart.webp', [1618, 2048]),
   /* 7 bay 8 */ spring('ec-when-i-was-young', 'When I was Young', 'When I was Young.webp', [1566, 2024]),
 ];
+
+// --- Rococo Hall, the table -------------------------------------------------
+// Not a wall slot. 'Into Bloom' lies flat on the turning stone table in the
+// middle of the hall (js/world/rococo-plinth.js), so you walk round it rather
+// than stand in front of it.
+//
+// The source is a rectangular photograph with no alpha, so the extruded panel
+// takes its own edges. Give this entry an `outline` — normalised [x, y] points,
+// same convention as `outline` in data/artworks.js — and the table's panel is
+// cut to that silhouette instead.
+export const INTO_BLOOM = spring(
+  'ec-into-bloom', 'Into Bloom', 'Into Bloom.webp', [1583, 2048],
+  { description: `From Erin Carle's spring1 series, laid flat on the table at the centre of the Rococo Hall.` },
+);

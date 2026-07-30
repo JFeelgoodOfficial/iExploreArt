@@ -7,6 +7,7 @@ import {
 } from './rococo-surfaces.js';
 import { fitToSlot } from '../art/fit.js';
 import { loadArtTexture } from '../art/load.js';
+import { buildPlinth } from './rococo-plinth.js';
 
 // ---------------------------------------------------------------------------
 // A rococo double-height gallery hall, after the Musikzimmer at Schloss
@@ -204,6 +205,10 @@ export function buildRococoRoom(scene, opts = {}) {
   // end wall: flanking the doors
   for (const x of [-5.35, 5.35]) hang(n++, x, 2.32, ROOM.z0 + 0.06, 0, ENVELOPE.end);
 
+  // ---- the table in the middle of the floor --------------------------------
+  const plinth = buildPlinth(group, { art: opts.plinthArt, aniso, maxEdge });
+  if (plinth.artwork) interactables.push(plinth.panel);
+
   // ---- lights -------------------------------------------------------------
   const lights = buildLights(scene, group, M, tier);
   group.add(buildChandelier(M, lights));
@@ -213,7 +218,9 @@ export function buildRococoRoom(scene, opts = {}) {
     }
   }
 
-  mergeStatics(group, new Set([elevator.group, ...lights.flames]));
+  // The plinth is skipped wholesale: batching would bake the panel's transform
+  // into world space, and it has to keep turning.
+  mergeStatics(group, new Set([elevator.group, plinth.group, ...lights.flames]));
 
   // ---- hang the collection ------------------------------------------------
   // After the merge: the canvases keep their own materials so they survive it,
@@ -223,7 +230,7 @@ export function buildRococoRoom(scene, opts = {}) {
   scene.add(group);
 
   return {
-    group, slots, interactables, lights, ROOM, elevator,
+    group, slots, interactables, lights, ROOM, elevator, plinth,
     spawn: { x: 0, y: 1.68, z: 4.2 },
     setImage(i, url) { slots[i] && slots[i].setImage(url); },
     dispose() { group.traverse(o => { o.geometry?.dispose?.(); }); },
