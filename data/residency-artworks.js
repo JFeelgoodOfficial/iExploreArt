@@ -31,12 +31,14 @@ const fall = (id, title, file, px) => ({
   description: `From Erin Carle's fall26 series, in residence in the Rococo Hall.`,
 });
 
-const spring = (id, title, file, px) => ({
+// `extra` carries per-piece exceptions — currently only `wide`, below.
+const spring = (id, title, file, px, extra) => ({
   id, title, artist: ARTIST, series: 'spring1',
   year: '', medium: '', price: 'Inquire', buyUrl: BUY,
   image: `assets/art/erin-carle/spring1/${file}`,
   px,
   description: `From Erin Carle's spring1 series, in residence in the Nouveau Hall.`,
+  ...extra,
 });
 
 // --- Rococo Hall: all ten of fall26 -----------------------------------------
@@ -65,22 +67,31 @@ export const ROCOCO_HANG = [
   /* 9 end wall */ fall('ec-american-layers', 'American Layers', 'American Layers.webp', [2048, 1755]),
 ];
 
-// --- Nouveau Hall: five of spring1 ------------------------------------------
-// Eight bays, five works. They hang on bays 2–6 (slot indices 1–5) — the
-// contiguous arc across the far half of the nonagon, straight ahead as you come
-// through the portal. The nine-sided plan puts no bay on the entry axis, so a
-// symmetric run of five is impossible; this at least straddles the axis with
-// the two widest pieces. Slots 0, 6 and 7 keep their generated canvases.
+// --- Nouveau Hall: seven of spring1 -----------------------------------------
+// Eight bays, seven works, so exactly one keeps its generated canvas: bay 1,
+// immediately right of the portal, where a gap reads least. The works then run
+// unbroken from bay 2 all the way round to bay 8.
+//
+// Bays 4 and 5 straddle the entry axis, so they carry the two pieces you meet
+// head-on. Heights run 2.10 → 1.68 → 1.70 → 1.24 → 1.90 → 2.10 → 2.10 across
+// the arc: full-height portraits at either end, stepping down to the broad, low
+// 'Dance of the Willis 3' in the middle.
+//
+// `wide: true` is a curatorial exception, not something to infer from aspect —
+// it costs that bay its two marquetry inlay strips so a landscape work can span
+// the whole bay (see PICT_WIDE in js/world/nouveau.js). At 16:9 'Dance of the
+// Willis 3' would otherwise fit to 1.66 × 0.93 and read as a letterbox floating
+// in a 3.2 m mahogany field.
 //
 // 'Into Bloom' is deliberately NOT hung. The file is still in the folder; leave
 // it there and leave it out of this list.
 export const NOUVEAU_HANG = [
   /* 0 bay 1 */ null,
   /* 1 bay 2 */ spring('ec-i-saw-this', 'I Saw This', 'I Saw This.webp', [1557, 1975]),
-  /* 2 bay 3 */ spring('ec-as-the-world-was-falling-apart', 'As the World was Falling Apart', 'As the World was Falling Apart.webp', [1618, 2048]),
-  /* 3 bay 4 */ spring('ec-morphogenesis', 'Morphogenesis', 'Morphogenesis.webp', [1792, 2048]),
-  /* 4 bay 5 */ spring('ec-in-a-dream', 'In a Dream', 'In a Dream.webp', [1476, 1493]),
-  /* 5 bay 6 */ spring('ec-when-i-was-young', 'When I was Young', 'When I was Young.webp', [1566, 2024]),
-  /* 6 bay 7 */ null,
-  /* 7 bay 8 */ null,
+  /* 2 bay 3 */ spring('ec-in-a-dream', 'In a Dream', 'In a Dream.webp', [1476, 1493]),
+  /* 3 bay 4 */ spring('ec-autonomy-1', 'Autonomy 1', 'Autonomy 1.webp', [1146, 1174]),
+  /* 4 bay 5 */ spring('ec-dance-of-the-willis-3', 'Dance of the Willis 3', 'Dance of the Willis 3.webp', [2048, 1152], { wide: true }),
+  /* 5 bay 6 */ spring('ec-morphogenesis', 'Morphogenesis', 'Morphogenesis.webp', [1792, 2048]),
+  /* 6 bay 7 */ spring('ec-as-the-world-was-falling-apart', 'As the World was Falling Apart', 'As the World was Falling Apart.webp', [1618, 2048]),
+  /* 7 bay 8 */ spring('ec-when-i-was-young', 'When I was Young', 'When I was Young.webp', [1566, 2024]),
 ];

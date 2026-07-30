@@ -26,7 +26,7 @@ export const RESIDENCIES = [
     name: 'Nouveau Hall',
     floor: 2,
     artist: 'Erin Carle',
-    blurb: 'a domed hall in leaded glass and mahogany, with a stair hall beyond the portal — five pieces from her spring1 series are hanging there now',
+    blurb: 'a domed hall in leaded glass and mahogany, with a stair hall beyond the portal — seven pieces from her spring1 series are hanging there now',
   },
   {
     id: 'rococo',

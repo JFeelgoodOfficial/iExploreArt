@@ -46,7 +46,7 @@ courtyard wall) are defined in `js/world/layout.js`.
 
 The two upper residencies hang visiting artists, from a second manifest:
 **`data/residency-artworks.js`**. Erin Carle currently holds both — the ten
-works of *fall26* across the Rococo Hall, five of *spring1* in the Nouveau Hall.
+works of *fall26* across the Rococo Hall, seven of *spring1* in the Nouveau Hall.
 
 It works differently from `data/artworks.js`, because these frames are carved
 geometry rather than four flat bars. Array position is the slot index in that
@@ -59,8 +59,15 @@ and no two frames in a hall need to match. **Change a file and its `px`
 together** — that pair is what keeps frame and canvas agreeing.
 
 To hang something else, edit the array and drop the `.webp` into
-`assets/art/<artist>/<series>/`. Filenames may contain spaces; they're
-`encodeURI`'d at load.
+`assets/art/<artist>/<series>/` (`cwebp -q 90 -noalpha -metadata none in.png -o
+out.webp` matches how the rest were encoded). Filenames may contain spaces;
+they're `encodeURI`'d at load.
+
+One Nouveau entry carries `wide: true`. A landscape work in a standard bay fits
+to something much shorter than its neighbours, so a wide bay gives up its two
+marquetry inlay strips and lets the frame span the bay instead. It's marked per
+piece rather than inferred from aspect, so the room's rhythm only changes when
+someone means it to.
 
 The curator's conversation lives in **`data/dialogue.js`** — plain data, easy to
 edit. Who is in residence where lives in **`data/residencies.js`**; the curator

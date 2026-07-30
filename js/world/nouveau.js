@@ -50,6 +50,13 @@ const PORTAL = { w: 2.2, springY: 2.9, r: 1.1 };
 // completely would mean 1.60, which is not worth 4% off every picture. Below,
 // the brass plate under a 2.1-tall frame already reaches the bead at y 1.15.
 const PICT = { w: 1.66, h: 2.1, y: 2.44 };
+// A bay whose artwork is marked `wide` gives up its two marquetry strips so a
+// landscape work can span it instead of hanging as a letterbox in the middle of
+// a tall mahogany field. Width is then bounded by the brass colonnettes at the
+// bay's corners, whose rings reach u ±1.34: a 2.20 picture puts the moulding at
+// ±1.24, leaving 0.10 clear. Height is the standard ceiling — a wide work is
+// nowhere near it.
+const PICT_WIDE = { w: 2.20, h: 2.1 };
 // the stair hall beyond the portal
 export const VEST = { x: 4.3, z0: 6.4, z1: 11.6, h: 4.7 };
 const STAIR = { cx: 1.6, cz: 9.2, rIn: 0.95, rOut: 2.5, rRail: 2.32, steps: 16, a0: -105, da: 10, rise: 0.185 };
@@ -200,18 +207,25 @@ export function buildNouveauRoom(scene, opts = {}) {
     if (isEntry) { buildPortal(M, s, { inWall, panel, atWall, perMetre, group }); continue; }
 
     if (s.kind === 'bay') {
-      // mahogany field with marquetry either side of the picture
-      panel(L, 3.2, perMetre(M.mahogany, L / 1.6, 2), s, 2.8, 0.02);
-      for (const sx of [-1, 1]) {
-        const [mx, mz] = atWall(s, sx * (L / 2 - 0.34), 0.045);
-        const m = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 2.7), M.inlay);
-        m.position.set(mx, 2.74, mz); m.rotation.y = s.ry;
-        group.add(m);
-      }
-      // this bay's picture sets the frame's size — the bay only sets the ceiling
+      // This bay's picture sets the frame's size — the bay only sets the
+      // ceiling. Read it first: a `wide` work changes what the bay is made of,
+      // not just how big the frame is.
       const art = hangList[slots.length] || null;
+      const env = art?.wide ? PICT_WIDE : PICT;
+
+      // mahogany field, with marquetry either side of the picture — except in a
+      // wide bay, where the frame takes the room the strips would have stood in
+      panel(L, 3.2, perMetre(M.mahogany, L / 1.6, 2), s, 2.8, 0.02);
+      if (!art?.wide) {
+        for (const sx of [-1, 1]) {
+          const [mx, mz] = atWall(s, sx * (L / 2 - 0.34), 0.045);
+          const m = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 2.7), M.inlay);
+          m.position.set(mx, 2.74, mz); m.rotation.y = s.ry;
+          group.add(m);
+        }
+      }
       const [pw, ph] = art
-        ? fitToSlot(art.px[0] / art.px[1], PICT.w, PICT.h)
+        ? fitToSlot(art.px[0] / art.px[1], env.w, env.h)
         : [PICT.w, PICT.h];
       const f = buildFrame(M, pw, ph, slots.length, art, aniso, maxEdge);
       const [fx, fz] = atWall(s, 0, 0.06);
