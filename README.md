@@ -42,8 +42,36 @@ The artwork keeps its manifest width; height adapts to the photo's aspect ratio
 automatically. Slot positions (`G-…` ground floor, `M-…` mezzanine, `C-…`
 courtyard wall) are defined in `js/world/layout.js`.
 
+### The residency halls
+
+The two upper residencies hang visiting artists, from a second manifest:
+**`data/residency-artworks.js`**. Erin Carle currently holds both — the ten
+works of *fall26* across the Rococo Hall, seven of *spring1* in the Nouveau Hall.
+
+It works differently from `data/artworks.js`, because these frames are carved
+geometry rather than four flat bars. Array position is the slot index in that
+hall (a `null` leaves the frame's generated placeholder), and each entry carries
+`px` — the source file's true pixel size — rather than a size in metres. Each
+hall declares an envelope per wall, the largest picture that wall can take, and
+`fitToSlot()` in `js/art/fit.js` fits the photograph inside it. So the moulding
+is cut to the picture instead of the picture being stretched to the moulding,
+and no two frames in a hall need to match. **Change a file and its `px`
+together** — that pair is what keeps frame and canvas agreeing.
+
+To hang something else, edit the array and drop the `.webp` into
+`assets/art/<artist>/<series>/` (`cwebp -q 90 -noalpha -metadata none in.png -o
+out.webp` matches how the rest were encoded). Filenames may contain spaces;
+they're `encodeURI`'d at load.
+
+One Nouveau entry carries `wide: true`. A landscape work in a standard bay fits
+to something much shorter than its neighbours, so a wide bay gives up its two
+marquetry inlay strips and lets the frame span the bay instead. It's marked per
+piece rather than inferred from aspect, so the room's rhythm only changes when
+someone means it to.
+
 The curator's conversation lives in **`data/dialogue.js`** — plain data, easy to
-edit.
+edit. Who is in residence where lives in **`data/residencies.js`**; the curator
+and the reception lift both read it.
 
 ## Project layout
 
@@ -51,6 +79,7 @@ edit.
 index.html            entry + UI overlays (import map, no bundler)
 css/gallery.css       brand-styled UI
 data/artworks.js      ← the collection manifest you edit
+data/residency-artworks.js  ← what hangs in the Nouveau and Rococo halls
 data/dialogue.js      ← the curator's conversation tree
 data/residencies.js   ← the artist residencies the reception lift serves
 js/
@@ -65,7 +94,8 @@ js/
   world/nouveau.js        residency: domed hall in leaded glass (built on first visit)
   world/rococo.js         residency: gilt hall under a painted ceiling (ditto)
   world/Lighting.js   sun, spots, baked shadows
-  art/                frames, placards, placeholder painting generator
+  art/                frames, placards, placeholder painting generator,
+                      aspect-fitting (fit.js) + photo loading (load.js)
   curator/Curator.js  portrait billboard, idle animation, dialogue runner
   ui/, controls/      overlays, pointer-lock + touch input
 vendor/three/         vendored Three.js (r0.185) + addons subset

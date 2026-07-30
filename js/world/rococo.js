@@ -5,6 +5,8 @@ import {
   plasterMaterial, giltMaterial, frescoMaterial, parquetMaterial, marbleMaterial,
   placeholderArt,
 } from './rococo-surfaces.js';
+import { fitToSlot } from '../art/fit.js';
+import { loadArtTexture } from '../art/load.js';
 
 // ---------------------------------------------------------------------------
 // A rococo double-height gallery hall, after the Musikzimmer at Schloss
@@ -12,8 +14,14 @@ import {
 // running on three sides, arched glazing on the end wall, and hanging space
 // for ten pictures (four on each side wall, two flanking the end doors).
 //
-//   const room = buildRococoRoom(scene, { tier });
+//   const room = buildRococoRoom(scene, { tier, art: ROCOCO_HANG });
 //   room.slots[0].setImage('assets/art/liberty.webp');
+//
+// `art` is an array indexed by slot (data/residency-artworks.js). Each entry's
+// true pixel size is contain-fitted into that slot's ENVELOPE below, so the
+// gilt moulding is cut to the picture instead of the picture being stretched to
+// a fixed frame. Sizes have to be settled here, before buildFrame extrudes the
+// moulding and mergeStatics() batches it away.
 // ---------------------------------------------------------------------------
 
 export const ROOM = {
@@ -32,8 +40,30 @@ const SOUTH_WIN = { w: 1.3, h: 2.0, y: 4.95, xs: [-4.6, 0, 4.6] };
 // enclosed glass lift, standing in the south-east corner of the gallery run
 export const LIFT = { x: 6.7, z: 4.35, w: 1.5, d: 1.5, h: 2.35, deckCut: 3.3 };
 
+// The largest picture each wall can carry, [maxW, maxH] in metres. Pictures are
+// contain-fitted inside these, so one dimension always lands on the envelope and
+// the other follows the photograph.
+//
+//   lower — height stops under the gallery slab soffit (y 3.94) and above the
+//           dado rail; width is capped by the boiserie's painted moulding, whose
+//           outer edge sits ±1.317 on a 2.9 m panel → outer frame 2.62.
+//   upper — height is left exactly as it hung: the frame already laps the first
+//           two cornice courses, and growing it makes that worse. Width is
+//           capped by the upper panel's moulding (outer 2.45), which bites
+//           before the pier abacus at y 6.94 does.
+//   end   — the widest wall in the room and the one you face on arrival. The
+//           only obstruction is the x 2.4 archivolt, whose jamb ends at x 3.335;
+//           the back gallery run overhead sets the same 3.94 ceiling as the
+//           lower side walls.
+const ENVELOPE = { lower: [2.30, 2.45], upper: [2.10, 2.05], end: [2.40, 2.45] };
+
 export function buildRococoRoom(scene, opts = {}) {
   const tier = opts.tier || { anisotropy: 8, shadowSize: 2048 };
+  const hangList = opts.art || [];
+  // main.js clamps anisotropy against the renderer's real ceiling; fall back to
+  // the tier's own numbers when the room is built standalone.
+  const aniso = opts.anisotropy ?? tier.anisotropy ?? 8;
+  const maxEdge = opts.artMaxEdge ?? tier.artMaxEdge ?? 0;
   const group = new THREE.Group();
   group.name = 'rococo-hall';
 
@@ -147,21 +177,32 @@ export function buildRococoRoom(scene, opts = {}) {
 
   // ---- pictures -----------------------------------------------------------
   const slots = [];
-  const hang = (i, x, y, z, ry, w, h) => {
-    const f = buildFrame(M, w, h, i);
+  const interactables = [];
+  // Each slot is cut to whatever hangs in it: contain-fit the artwork's true
+  // pixel aspect into the wall's envelope. An empty slot falls back to a frame
+  // narrower than its envelope, so a generated placeholder never ends up the
+  // largest thing on the wall; its canvas is drawn at that aspect too, so the
+  // placeholder isn't stretched either.
+  const hang = (i, x, y, z, ry, [maxW, maxH]) => {
+    const art = hangList[i] || null;
+    const [w, h] = art
+      ? fitToSlot(art.px[0] / art.px[1], maxW, maxH)
+      : [maxW * 0.85, maxH];
+    const f = buildFrame(M, w, h, i, art, aniso, maxEdge);
     f.position.set(x, y, z); f.rotation.y = ry;
     group.add(f);
     slots.push(f.userData.slot);
+    if (art) interactables.push(f.userData.slot.mesh);
   };
   // side walls: two lower, two upper per side
   let n = 0;
   for (const sx of [-1, 1]) {
     const ry = -sx * Math.PI / 2;
-    for (const z of BAY_Z) hang(n++, sx * (ROOM.x1 - 0.06), 2.32, z, ry, 1.95, 2.45);
-    for (const z of BAY_Z) hang(n++, sx * (ROOM.x1 - 0.06), 6.05, z, ry, 1.7, 2.05);
+    for (const z of BAY_Z) hang(n++, sx * (ROOM.x1 - 0.06), 2.32, z, ry, ENVELOPE.lower);
+    for (const z of BAY_Z) hang(n++, sx * (ROOM.x1 - 0.06), 6.05, z, ry, ENVELOPE.upper);
   }
   // end wall: flanking the doors
-  for (const x of [-5.35, 5.35]) hang(n++, x, 2.32, ROOM.z0 + 0.06, 0, 1.75, 2.3);
+  for (const x of [-5.35, 5.35]) hang(n++, x, 2.32, ROOM.z0 + 0.06, 0, ENVELOPE.end);
 
   // ---- lights -------------------------------------------------------------
   const lights = buildLights(scene, group, M, tier);
@@ -174,10 +215,15 @@ export function buildRococoRoom(scene, opts = {}) {
 
   mergeStatics(group, new Set([elevator.group, ...lights.flames]));
 
+  // ---- hang the collection ------------------------------------------------
+  // After the merge: the canvases keep their own materials so they survive it,
+  // and the textures land asynchronously through the frame loop's upload queue.
+  hangList.forEach((art, i) => { if (art) slots[i]?.setImage(art.image); });
+
   scene.add(group);
 
   return {
-    group, slots, lights, ROOM, elevator,
+    group, slots, interactables, lights, ROOM, elevator,
     spawn: { x: 0, y: 1.68, z: 4.2 },
     setImage(i, url) { slots[i] && slots[i].setImage(url); },
     dispose() { group.traverse(o => { o.geometry?.dispose?.(); }); },
@@ -558,8 +604,9 @@ function balustrade(M, len, x, y, z, rot) {
   return g;
 }
 
-// A carved gilt picture frame with a canvas and a crest.
-function buildFrame(M, w, h, index) {
+// A carved gilt picture frame with a canvas and a crest. `w`/`h` are the
+// picture's own metres — every frame in the hall is a different size.
+function buildFrame(M, w, h, index, art = null, aniso = 8, maxEdge = 0) {
   const g = new THREE.Group(); g.name = `picture-${index}`;
   const t = 0.16, d = 0.13;
   const outer = new THREE.Shape();
@@ -582,18 +629,35 @@ function buildFrame(M, w, h, index) {
   frame.castShadow = true; frame.receiveShadow = true;
   g.add(frame);
 
-  // canvas
+  // canvas — an empty slot draws its generated canvas at the frame's own aspect.
+  // A slot that IS hung skips the generator entirely (it's the expensive part of
+  // building this hall) and sits at a dark canvas colour until its photo lands;
+  // setImage clears the tint, since `color` multiplies `map`.
   const artMat = new THREE.MeshStandardMaterial({
-    map: placeholderArt(index), roughness: 0.52, metalness: 0, envMapIntensity: 0.5,
+    map: art ? null : placeholderArt(index, 512, Math.round(512 * h / w)),
+    color: art ? 0x3a3129 : 0xffffff,
+    roughness: 0.52, metalness: 0, envMapIntensity: 0.5,
   });
-  const art = new THREE.Mesh(new THREE.PlaneGeometry(w, h), artMat);
-  art.position.z = 0.05;
-  art.receiveShadow = true;
-  g.add(art);
+  const canvas = new THREE.Mesh(new THREE.PlaneGeometry(w, h), artMat);
+  canvas.position.z = 0.05;
+  canvas.receiveShadow = true;
+  canvas.name = `picture-canvas-${index}`;
+  // the one field js/Interaction.js needs to make it hoverable and viewable
+  if (art) canvas.userData.artwork = art;
+  g.add(canvas);
 
-  // crest + corner rocaille sit proud of the frame
-  const crest = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.9, w * 0.45), M.ornCartouche);
-  crest.position.set(0, h / 2 + t + w * 0.16, 0.1);
+  // Crest + corner rocaille sit proud of the frame. Both its height and its
+  // offset were scaled off `w` alone, which is backwards once frames vary: a
+  // landscape work is the widest AND the shortest, so it would wear the tallest
+  // cartouche pushed furthest up. Drive it off the smaller dimension, and cap it
+  // at the width every frame in this hall used to be — the cartouche already
+  // sinks into the gallery slab and the cornice at that size, and nothing here
+  // should make that worse. With both limits no crest rises above y 4.46 on the
+  // lower storey or y 7.86 on the upper, which is where they all sat before.
+  const CREST_MAX = 1.95;
+  const cw = Math.min(w, h, CREST_MAX);
+  const crest = new THREE.Mesh(new THREE.PlaneGeometry(cw * 0.9, cw * 0.45), M.ornCartouche);
+  crest.position.set(0, h / 2 + t + cw * 0.16, 0.1);
   g.add(crest);
 
   // brass plate
@@ -602,12 +666,13 @@ function buildFrame(M, w, h, index) {
   g.add(plate);
 
   g.userData.slot = {
-    index, mesh: art, material: artMat, width: w, height: h,
+    index, mesh: canvas, material: artMat, artwork: art, width: w, height: h,
     setImage(url) {
-      new THREE.TextureLoader().load(url, (tx) => {
-        tx.colorSpace = THREE.SRGBColorSpace;
-        tx.anisotropy = 8;
-        artMat.map = tx; artMat.needsUpdate = true;
+      loadArtTexture(url, { anisotropy: aniso, px: art?.px, maxEdge }, (tx) => {
+        artMat.map = tx;
+        if (artMat.emissiveMap) artMat.emissiveMap = tx;   // a hover may have bound the old map
+        artMat.color.setHex(0xffffff);                     // drop the waiting tint
+        artMat.needsUpdate = true;
       });
     },
     setTexture(tx) { artMat.map = tx; artMat.needsUpdate = true; },

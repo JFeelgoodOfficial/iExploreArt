@@ -25,15 +25,15 @@ export const RESIDENCIES = [
     id: 'nouveau',
     name: 'Nouveau Hall',
     floor: 2,
-    artist: 'Marisol Vega',
-    blurb: 'a domed hall in leaded glass and mahogany, with a stair hall beyond the portal',
+    artist: 'Erin Carle',
+    blurb: 'a domed hall in leaded glass and mahogany, with a stair hall beyond the portal — seven pieces from her spring1 series are hanging there now',
   },
   {
     id: 'rococo',
     name: 'Rococo Hall',
     floor: 3,
-    artist: 'Silas Marlowe',
-    blurb: 'gilt boiserie under a painted ceiling, with a gallery running on three sides',
+    artist: 'Erin Carle',
+    blurb: 'gilt boiserie under a painted ceiling, with a gallery running on three sides — she has hung the whole of fall26 across it, ten pieces',
   },
 ];
 

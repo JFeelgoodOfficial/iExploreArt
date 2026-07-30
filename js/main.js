@@ -16,6 +16,7 @@ import { buildReceptionLift } from './world/ReceptionLift.js';
 import { buildNouveauRoom, nouveauGround, nouveauSegments, LANDING } from './world/nouveau.js';
 import { buildRococoRoom, ROOM as ROCOCO, LIFT as ROCOCO_LIFT } from './world/rococo.js';
 import { RESIDENCIES } from '../data/residencies.js';
+import { ROCOCO_HANG, NOUVEAU_HANG } from '../data/residency-artworks.js';
 import { createRoomManager } from './RoomManager.js';
 import { groundHeight as galleryGround, buildColliders as buildGalleryColliders } from './world/layout.js';
 import { buildWallFountain } from './world/WallFountain.js';
@@ -166,9 +167,18 @@ function courtyardCollisionSegments() {
 // behind the lift's opaque veil, where a stalled frame doesn't show.
 const residencyRooms = {};   // id -> the builder's room object, once built
 
+// Hung photographs: anisotropy against the GPU's real ceiling, and a decode
+// cap so the low tier doesn't hold fifteen 2048px canvases in texture memory.
+const artOpts = {
+  anisotropy: Math.min(tier.anisotropy, renderer.capabilities.getMaxAnisotropy()),
+  artMaxEdge: tier.artMaxEdge,
+};
+
 const ROOM_FACTORIES = {
   nouveau: () => {
-    const room = buildNouveauRoom(scene, { shadowSize: tier.shadowSize, anisotropy: tier.anisotropy });
+    const room = buildNouveauRoom(scene, {
+      shadowSize: tier.shadowSize, ...artOpts, art: NOUVEAU_HANG,
+    });
     // the doorway at the head of the stair opens into the rococo hall
     const stairDoor = doorHitbox(1.3, 2.2, LANDING.doorX, LANDING.y + 1.2, LANDING.doorZ - 0.1, Math.PI, 'door-to-rococo');
     stairDoor.userData.door = { label: 'through the doorway', onEnter: () => travelTo('rococo') };
@@ -181,7 +191,7 @@ const ROOM_FACTORIES = {
     return {
       room,
       def: {
-        targets: [stairDoor, liftDoor],
+        targets: [stairDoor, liftDoor, ...room.interactables],
         spawn: { x: 0, z: 4.2, yaw: 0 },   // NB: room.spawn.y is an eye height, not a floor
         segments: nouveauSegments(),
         ground: nouveauGround,
@@ -192,7 +202,7 @@ const ROOM_FACTORIES = {
   },
 
   rococo: () => {
-    const room = buildRococoRoom(scene, { tier });
+    const room = buildRococoRoom(scene, { tier, ...artOpts, art: ROCOCO_HANG });
     const door = returnDoor(0, 1.25, ROCOCO.z1 - 0.14, Math.PI);
     const el = room.elevator;
     const G = ROCOCO.galleryY;
@@ -221,7 +231,7 @@ const ROOM_FACTORIES = {
     return {
       room,
       def: {
-        targets: [door, ...el.buttons],
+        targets: [door, ...el.buttons, ...room.interactables],
         spawn: { x: 0, z: 4.2, yaw: 0 },
         segments: [
           // ground-floor keep-in, opened where the floor meets the lift cage
