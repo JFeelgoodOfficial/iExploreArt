@@ -24,6 +24,7 @@ export function createMaterials(tier) {
     marble: new THREE.MeshStandardMaterial({ color: 0x23252b, roughness: 0.25, metalness: 0.05 }),
     steel: new THREE.MeshStandardMaterial({ color: 0x33343a, roughness: 0.4, metalness: 0.85 }),
     brass: new THREE.MeshStandardMaterial({ color: 0xa88b52, roughness: 0.35, metalness: 0.9 }),
+    bronze: new THREE.MeshStandardMaterial({ color: 0x6f5233, roughness: 0.38, metalness: 0.9 }),
     fabric: new THREE.MeshStandardMaterial({ color: 0x36626a, roughness: 1 }),
     glass,
     railGlass: new THREE.MeshStandardMaterial({

@@ -13,7 +13,7 @@ import { buildCityView } from './world/CityView.js';
 import { buildCourtyard } from './world/Courtyard.js';
 import { buildCourtyardRoom, setupCourtyardLighting, CR } from './world/CourtyardRoom.js';
 import { buildReceptionLift } from './world/ReceptionLift.js';
-import { buildNouveauRoom, HALL } from './world/nouveau.js';
+import { buildNouveauRoom, nouveauGround, nouveauSegments, LANDING } from './world/nouveau.js';
 import { buildRococoRoom, ROOM as ROCOCO, LIFT as ROCOCO_LIFT } from './world/rococo.js';
 import { RESIDENCIES } from '../data/residencies.js';
 import { createRoomManager } from './RoomManager.js';
@@ -112,8 +112,6 @@ const rooms = createRoomManager({ scene, player, interaction });
 // the scene — geometry, lights, its return-door hitbox — is hidden with it.
 // A stray scene.add() after the capture would float visibly in every room.
 const seg = (ax, az, bx, bz, level = 'all') => ({ a: [ax, az], b: [bx, bz], level });
-const rect = (x0, z0, x1, z1) =>
-  [seg(x0, z0, x1, z0), seg(x1, z0, x1, z1), seg(x1, z1, x0, z1), seg(x0, z1, x0, z0)];
 
 // Every residency's way back: an invisible plane by the spawn, facing the way
 // the visitor arrived. Hub and spoke — you ride up, you walk back.
@@ -166,28 +164,27 @@ function courtyardCollisionSegments() {
 // that at boot blocks the main thread well past the loading screen's own 12 s
 // watchdog, so instead each is built the first time someone rides to it —
 // behind the lift's opaque veil, where a stalled frame doesn't show.
-//
-// Both are ground-floor only for now: flat floors, a keep-in wall, no internal
-// vertical travel. Rococo's glass lift is dressing — its cage is fenced off
-// rather than wired, so nobody can ride into a storey that isn't built.
-const FLAT = () => 0;
 const residencyRooms = {};   // id -> the builder's room object, once built
 
 const ROOM_FACTORIES = {
   nouveau: () => {
     const room = buildNouveauRoom(scene, { shadowSize: tier.shadowSize, anisotropy: tier.anisotropy });
-    const door = returnDoor(0, 1.25, 5.2, Math.PI);
-    const R = HALL.A - 1.0;   // keep-in ring, just inside the bay walls
+    // the doorway at the head of the stair opens into the rococo hall
+    const stairDoor = doorHitbox(1.3, 2.2, LANDING.doorX, LANDING.y + 1.2, LANDING.doorZ - 0.1, Math.PI, 'door-to-rococo');
+    stairDoor.userData.door = { label: 'through the doorway', onEnter: () => travelTo('rococo') };
+    scene.add(stairDoor);
+    // the lift set into the stair hall's west wall rides back to reception
+    // (entering 'gallery' spawns you inside the reception cabin, doors open)
+    const liftDoor = doorHitbox(1.6, 2.3, -4.1, 1.25, 8.5, Math.PI / 2, 'nouveau-lift-to-reception');
+    liftDoor.userData.door = { label: 'ride the lift to reception', onEnter: () => travelTo('gallery') };
+    scene.add(liftDoor);
     return {
       room,
       def: {
-        targets: [door],
+        targets: [stairDoor, liftDoor],
         spawn: { x: 0, z: 4.2, yaw: 0 },   // NB: room.spawn.y is an eye height, not a floor
-        segments: Array.from({ length: 18 }, (_, i) => {
-          const a = (i / 18) * Math.PI * 2, b = ((i + 1) / 18) * Math.PI * 2;
-          return seg(Math.sin(a) * R, Math.cos(a) * R, Math.sin(b) * R, Math.cos(b) * R);
-        }),
-        ground: FLAT,
+        segments: nouveauSegments(),
+        ground: nouveauGround,
         background: new THREE.Color(0x1a1712),
         bake: () => { renderer.shadowMap.needsUpdate = true; },
       },
@@ -197,17 +194,59 @@ const ROOM_FACTORIES = {
   rococo: () => {
     const room = buildRococoRoom(scene, { tier });
     const door = returnDoor(0, 1.25, ROCOCO.z1 - 0.14, Math.PI);
+    const el = room.elevator;
+    const G = ROCOCO.galleryY;
+    // Cab footprint (a whisker inside the cage rails), then the three gallery
+    // deck strips. prevY gates keep the ground floor and the deck from
+    // capturing each other: you only resolve to a height you're already near.
+    const CABX0 = ROCOCO_LIFT.x - ROCOCO_LIFT.w / 2, CABX1 = ROCOCO_LIFT.x + ROCOCO_LIFT.w / 2;
+    const CABZ0 = ROCOCO_LIFT.z - ROCOCO_LIFT.d / 2, CABZ1 = ROCOCO_LIFT.z + ROCOCO_LIFT.d / 2;
+    // The cab's open side faces the deck. When the car isn't parked at the top
+    // that opening is a hole, so this segment closes it — the frame loop flips
+    // its level out of range whenever the cab is actually there to step into.
+    const shaftGuard = seg(CABX0, CABZ0, CABX1, CABZ0, G);
+    el.shaftGuard = shaftGuard;
+    const ground = (x, z, prevY) => {
+      if (x > CABX0 && x < CABX1 && z > CABZ0 && z < CABZ1) {
+        const fy = el.y + 0.1;                  // the cab's marble floor plate
+        if (Math.abs(prevY - fy) < 0.8) return fy;
+      }
+      if (prevY > 2.2) {
+        if (z > -5.5 && z < -3.9 && x > -7.5 && x < 7.5) return G;   // north run
+        if (x > -7.5 && x < -5.9 && z > -3.9 && z < 5.5) return G;   // west run
+        if (x > 5.9 && x < 7.5 && z > -3.9 && z < CABZ0 + 0.02) return G; // east run + sill
+      }
+      return 0;
+    };
     return {
       room,
       def: {
-        targets: [door],
+        targets: [door, ...el.buttons],
         spawn: { x: 0, z: 4.2, yaw: 0 },
         segments: [
-          ...rect(ROCOCO.x0 + 0.6, ROCOCO.z0 + 0.6, ROCOCO.x1 - 0.6, ROCOCO.z1 - 0.6),
-          ...rect(ROCOCO_LIFT.x - ROCOCO_LIFT.w / 2 - 0.15, ROCOCO_LIFT.z - ROCOCO_LIFT.d / 2 - 0.15,
-                  ROCOCO_LIFT.x + ROCOCO_LIFT.w / 2 + 0.15, ROCOCO_LIFT.z + ROCOCO_LIFT.d / 2 + 0.15),
+          // ground-floor keep-in, opened where the floor meets the lift cage
+          seg(-6.9, -4.9, 6.9, -4.9, 0),
+          seg(-6.9, -4.9, -6.9, 4.9, 0),
+          seg(-6.9, 4.9, CABX0, 4.9, 0),           // south, stops at the cage
+          seg(6.9, -4.9, 6.9, CABZ0 - 0.25, 0),    // east, stops short of the cage
+          seg(6.9, CABZ0 - 0.25, CABX1, CABZ0 - 0.25, 0),
+          // the cage itself: glazed east/west/south sides, open to the north
+          seg(CABX0, CABZ0, CABX0, CABZ1),
+          seg(CABX1, CABZ0, CABX1, CABZ1),
+          seg(CABX0, CABZ1, CABX1, CABZ1),
+          // gallery deck at 4.3: perimeter walls…
+          seg(-7.35, -5.35, 7.35, -5.35, G),
+          seg(-7.35, -5.35, -7.35, 5.35, G),
+          seg(-7.35, 5.35, -5.9, 5.35, G),
+          seg(7.35, -5.35, 7.35, CABZ0, G),
+          // …and the balustrade edges nobody should step over
+          seg(-5.9, -3.9, 5.9, -3.9, G),
+          seg(-5.9, -3.9, -5.9, 5.35, G),
+          seg(5.9, -3.9, 5.9, ROCOCO_LIFT.deckCut, G),
+          seg(5.9, ROCOCO_LIFT.deckCut, 5.9, CABZ0, G),  // sill's open west edge
+          shaftGuard,
         ],
-        ground: FLAT,
+        ground,
         background: new THREE.Color(0xdfeaf4),
         bake: () => { renderer.shadowMap.needsUpdate = true; },
       },
@@ -222,6 +261,27 @@ async function ensureRoom(id) {
   const { value, layer } = rooms.captureLayer(ROOM_FACTORIES[id]);
   residencyRooms[id] = value.room;
   rooms.define(id, { layer, ...value.def });
+}
+
+// A veiled hop between rooms for doors and lifts that don't ride the reception
+// cabin: fade to black, switch (building the destination if this is its first
+// visit), fade back. `travelling` gates re-entrant presses and freezes walking.
+let travelling = false;
+async function travelTo(id) {
+  if (travelling) return;
+  travelling = true;
+  try {
+    ui.veil(true);
+    await new Promise((r) => setTimeout(r, 600));  // #veil's CSS fade is 0.5 s
+    await ensureRoom(id);
+    rooms.enter(id);
+    if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
+  } catch (e) {
+    console.error('[travel] failed', e);
+  } finally {
+    ui.veil(false);
+    travelling = false;
+  }
 }
 
 // --- register every room --------------------------------------------------
@@ -271,10 +331,16 @@ lift.panel.userData.lift = {
   ),
 };
 
-// The courtyard's own lift stays a floors-only lift within that room.
+// The courtyard's own lift serves that room's three floors, plus a starred
+// button that rides the veil back to the reception hall (you step out of the
+// reception cabin, right by the desk).
 const cyLift = courtyardRoom.lift;
 cyLift.panel.userData.lift = {
-  open: () => ui.openLift(cyLift.labels, cyLift.currentIndex(), (i) => cyLift.selectFloor(i)),
+  open: () => ui.openLift(
+    ['★ Reception Hall', ...cyLift.labels],
+    cyLift.currentIndex() + 1,
+    (i) => (i === 0 ? travelTo('gallery') : cyLift.selectFloor(i - 1))
+  ),
 };
 
 let entered = false;
@@ -326,6 +392,15 @@ renderer.setAnimationLoop(() => {
   // the throttle early-return, or pausing mid-ride would strand it forever, and
   // above player.update so the cabin floor this frame is what ground sampling sees.
   lift.update(dt);
+  // Same reasoning for the rococo glass lift, whose cab floor is the ground fn.
+  const glassLift = rooms.current === 'rococo' ? residencyRooms.rococo?.elevator : null;
+  if (glassLift) {
+    glassLift.update(dt);
+    // open the deck-level opening only while the car is parked up there
+    if (glassLift.shaftGuard) {
+      glassLift.shaftGuard.level = glassLift.y > glassLift.top - 0.05 ? -99 : ROCOCO.galleryY;
+    }
+  }
 
   // Behind a blurred full-screen overlay the gallery is barely visible; render
   // it a quarter as often to drop the render+backdrop-blur double cost. Never
@@ -339,9 +414,11 @@ renderer.setAnimationLoop(() => {
     return;
   }
 
-  // Freeze walking while either elevator is travelling so you can't step out of
-  // the cabin mid-ride (the cabin carries you between floors).
-  const riding = courtyardRoom.liftMoving || lift.busy;
+  // Freeze walking while any elevator is travelling so you can't step out of
+  // the cabin mid-ride (the cabin carries you between floors), and during a
+  // veiled door/lift hop.
+  const riding = courtyardRoom.liftMoving || lift.busy || travelling
+    || !!residencyRooms.rococo?.elevator.moving;
   player.update(dt, riding ? NO_INTENT : controls.intent);
   interaction.enabled = !ui.activePanel && !riding;
   interaction.update(dt);

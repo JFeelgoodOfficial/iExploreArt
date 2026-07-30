@@ -484,9 +484,12 @@ function buildGalleryLevel(M, perMetre, uv1) {
   const g = new THREE.Group(); g.name = 'gallery-level';
   const { x0, x1, z0, z1, galleryY: Y, gallerySlab: S, galleryDepth: DP } = ROOM;
   const runs = [
-    { len: x1 - x0, w: DP, x: 0, z: z0 + DP / 2, rot: 0, railZ: z0 + DP, railLen: x1 - x0, railRot: 0 },
+    // balLen trims each balustrade to the walkable span: the back run stops at
+    // the corner squares so the side runs can be reached, and the east run
+    // stops with its deck at the lift. The fascia keeps the full slab edge.
+    { len: x1 - x0, w: DP, x: 0, z: z0 + DP / 2, rot: 0, railZ: z0 + DP, railLen: x1 - x0, railRot: 0, balLen: (x1 - x0) - 2 * DP },
     { len: z1 - z0 - DP, w: DP, x: x0 + DP / 2, z: (z0 + DP + z1) / 2, rot: 0, railX: x0 + DP, railLen: z1 - z0 - DP, railRot: Math.PI / 2 },
-    { len: z1 - z0 - DP, w: DP, x: x1 - DP / 2, z: (z0 + DP + LIFT.deckCut) / 2, rot: 0, railX: x1 - DP, railLen: z1 - z0 - DP, railRot: Math.PI / 2, deckLen: LIFT.deckCut - (z0 + DP) },
+    { len: z1 - z0 - DP, w: DP, x: x1 - DP / 2, z: (z0 + DP + LIFT.deckCut) / 2, rot: 0, railX: x1 - DP, railLen: z1 - z0 - DP, railRot: Math.PI / 2, deckLen: LIFT.deckCut - (z0 + DP), balLen: LIFT.deckCut - (z0 + DP), fasciaLen: LIFT.deckCut - z0 - 0.5, fasciaZ: (z0 + 0.5 + LIFT.deckCut) / 2 },
   ];
   for (const r of runs) {
     const isBack = r.railZ !== undefined;
@@ -505,12 +508,12 @@ function buildGalleryLevel(M, perMetre, uv1) {
     const fz = isBack ? r.railZ : r.z;
     const fLen = r.railLen;
     const fRot = r.railRot;
-    const fascia = new THREE.Mesh(new THREE.BoxGeometry(fLen, S + 0.14, 0.16), perMetre(M.egg, 1, 1));
-    fascia.position.set(fx, Y - S / 2, fz);
+    const fascia = new THREE.Mesh(new THREE.BoxGeometry(r.fasciaLen ?? fLen, S + 0.14, 0.16), perMetre(M.egg, 1, 1));
+    fascia.position.set(fx, Y - S / 2, r.fasciaZ ?? fz);
     fascia.rotation.y = fRot; fascia.castShadow = true;
     g.add(fascia);
     // balustrade
-    g.add(balustrade(M, fLen, fx, Y, fz, fRot));
+    g.add(balustrade(M, r.balLen ?? fLen, fx, Y, fz, fRot));
   }
   return g;
 }
@@ -857,7 +860,6 @@ function buildElevator(M) {
       b.rotation.x = Math.PI / 2;
       b.position.set(0, dy, 0.024);
       b.name = i === 0 ? 'lift-up' : 'lift-down';
-      b.userData.lift = true;
       plate.add(b);
       buttons.push(b);
     }
@@ -878,9 +880,16 @@ function buildElevator(M) {
 
   cab.position.set(x, 0, z);
 
+  // marble sill bridging the gap between the gallery deck's end and the cab's
+  // open side, so stepping in at the top isn't a stride over fresh air
+  const sill = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.36), M.marble);
+  sill.position.set(x, top - 0.06, z - d / 2 - 0.15);
+  sill.receiveShadow = true; g.add(sill);
+
   const lift = {
     group: g, cab, buttons, y: 0, target: 0, bottom: 0, top, moving: false, chime: 0,
     call() {
+      if (this.moving) return;
       this.target = Math.abs(this.y - this.bottom) < 0.02 ? this.top : this.bottom;
       this.moving = true;
     },
@@ -900,6 +909,9 @@ function buildElevator(M) {
       return dir * step;
     },
   };
+  // Pressing either plate just calls the car — Interaction.activate expects
+  // `userData.lift.open()`, the same contract as the other lift panels.
+  for (const b of buttons) b.userData.lift = { label: 'ride the lift', open: () => lift.call() };
   return lift;
 }
 
