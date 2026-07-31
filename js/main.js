@@ -15,8 +15,13 @@ import { buildCourtyardRoom, setupCourtyardLighting, CR } from './world/Courtyar
 import { buildReceptionLift } from './world/ReceptionLift.js';
 import { buildNouveauRoom, nouveauGround, nouveauSegments, LANDING } from './world/nouveau.js';
 import { buildRococoRoom, ROOM as ROCOCO, LIFT as ROCOCO_LIFT, LOBE } from './world/rococo.js';
+import {
+  buildBrutalistRoom, setupBrutalistLighting,
+  brutalistGround, brutalistSegments, SPAWN as BX_SPAWN, BX, SUN_POS as BX_SUN,
+} from './world/brutalism/brutalist.js';
 import { RESIDENCIES } from '../data/residencies.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
+import { BRUTALIST_HANG } from '../data/brutalist-artworks.js';
 import { PLINTH } from './world/rococo-plinth.js';
 import { createRoomManager } from './RoomManager.js';
 import { groundHeight as galleryGround, buildColliders as buildGalleryColliders } from './world/layout.js';
@@ -355,6 +360,33 @@ const ROOM_FACTORIES = {
       },
     };
   },
+
+  brutalist: () => {
+    const room = buildBrutalistRoom(scene, { tier, ...artOpts, art: BRUTALIST_HANG });
+    const lights = setupBrutalistLighting(scene, renderer, tier);
+    // The city the pool looks over. Same builder as the gallery's north view,
+    // yawed a quarter turn the other way so the skyline lies out along +X, past
+    // the terrace's infinity edge. `fog` is global and the gallery already set
+    // it; the sun matches setupBrutalistLighting's, or the daylight would arrive
+    // from two quarters at once.
+    const city = buildCityView(scene, renderer, {
+      name: 'city-brutalism', seed: 5150, yaw: -Math.PI / 2, fog: false,
+      sunPosition: BX_SUN, nearProps: tier.name !== 'low',
+    });
+    // South wall by the spawn, facing back up the hall.
+    const door = returnDoor(2.6, 1.35, BX.z1 - 0.14, Math.PI);
+    return {
+      room: { ...room, lights, city },
+      def: {
+        targets: [door, ...room.interactables],
+        spawn: BX_SPAWN,
+        segments: brutalistSegments(),
+        ground: brutalistGround,
+        background: new THREE.Color(0x9aa3a8),
+        bake: () => { lights.bake(); },
+      },
+    };
+  },
 };
 
 async function ensureRoom(id) {
@@ -545,7 +577,16 @@ renderer.setAnimationLoop(() => {
   courtyardRoom.update(t);   // foliage wind (cheap; harmless while hidden)
   // the rococo table's slow turn — only while you're in the room to see it
   if (rooms.current === 'rococo') residencyRooms.rococo?.plinth?.update(dt);
-  residencyRooms[rooms.current]?.lights?.update(dt);   // candle / lamp flicker
+  // the brutalist hall's own skyline past the terrace, and the pool's ripples
+  if (rooms.current === 'brutalist') {
+    residencyRooms.brutalist?.city.update(t);
+    residencyRooms.brutalist?.update(dt);
+  }
+  // Candle / lamp flicker, for the rooms that have any. The call is optional as
+  // well as the rig: a room lit by daylight alone (the brutalist hall) returns a
+  // rig with no `update`, and setAnimationLoop re-arms its rAF *after* the
+  // callback — so a TypeError here doesn't skip a frame, it stops the loop dead.
+  residencyRooms[rooms.current]?.lights?.update?.(dt);
   curator.update(dt, t);
   if (effects) effects.render();
   else renderer.render(scene, camera);

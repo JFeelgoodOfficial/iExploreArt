@@ -7,9 +7,10 @@ floor, and speak with Mira, the curator at the reception desk — who can tell t
 story behind every piece and route purchases through
 [minicuration.com](https://minicuration.com).
 
-Beside the reception desk a lift rides up to the **artist residencies** — three
+Beside the reception desk a lift rides up to the **artist residencies** — four
 further rooms, listed in `data/residencies.js`: an arcaded courtyard palazzo, an
-Art Nouveau domed hall, and a Rococo gallery.
+Art Nouveau domed hall, a Rococo gallery, and a board-formed concrete hall built
+round a four-storey void.
 
 Everything is static files — no build step, no server. Open `index.html` from any
 static host (GitHub Pages, Netlify, etc.).
@@ -44,12 +45,15 @@ courtyard wall) are defined in `js/world/layout.js`.
 
 ### The residency halls
 
-The two upper residencies hang visiting artists, from a second manifest:
-**`data/residency-artworks.js`**. Erin Carle currently holds both — the ten
-works of her *Fall Series* across the Rococo Hall, seven of the *Spring Series*
-in the Nouveau Hall. Neither carries a `buyUrl`, so the info panel shows
-"Inquire" and drops its collect button; the asset folders keep their original
-`fall26` / `spring1` names.
+The upper residencies hang visiting artists from their own manifests. Erin Carle
+holds two of them, from **`data/residency-artworks.js`** — the ten works of her
+*Fall Series* across the Rococo Hall, seven of the *Spring Series* in the
+Nouveau Hall. Neither carries a `buyUrl`, so the info panel shows "Inquire" and
+drops its collect button; the asset folders keep their original `fall26` /
+`spring1` names. Chad Rea holds Brutalism Hall, from
+**`data/brutalist-artworks.js`** — ten works, all still `image: null`, so
+`js/art/placeholder.js` generates a canvas for each and the hall reads as
+complete until the real files arrive.
 
 It works differently from `data/artworks.js`, because these frames are carved
 geometry rather than four flat bars. Array position is the slot index in that
@@ -90,6 +94,7 @@ index.html            entry + UI overlays (import map, no bundler)
 css/gallery.css       brand-styled UI
 data/artworks.js      ← the collection manifest you edit
 data/residency-artworks.js  ← what hangs in the Nouveau and Rococo halls
+data/brutalist-artworks.js  ← what hangs in Brutalism Hall
 data/dialogue.js      ← the curator's conversation tree
 data/residencies.js   ← the artist residencies the reception lift serves
 js/
@@ -104,6 +109,9 @@ js/
   world/nouveau.js        residency: domed hall in leaded glass (built on first visit)
   world/rococo.js         residency: gilt hall under a painted ceiling (ditto)
   world/rococo-plinth.js  the turning table at the centre of that hall
+  world/brutalism/brutalist.js  residency: board-formed concrete round a
+                          four-storey void, glass floor at the top, infinity
+                          pool over the city (ditto)
   world/Lighting.js   sun, spots, baked shadows
   art/                frames, placards, placeholder painting generator,
                       aspect-fitting (fit.js) + photo loading (load.js)

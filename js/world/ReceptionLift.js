@@ -229,6 +229,9 @@ function panelTex() {
   ctx.fillStyle = '#c9b48a'; ctx.font = 'bold 20px Georgia';
   ctx.fillText('RESIDENCIES', 128, 52);
 
+  // Four discs is what this canvas holds: the last centres at y = 444 and its
+  // rim lands at 478, inside the border at 502. A fifth would run off the
+  // bottom — tighten `gap` (or grow the canvas) before adding one.
   const top = 120, gap = 108;
   RESIDENCIES.forEach((r, i) => {
     const cy = top + i * gap;
