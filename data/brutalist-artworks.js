@@ -1,5 +1,5 @@
 // ============================================================================
-// THE CAST HALL HANG — ten works, floor 4.
+// BRUTALISM HALL HANG — ten works, floor 4.
 //
 // Placeholders. Every entry has `image: null`, so js/art/placeholder.js
 // generates an abstract canvas in the house palette and the hall reads as
@@ -9,7 +9,7 @@
 //   2. set `image` to that path and `px` to the file's TRUE pixel size
 //   3. fill in title / year / medium / description
 //
-// Array POSITION is the slot index in js/world/brutalist.js SLOTS[]. `px` is
+// Array POSITION is the slot index in js/world/brutalism/brutalist.js SLOTS[]. `px` is
 // what fitToSlot() contain-fits into each slot's envelope, so the canvas is cut
 // to the picture rather than the picture stretched to the wall. Change a file
 // and its `px` together.
@@ -18,8 +18,8 @@
 // and is ignored once `image` is set.
 // ============================================================================
 
-const ARTIST = 'Artist in residence';
-const SERIES = 'Cast Hall';
+const ARTIST = 'Chad Rea';
+const SERIES = 'Brutalism Hall';
 
 const work = (id, title, px, palette, extra) => ({
   id, title, artist: ARTIST, series: SERIES,
@@ -27,11 +27,11 @@ const work = (id, title, px, palette, extra) => ({
   image: null,
   px,
   palette,
-  description: 'Placeholder — in residence in the Cast Hall.',
+  description: 'Placeholder — in residence in Brutalism Hall.',
   ...extra,
 });
 
-// Slot order is the order brutalist.js hangs them: two on the end wall you
+// Slot order is the order brutalism/brutalist.js hangs them: two on the end wall you
 // meet on arrival, two on the freestanding fin, then one pair per gallery
 // level as you climb — level 1, level 2, and two on the glass floor at level 3.
 export const BRUTALIST_HANG = [

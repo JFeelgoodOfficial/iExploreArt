@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { fitToSlot } from '../art/fit.js';
-import { loadArtTexture } from '../art/load.js';
-import { generatePainting } from '../art/placeholder.js';
-import { mulberry32 } from '../utils/proctex.js';
+import { fitToSlot } from '../../art/fit.js';
+import { loadArtTexture } from '../../art/load.js';
+import { generatePainting } from '../../art/placeholder.js';
+import { mulberry32 } from '../../utils/proctex.js';
 
 // ---------------------------------------------------------------------------
-// THE CAST HALL — residency four.
+// BRUTALISM HALL — residency four (room id `brutalist`).
 //
 // One volume, four storeys, board-formed concrete. The floor plates are rings
 // around a single void, so from anywhere on the ground you can see all the way

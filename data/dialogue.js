@@ -64,7 +64,7 @@ export const DIALOGUE = {
   },
 
   residency: {
-    text: 'We keep three artist residencies upstairs — whole rooms, not studios behind a door. The lift just behind me goes to all of them; step in and press the floor. Shall I tell you who’s working where?',
+    text: 'We keep four artist residencies upstairs — whole rooms, not studios behind a door. The lift just behind me goes to all of them; step in and press the floor. Shall I tell you who’s working where?',
     choices: [
       { label: 'Yes — who’s in residence?', action: { type: 'residencyList' } },
       { label: 'Back.', next: 'start' },

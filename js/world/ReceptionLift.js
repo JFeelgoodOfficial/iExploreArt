@@ -26,6 +26,11 @@ export const CAB = {
 const CAB_CZ = (CAB.z0 + CAB.z1) / 2;
 const DOOR_W = CAB.z1 - CAB.z0;
 
+// Height of the call plate's centre. The panel is 0.86 m tall, so this puts it
+// between 0.99 m and 1.85 m — see panelTex() for why the bottom edge matters.
+const PANEL_Y = 1.42;
+const PANEL_H = 0.86;
+
 const SPEED = 2.6;          // m/s of climb
 const CLOSE_TIME = 0.9;     // seconds for the leaves to shut
 const VEIL_TIME = 0.55;     // seconds of fade before the room switch
@@ -101,7 +106,10 @@ export function buildReceptionLift(scene, mats) {
     new THREE.PlaneGeometry(0.42, 0.86),
     new THREE.MeshStandardMaterial({ map: panelTex(), roughness: 0.45, metalness: 0.2 })
   );
-  panel.position.set(cx + 0.25, 1.3, CAB.z0 + CAB.wallT + 0.01);
+  // Raised from 1.3: the cabin is only 2.3 m deep, so the plate is read from
+  // under a metre away and its lower half sits a long way below the 1.65 m eye.
+  // See panelTex() — the bottom disc is the one that decides this number.
+  panel.position.set(cx + 0.25, PANEL_Y, CAB.z0 + CAB.wallT + 0.01);
   panel.rotation.y = 0;
   panel.name = 'reception-lift-panel';
   car.add(panel);
@@ -229,12 +237,33 @@ function panelTex() {
   ctx.fillStyle = '#c9b48a'; ctx.font = 'bold 20px Georgia';
   ctx.fillText('RESIDENCIES', 128, 52);
 
-  const top = 120, gap = 108;
+  // The constraint here is the camera frustum, NOT the canvas border. The cabin
+  // is 2.3 m deep, so the plate is read from about 0.87 m away, and the camera's
+  // vertical FOV is 72° — half of that, 36°, is all the downward angle there is.
+  // At that distance a disc more than ~0.5 m below the 1.65 m eye falls off the
+  // bottom of the screen entirely, while still sitting comfortably inside the
+  // canvas. A fixed `top + i * gap` stack grows downward and walks straight out
+  // of view on the residency that gets added next — which is exactly what a
+  // fourth one did.
+  //
+  // So the discs are spread across a band chosen in WORLD space and converted
+  // back to canvas pixels: BAND_BOT is the lowest point still inside the view
+  // cone, and the stack closes up as residencies are added instead of reaching
+  // past it. Radius follows the gap so they never collide.
+  const EYE = 1.65, READ_DIST = 0.87, MAX_DROP = READ_DIST * Math.tan(30 * Math.PI / 180);
+  const yToCanvas = (worldY) => (1 - (worldY - (PANEL_Y - PANEL_H / 2)) / PANEL_H) * c.height;
+  const BAND_TOP = 116;                              // clear of the header
+  const BAND_BOT = Math.min(440, yToCanvas(EYE - MAX_DROP));
+  const n = RESIDENCIES.length;
+  const gap = n > 1 ? Math.min(108, (BAND_BOT - BAND_TOP) / (n - 1)) : 0;
+  const top = BAND_TOP + ((BAND_BOT - BAND_TOP) - gap * (n - 1)) / 2;
+  const R = n > 1 ? Math.min(34, gap / 2 - 6) : 34;
+
   RESIDENCIES.forEach((r, i) => {
     const cy = top + i * gap;
     ctx.fillStyle = '#e7dcc5';
-    ctx.beginPath(); ctx.arc(76, cy, 34, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#2b2723'; ctx.font = 'bold 34px Georgia';
+    ctx.beginPath(); ctx.arc(76, cy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2b2723'; ctx.font = `bold ${Math.round(R)}px Georgia`;
     ctx.fillText(String(r.floor), 76, cy + 2);
     ctx.fillStyle = '#e7dcc5';
     let fs = 22;

@@ -35,6 +35,13 @@ export const RESIDENCIES = [
     artist: 'Erin Carle',
     blurb: 'gilt boiserie under a painted ceiling, with a gallery running on three sides — she has hung the whole of the Fall Series across it, ten pieces',
   },
+  {
+    id: 'brutalist',
+    name: 'Brutalism Hall',
+    floor: 4,
+    artist: 'Chad Rea',
+    blurb: 'four storeys of board-formed concrete round one void — galleries ringing it at two levels, three cantilevered flights each against a different wall, and a glass floor at the top you stand on to look the whole way down; ten works hung flat on the concrete, unframed, and a terrace with an infinity pool over the city',
+  },
 ];
 
 // Metres per floor, so `floor` reads as a storey rather than a raw height.
