@@ -56,6 +56,16 @@ const SOUTH_WIN = { w: 1.3, h: 2.0, y: 4.95, xs: [-4.6, 0, 4.6] };
 // only route between the near run and the east run.
 export const LIFT = { x: 6.7, z: 4.85, w: 1.5, d: 1.0, h: 2.35 };
 
+// The bowed ends of the two side runs, where they meet the glazed end wall. A
+// square termination against all that glass read as a plank cut off; a half-
+// round balcony gives you somewhere to stand and turn and look back down the
+// hall, which is what the end of a gallery run is for. Tangent to the end wall
+// (centre at z0 + r) so it reads as growing out of the glazing rather than
+// floating short of it, and clear of the wall's upper lights at x ∈ {−2.4, 0,
+// 2.4}. js/main.js derives the deck's ground test and its rail colliders from
+// this — do not repeat the numbers there.
+export const LOBE = { r: 1.3, z: ROOM.z0 + 1.3 };
+
 // The largest picture each wall can carry, [maxW, maxH] in metres. Pictures are
 // contain-fitted inside these, so one dimension always lands on the envelope and
 // the other follows the photograph.
@@ -567,6 +577,7 @@ function buildGalleryLevel(M, perMetre, uv1) {
   // runs so the corners can be walked. Nothing here should be inferred.
   const RAIL_Z = z1 - DP;                  // the near run's open edge
   const RAIL_X0 = x0 + DP, RAIL_X1 = x1 - DP;   // the side runs' open edges
+  const LOBE_END = LOBE.z + LOBE.r;        // where a side run's straight edge picks up again
   const SHAFT_X = LIFT.x - LIFT.w / 2;     // where the lift comes up through the deck
   const LEDGE_D = Math.max(0, (LIFT.z - LIFT.d / 2) - RAIL_Z);
   const runs = [
@@ -580,17 +591,21 @@ function buildGalleryLevel(M, perMetre, uv1) {
     // east run adjoins it to the north and the shaft guard closes its back, so
     // it has no open edge and takes neither fascia nor balustrade.
     { x0: SHAFT_X, x1, z0: RAIL_Z, z1: RAIL_Z + LEDGE_D },
-    // west run
+    // West and east runs. Their open edges stop short of the end wall by the
+    // lobe's diameter: from there to the glazing the edge is the bowed balcony
+    // built below, which carries its own fascia and balustrade. Straightening
+    // them back out again would leave the lobe's rail floating over a plank.
     {
       x0, x1: RAIL_X0, z0, z1: RAIL_Z,
-      fascia: { len: RAIL_Z - z0, x: RAIL_X0, z: (z0 + RAIL_Z) / 2, rot: Math.PI / 2 },
-      bal: { len: RAIL_Z - z0, x: RAIL_X0, z: (z0 + RAIL_Z) / 2, rot: Math.PI / 2 },
+      fascia: { len: RAIL_Z - LOBE_END, x: RAIL_X0, z: (LOBE_END + RAIL_Z) / 2, rot: Math.PI / 2 },
+      bal: { len: RAIL_Z - LOBE_END, x: RAIL_X0, z: (LOBE_END + RAIL_Z) / 2, rot: Math.PI / 2 },
+      lobe: RAIL_X0,
     },
-    // east run
     {
       x0: RAIL_X1, x1, z0, z1: RAIL_Z,
-      fascia: { len: RAIL_Z - z0, x: RAIL_X1, z: (z0 + RAIL_Z) / 2, rot: Math.PI / 2 },
-      bal: { len: RAIL_Z - z0, x: RAIL_X1, z: (z0 + RAIL_Z) / 2, rot: Math.PI / 2 },
+      fascia: { len: RAIL_Z - LOBE_END, x: RAIL_X1, z: (LOBE_END + RAIL_Z) / 2, rot: Math.PI / 2 },
+      bal: { len: RAIL_Z - LOBE_END, x: RAIL_X1, z: (LOBE_END + RAIL_Z) / 2, rot: Math.PI / 2 },
+      lobe: RAIL_X1,
     },
   ];
   for (const r of runs) {
@@ -613,23 +628,100 @@ function buildGalleryLevel(M, perMetre, uv1) {
       g.add(f);
     }
     if (r.bal) g.add(balustrade(M, r.bal.len, r.bal.x, Y, r.bal.z, r.bal.rot));
+    if (r.lobe !== undefined) g.add(bowedEnd(M, perMetre, uv1, r.lobe, Y, S));
   }
   return g;
 }
 
+// A half-annulus in plan, standing `h` tall from y = 0: the curved counterpart
+// of every straight band in balustrade() and of the runs' fascia. Authored
+// bulging along +X, centred on the origin.
+function halfAnnulus(rOut, rIn, h) {
+  const s = new THREE.Shape();
+  s.absarc(0, 0, rOut, -Math.PI / 2, Math.PI / 2, false);
+  s.lineTo(0, rIn);
+  s.absarc(0, 0, rIn, Math.PI / 2, -Math.PI / 2, true);
+  s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: h, bevelEnabled: false, curveSegments: 32 });
+  g.rotateX(-Math.PI / 2);   // plan XY → world XZ, extrusion → +Y
+  return g;
+}
+
+// The bowed balcony at a side run's end. `railX` is the run's open edge; the
+// lobe hangs off it centred on LOBE.z, bulging into the room — +x for the west
+// run at x0 + DP, −x for the east run at x1 − DP, which is a half-turn of the
+// same geometry. Its diameter lies flat against the run's slab edge, so the two
+// meet with nothing exposed between them.
+function bowedEnd(M, perMetre, uv1, railX, Y, S) {
+  const { r } = LOBE;
+  const g = new THREE.Group();
+  g.name = 'gallery-lobe';
+  g.position.set(railX, Y, LOBE.z);
+  g.rotation.y = railX > 0 ? Math.PI : 0;
+
+  const slab = new THREE.Mesh(uv1(new THREE.CylinderGeometry(r, r, S, 32, 1, false, 0, Math.PI)), perMetre(M.plasterWarm, 1, 1));
+  slab.position.y = -S / 2;
+  slab.castShadow = true; slab.receiveShadow = true;
+  g.add(slab);
+
+  // Walking surface. The runs' decks are planes with 0..1 UVs and a sub-1
+  // repeat, which samples one corner of the parquet — fine for a long strip,
+  // but on a 2.6 m disc it landed on a dark green patch of the sheet and read
+  // as a different floor from the run it grows out of. UVs off the plan
+  // position instead, at a plank scale of one tile per 3.4 m, so the lobe takes
+  // the whole texture the way a floor does.
+  const deckGeo = new THREE.CircleGeometry(r, 32, -Math.PI / 2, Math.PI);
+  {
+    const uv = deckGeo.attributes.uv, pos = deckGeo.attributes.position;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / 3.4, pos.getY(i) / 3.4);
+  }
+  const deck = new THREE.Mesh(uv1(deckGeo), perMetre(M.parquet, 1, 1));
+  deck.rotation.x = -Math.PI / 2; deck.position.y = 0.002;
+  deck.receiveShadow = true; g.add(deck);
+
+  // moulded soffit edge, matching the straight fascia's 0.16 depth and S + 0.14 face
+  const fascia = new THREE.Mesh(halfAnnulus(r + 0.08, r - 0.08, S + 0.14), perMetre(M.egg, 1, 1));
+  fascia.position.y = -S / 2 - (S + 0.14) / 2;
+  fascia.castShadow = true; g.add(fascia);
+
+  // The east lobe is the west one turned a half-turn, which swaps which of its
+  // two ends is the one against the glazing — so the newel's side is passed in
+  // rather than baked into the sweep.
+  g.add(curvedBalustrade(M, r, railX > 0 ? 1 : -1));
+  return g;
+}
+
+// BAL_H is the handrail height, and it is set low on purpose. What you look at
+// from this gallery is not just the pictures opposite but the turning table on
+// the floor below, and at the old 1.02 the rail cut that line off unless you
+// leaned. At 0.82 the top of the bead sits about 1.1 m under standing eye level,
+// so the table reads from anywhere on the run — straight or bowed.
+const BAL_H = 0.82;
+const BAL_SPACING = 0.32;
+
+// Turned baluster profile, drawn at its authored height and then squeezed to
+// whatever gap the plinth and the rail actually leave, so the turning keeps its
+// proportions and the top still lands inside the handrail rather than standing
+// proud of it. Shared by the straight runs and the bowed ends — one turning for
+// the whole gallery.
+function balusterGeometry() {
+  const PROF_H = 0.86;
+  const k = (BAL_H - 0.16) / PROF_H;
+  const prof = [];
+  const add = (r, y2) => prof.push(new THREE.Vector2(r, y2 * k));
+  add(0.001, 0); add(0.085, 0); add(0.085, 0.05); add(0.062, 0.08);
+  add(0.052, 0.14); add(0.075, 0.22); add(0.088, 0.32); add(0.082, 0.44);
+  add(0.055, 0.54); add(0.038, 0.60); add(0.048, 0.66); add(0.040, 0.72);
+  add(0.030, 0.78); add(0.052, 0.82); add(0.052, PROF_H); add(0.001, PROF_H);
+  return new THREE.LatheGeometry(prof, 20);
+}
+
 // A run's open edge. `y` is the deck it stands on; everything below is measured
 // from there.
-//
-// H is the handrail height, and it is set low on purpose. What you look at from
-// this gallery is not just the pictures opposite but the turning table on the
-// floor below, and at the old 1.02 the rail cut that line off unless you leaned.
-// At 0.82 the top of the bead sits about 1.1 m under standing eye level, so the
-// table reads from anywhere on the run. The balusters are scaled to suit rather
-// than left at their old length, or they would stand proud of the rail.
 function balustrade(M, len, x, y, z, rot) {
   const g = new THREE.Group();
   g.position.set(x, y, z); g.rotation.y = rot;
-  const H = 0.82;
+  const H = BAL_H;
   const plinth = new THREE.Mesh(new THREE.BoxGeometry(len, 0.16, 0.26), M.marble);
   plinth.position.y = 0.08; plinth.castShadow = true; plinth.receiveShadow = true;
   g.add(plinth);
@@ -638,20 +730,8 @@ function balustrade(M, len, x, y, z, rot) {
   const bead = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.34), M.giltDeep);
   bead.position.y = H + 0.085; bead.castShadow = true; g.add(bead);
 
-  // Turned baluster profile, drawn at its authored height and then squeezed to
-  // whatever gap the plinth and the rail actually leave, so the turning keeps
-  // its proportions and the top still lands inside the handrail.
-  const PROF_H = 0.86;
-  const k = (H - 0.16) / PROF_H;
-  const prof = [];
-  const add = (r, y2) => prof.push(new THREE.Vector2(r, y2 * k));
-  add(0.001, 0); add(0.085, 0); add(0.085, 0.05); add(0.062, 0.08);
-  add(0.052, 0.14); add(0.075, 0.22); add(0.088, 0.32); add(0.082, 0.44);
-  add(0.055, 0.54); add(0.038, 0.60); add(0.048, 0.66); add(0.040, 0.72);
-  add(0.030, 0.78); add(0.052, 0.82); add(0.052, PROF_H); add(0.001, PROF_H);
-  const geo = new THREE.LatheGeometry(prof, 20);
-  const count = Math.max(6, Math.round(len / 0.32));
-  const inst = new THREE.InstancedMesh(geo, M.marble, count);
+  const count = Math.max(6, Math.round(len / BAL_SPACING));
+  const inst = new THREE.InstancedMesh(balusterGeometry(), M.marble, count);
   inst.castShadow = true; inst.receiveShadow = true;
   const mtx = new THREE.Matrix4();
   for (let i = 0; i < count; i++) {
@@ -667,6 +747,43 @@ function balustrade(M, len, x, y, z, rot) {
     n.position.set(sx * (len / 2 - 0.1), H / 2, 0);
     n.castShadow = true; g.add(n);
   }
+  return g;
+}
+
+// The same balustrade swept round a bowed end: identical cross-sections, the
+// same turning, the same low rail — everything that makes the straight runs
+// read, bent to LOBE.r. Authored about the origin bulging along +X, so
+// bowedEnd()'s group places and turns it. Only the end-wall end takes a newel;
+// the other end butts the straight run, which brings its own.
+function curvedBalustrade(M, r, wallSide) {
+  const g = new THREE.Group();
+  const H = BAL_H;
+  const band = (depth, h, y, mat) => {
+    const m = new THREE.Mesh(halfAnnulus(r + depth / 2, r - depth / 2, h), mat);
+    m.position.y = y; m.castShadow = true; m.receiveShadow = true;
+    g.add(m); return m;
+  };
+  band(0.26, 0.16, 0, M.marble);                 // plinth
+  band(0.30, 0.12, H - 0.06, M.marble);          // handrail
+  band(0.34, 0.05, H + 0.06, M.giltDeep);        // gilt bead
+
+  const arc = Math.PI * r;
+  const count = Math.max(5, Math.round(arc / BAL_SPACING));
+  const inst = new THREE.InstancedMesh(balusterGeometry(), M.marble, count);
+  inst.castShadow = true; inst.receiveShadow = true;
+  const mtx = new THREE.Matrix4();
+  for (let i = 0; i < count; i++) {
+    const a = -Math.PI / 2 + ((i + 0.5) / count) * Math.PI;
+    mtx.makeTranslation(Math.cos(a) * r, 0.16, Math.sin(a) * r);
+    inst.setMatrixAt(i, mtx);
+  }
+  inst.instanceMatrix.needsUpdate = true;
+  g.add(inst);
+
+  // newel where the bow dies into the glazed end wall
+  const n = new THREE.Mesh(new THREE.BoxGeometry(0.28, H, 0.2), M.marble);
+  n.position.set(0, H / 2, wallSide * (r - 0.1));
+  n.castShadow = true; g.add(n);
   return g;
 }
 

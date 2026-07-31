@@ -14,9 +14,19 @@ export function createEffects(renderer, scene, camera, tier) {
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
 
+  // strength, radius, threshold. The threshold is in LINEAR light, not display
+  // light — the composer's buffer is HDR and tone mapping happens at the very
+  // end, in OutputPass. At the old 0.92 that took in every well-lit white
+  // surface in the building, and the worst of it landed on the art: a
+  // high-key photograph is mostly bright ground, so its own ground bloomed
+  // across the dark subject standing in it and the picture read as fog. The
+  // wide bay in the nouveau hall was the clearest case — a figure under black
+  // tulle on a white floor, washed to a grey ghost. At 1.9 an interior surface
+  // has to be genuinely emissive to bloom: the leaded glass, the opal globes,
+  // the sky through a window. Pigment stays pigment.
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.22, 0.60, 0.92
+    0.22, 0.60, 1.9
   );
   // Run the bloom mip chain at half the composer resolution. It's a soft, wide
   // glow, so starting one mip level lower is imperceptible but roughly quarters
@@ -39,6 +49,7 @@ export function createEffects(renderer, scene, camera, tier) {
   composer.addPass(new OutputPass());
 
   return {
+    bloom,
     render: () => composer.render(),
     resize: (w, h) => composer.setSize(w, h),
     setPixelRatio: (r) => composer.setPixelRatio(r),
