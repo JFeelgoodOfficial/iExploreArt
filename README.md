@@ -46,7 +46,10 @@ courtyard wall) are defined in `js/world/layout.js`.
 
 The two upper residencies hang visiting artists, from a second manifest:
 **`data/residency-artworks.js`**. Erin Carle currently holds both — the ten
-works of *fall26* across the Rococo Hall, seven of *spring1* in the Nouveau Hall.
+works of her *Fall Series* across the Rococo Hall, seven of the *Spring Series*
+in the Nouveau Hall. Neither carries a `buyUrl`, so the info panel shows
+"Inquire" and drops its collect button; the asset folders keep their original
+`fall26` / `spring1` names.
 
 It works differently from `data/artworks.js`, because these frames are carved
 geometry rather than four flat bars. Array position is the slot index in that

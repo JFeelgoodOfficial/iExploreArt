@@ -11,9 +11,12 @@ import { buildPlinth } from './rococo-plinth.js';
 
 // ---------------------------------------------------------------------------
 // A rococo double-height gallery hall, after the Musikzimmer at Schloss
-// Augustusburg: gilt boiserie, a coved fresco ceiling, a first-floor gallery
-// running on three sides, arched glazing on the end wall, and hanging space
-// for ten pictures (four on each side wall, two flanking the end doors).
+// Augustusburg: gilt boiserie, a coved fresco ceiling, arched glazing on the
+// end wall, hanging space for ten pictures (four on each side wall, two
+// flanking the end doors), and a first-floor gallery running the two side walls
+// and the near wall you come in through. It does not cross the end wall: that
+// wall is glazed top to bottom, and a walkway over it put the visitor in the
+// glare with his back to the room.
 //
 //   const room = buildRococoRoom(scene, { tier, art: ROCOCO_HANG });
 //   room.slots[0].setImage('assets/art/liberty.webp');
@@ -28,7 +31,13 @@ import { buildPlinth } from './rococo-plinth.js';
 export const ROOM = {
   w: 15, d: 11, wallH: 7.6, coveH: 1.0, ceilY: 8.6,
   x0: -7.5, x1: 7.5, z0: -5.5, z1: 5.5,
-  galleryY: 4.3, gallerySlab: 0.36, galleryDepth: 1.6,
+  // The gallery runs the two side walls and the NEAR wall (z1, the one you come
+  // in through). It deliberately does not run the end wall: that wall is all
+  // glazing, and a deck across it put the visitor in the glare with nothing to
+  // look at. galleryDepth is the walkable band from wall face to rail line —
+  // js/main.js derives the deck's collision geometry from these, so widening it
+  // here moves the barriers with it.
+  galleryY: 4.3, gallerySlab: 0.36, galleryDepth: 2.1,
   wallT: 0.4,
 };
 
@@ -38,8 +47,14 @@ const DOOR_X = [-2.4, 0, 2.4];
 // near (south) wall: entrance door below, three arched windows at gallery level
 const SOUTH_DOOR = { w: 2.1, h: 3.6 };
 const SOUTH_WIN = { w: 1.3, h: 2.0, y: 4.95, xs: [-4.6, 0, 4.6] };
-// enclosed glass lift, standing in the south-east corner of the gallery run
-export const LIFT = { x: 6.7, z: 4.35, w: 1.5, d: 1.5, h: 2.35, deckCut: 3.3 };
+// Enclosed glass lift, standing in the near-east corner. The gallery deck turns
+// that corner, so the cab cannot simply sit in the middle of it: whatever it
+// leaves over has to be wide enough to walk, and PLAYER.radius is 0.35, so a
+// gap under 0.9 m is a wall. Hence a shallow cab pushed hard against the near
+// wall — 1.5 across the corner, 1.1 deep — which leaves a 0.95 m ledge along
+// its open north side. That ledge is both the landing you step out onto and the
+// only route between the near run and the east run.
+export const LIFT = { x: 6.7, z: 4.85, w: 1.5, d: 1.0, h: 2.35 };
 
 // The largest picture each wall can carry, [maxW, maxH] in metres. Pictures are
 // contain-fitted inside these, so one dimension always lands on the envelope and
@@ -53,9 +68,11 @@ export const LIFT = { x: 6.7, z: 4.35, w: 1.5, d: 1.5, h: 2.35, deckCut: 3.3 };
 //           capped by the upper panel's moulding (outer 2.45), which bites
 //           before the pier abacus at y 6.94 does.
 //   end   — the widest wall in the room and the one you face on arrival. The
-//           only obstruction is the x 2.4 archivolt, whose jamb ends at x 3.335;
-//           the back gallery run overhead sets the same 3.94 ceiling as the
-//           lower side walls.
+//           only obstruction is the x 2.4 archivolt, whose jamb ends at x 3.335.
+//           This wall is now clear to the cornice — the gallery run that used to
+//           cross it has moved to the near wall — so the 2.45 ceiling is a hang
+//           decision rather than a structural one. Growing it would break the
+//           band these two read as with the lower side walls; left as it is.
 const ENVELOPE = { lower: [2.30, 2.45], upper: [2.10, 2.05], end: [2.40, 2.45] };
 
 export function buildRococoRoom(scene, opts = {}) {
@@ -414,8 +431,14 @@ function buildEndWall(M, perMetre, uv1) {
   for (const x of DOOR_X) paneFor(x, 1.45, 2.25, 4.85);
   g.add(glassGroup);
 
+  // Daylight behind the glazing, and the brightest thing in the hall. It is
+  // MeshBasicMaterial with `toneMapped: false`, so this colour reaches the
+  // frame exactly as written — no ACES rolloff pulling it back, and no light
+  // falloff with distance. At 0xeaf1f7 the glazing read as a lightbox and the
+  // two pictures flanking it at x ±5.35 lost their darks against it. This is
+  // still plainly daylight, a stop or so down.
   const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(16, 12), new THREE.MeshBasicMaterial({
-    color: 0xeaf1f7, toneMapped: false,
+    color: 0xd2dfea, toneMapped: false,
   }));
   backdrop.position.set(0, 4, z0 - 1.4);
   backdrop.name = 'daylight-backdrop';
@@ -536,45 +559,77 @@ function buildPanels(M, perMetre) {
 function buildGalleryLevel(M, perMetre, uv1) {
   const g = new THREE.Group(); g.name = 'gallery-level';
   const { x0, x1, z0, z1, galleryY: Y, gallerySlab: S, galleryDepth: DP } = ROOM;
+  // Each run is a slab described by its plan rectangle, plus — where it has an
+  // open edge over the room — a fascia and a balustrade along that edge. The
+  // three are given separately rather than derived from one another: the near
+  // run's slab stops at the lift shaft, its fascia stops where the east run
+  // starts backing onto it, and its balustrade stops a bay short of both side
+  // runs so the corners can be walked. Nothing here should be inferred.
+  const RAIL_Z = z1 - DP;                  // the near run's open edge
+  const RAIL_X0 = x0 + DP, RAIL_X1 = x1 - DP;   // the side runs' open edges
+  const SHAFT_X = LIFT.x - LIFT.w / 2;     // where the lift comes up through the deck
+  const LEDGE_D = Math.max(0, (LIFT.z - LIFT.d / 2) - RAIL_Z);
   const runs = [
-    // balLen trims each balustrade to the walkable span: the back run stops at
-    // the corner squares so the side runs can be reached, and the east run
-    // stops with its deck at the lift. The fascia keeps the full slab edge.
-    { len: x1 - x0, w: DP, x: 0, z: z0 + DP / 2, rot: 0, railZ: z0 + DP, railLen: x1 - x0, railRot: 0, balLen: (x1 - x0) - 2 * DP },
-    { len: z1 - z0 - DP, w: DP, x: x0 + DP / 2, z: (z0 + DP + z1) / 2, rot: 0, railX: x0 + DP, railLen: z1 - z0 - DP, railRot: Math.PI / 2 },
-    { len: z1 - z0 - DP, w: DP, x: x1 - DP / 2, z: (z0 + DP + LIFT.deckCut) / 2, rot: 0, railX: x1 - DP, railLen: z1 - z0 - DP, railRot: Math.PI / 2, deckLen: LIFT.deckCut - (z0 + DP), balLen: LIFT.deckCut - (z0 + DP), fasciaLen: LIFT.deckCut - z0 - 0.5, fasciaZ: (z0 + 0.5 + LIFT.deckCut) / 2 },
+    // near run (the wall you come in through), open edge facing the room
+    {
+      x0, x1: SHAFT_X, z0: RAIL_Z, z1,
+      fascia: { len: RAIL_X1 - x0, x: (x0 + RAIL_X1) / 2, z: RAIL_Z, rot: 0 },
+      bal: { len: RAIL_X1 - RAIL_X0, x: 0, z: RAIL_Z, rot: 0 },
+    },
+    // the lift landing: a shallower ledge in front of the cab's open side. The
+    // east run adjoins it to the north and the shaft guard closes its back, so
+    // it has no open edge and takes neither fascia nor balustrade.
+    { x0: SHAFT_X, x1, z0: RAIL_Z, z1: RAIL_Z + LEDGE_D },
+    // west run
+    {
+      x0, x1: RAIL_X0, z0, z1: RAIL_Z,
+      fascia: { len: RAIL_Z - z0, x: RAIL_X0, z: (z0 + RAIL_Z) / 2, rot: Math.PI / 2 },
+      bal: { len: RAIL_Z - z0, x: RAIL_X0, z: (z0 + RAIL_Z) / 2, rot: Math.PI / 2 },
+    },
+    // east run
+    {
+      x0: RAIL_X1, x1, z0, z1: RAIL_Z,
+      fascia: { len: RAIL_Z - z0, x: RAIL_X1, z: (z0 + RAIL_Z) / 2, rot: Math.PI / 2 },
+      bal: { len: RAIL_Z - z0, x: RAIL_X1, z: (z0 + RAIL_Z) / 2, rot: Math.PI / 2 },
+    },
   ];
   for (const r of runs) {
-    const isBack = r.railZ !== undefined;
-    const sw = isBack ? r.len : r.w;
-    const sd = isBack ? r.w : (r.deckLen ?? (z1 - z0 - DP));
+    const sw = r.x1 - r.x0, sd = r.z1 - r.z0;
+    if (sw <= 0 || sd <= 0) continue;    // a lift deep enough to fill the corner leaves no ledge
+    const cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2;
     const slab = new THREE.Mesh(uv1(new THREE.BoxGeometry(sw, S, sd)), perMetre(M.plasterWarm, 1, 1));
-    slab.position.set(r.x, Y - S / 2, r.z);
+    slab.position.set(cx, Y - S / 2, cz);
     slab.castShadow = true; slab.receiveShadow = true;
     g.add(slab);
     // walking surface
     const deck = new THREE.Mesh(uv1(new THREE.PlaneGeometry(sw, sd)), perMetre(M.parquet, 0.62, 0.62));
-    deck.rotation.x = -Math.PI / 2; deck.position.set(r.x, Y + 0.002, r.z);
+    deck.rotation.x = -Math.PI / 2; deck.position.set(cx, Y + 0.002, cz);
     deck.receiveShadow = true; g.add(deck);
     // moulded soffit edge
-    const fx = isBack ? r.x : r.railX;
-    const fz = isBack ? r.railZ : r.z;
-    const fLen = r.railLen;
-    const fRot = r.railRot;
-    const fascia = new THREE.Mesh(new THREE.BoxGeometry(r.fasciaLen ?? fLen, S + 0.14, 0.16), perMetre(M.egg, 1, 1));
-    fascia.position.set(fx, Y - S / 2, r.fasciaZ ?? fz);
-    fascia.rotation.y = fRot; fascia.castShadow = true;
-    g.add(fascia);
-    // balustrade
-    g.add(balustrade(M, r.balLen ?? fLen, fx, Y, fz, fRot));
+    if (r.fascia) {
+      const f = new THREE.Mesh(new THREE.BoxGeometry(r.fascia.len, S + 0.14, 0.16), perMetre(M.egg, 1, 1));
+      f.position.set(r.fascia.x, Y - S / 2, r.fascia.z);
+      f.rotation.y = r.fascia.rot; f.castShadow = true;
+      g.add(f);
+    }
+    if (r.bal) g.add(balustrade(M, r.bal.len, r.bal.x, Y, r.bal.z, r.bal.rot));
   }
   return g;
 }
 
+// A run's open edge. `y` is the deck it stands on; everything below is measured
+// from there.
+//
+// H is the handrail height, and it is set low on purpose. What you look at from
+// this gallery is not just the pictures opposite but the turning table on the
+// floor below, and at the old 1.02 the rail cut that line off unless you leaned.
+// At 0.82 the top of the bead sits about 1.1 m under standing eye level, so the
+// table reads from anywhere on the run. The balusters are scaled to suit rather
+// than left at their old length, or they would stand proud of the rail.
 function balustrade(M, len, x, y, z, rot) {
   const g = new THREE.Group();
   g.position.set(x, y, z); g.rotation.y = rot;
-  const H = 1.02;
+  const H = 0.82;
   const plinth = new THREE.Mesh(new THREE.BoxGeometry(len, 0.16, 0.26), M.marble);
   plinth.position.y = 0.08; plinth.castShadow = true; plinth.receiveShadow = true;
   g.add(plinth);
@@ -583,13 +638,17 @@ function balustrade(M, len, x, y, z, rot) {
   const bead = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.34), M.giltDeep);
   bead.position.y = H + 0.085; bead.castShadow = true; g.add(bead);
 
-  // turned baluster profile
+  // Turned baluster profile, drawn at its authored height and then squeezed to
+  // whatever gap the plinth and the rail actually leave, so the turning keeps
+  // its proportions and the top still lands inside the handrail.
+  const PROF_H = 0.86;
+  const k = (H - 0.16) / PROF_H;
   const prof = [];
-  const add = (r, y2) => prof.push(new THREE.Vector2(r, y2));
+  const add = (r, y2) => prof.push(new THREE.Vector2(r, y2 * k));
   add(0.001, 0); add(0.085, 0); add(0.085, 0.05); add(0.062, 0.08);
   add(0.052, 0.14); add(0.075, 0.22); add(0.088, 0.32); add(0.082, 0.44);
   add(0.055, 0.54); add(0.038, 0.60); add(0.048, 0.66); add(0.040, 0.72);
-  add(0.030, 0.78); add(0.052, 0.82); add(0.052, 0.86); add(0.001, 0.86);
+  add(0.030, 0.78); add(0.052, 0.82); add(0.052, PROF_H); add(0.001, PROF_H);
   const geo = new THREE.LatheGeometry(prof, 20);
   const count = Math.max(6, Math.round(len / 0.32));
   const inst = new THREE.InstancedMesh(geo, M.marble, count);
@@ -643,7 +702,11 @@ function buildFrame(M, w, h, index, art = null, aniso = 8, maxEdge = 0) {
   const artMat = new THREE.MeshStandardMaterial({
     map: art ? null : placeholderArt(index, 512, Math.round(512 * h / w)),
     color: art ? 0x3a3129 : 0xffffff,
-    roughness: 0.52, metalness: 0, envMapIntensity: 0.5,
+    // The hall is lit far more by the HDR environment than by any of its own
+    // lamps, and a canvas is the one surface here that should read as pigment
+    // rather than as a polished thing catching the sky. Taking its share of the
+    // environment down is what keeps the works by the glazing from going pale.
+    roughness: 0.52, metalness: 0, envMapIntensity: 0.34,
   });
   const canvas = new THREE.Mesh(new THREE.PlaneGeometry(w, h), artMat);
   canvas.position.z = 0.05;
@@ -809,15 +872,19 @@ function buildSouthWall(M, perMetre, uv1) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(wd, ht, dp), M.gilt);
     m.position.set(x, y, z); m.castShadow = true; g.add(m); return m;
   };
-  // door architrave, keystone, overdoor cartouche
+  // Door architrave and keystone. There is no overdoor cartouche: the gallery
+  // now runs along this wall, and its slab soffit comes down to
+  // galleryY - gallerySlab = 3.94, leaving only 0.34 m of wall above the door
+  // head at 3.6. A 1.45 m cartouche in that gap would be sliced in half by the
+  // deck, and there is nowhere else on this wall for it to go. The keystone is
+  // kept but stopped under the soffit.
   const dr = SOUTH_DOOR.w / 2, dh = SOUTH_DOOR.h;
+  const soffit = ROOM.galleryY - ROOM.gallerySlab;
   const arch = new THREE.Mesh(new THREE.TorusGeometry(dr + 0.09, 0.09, 10, 44, Math.PI), M.gilt);
   arch.position.set(0, dh - dr, z1 - 0.02); arch.rotation.z = Math.PI; arch.castShadow = true; g.add(arch);
   for (const sx of [-1, 1]) gilt(0.18, dh - dr, 0.18, sx * (dr + 0.09), (dh - dr) / 2, z1 - 0.02);
-  gilt(0.3, 0.46, 0.22, 0, dh + 0.14, z1 - 0.04);
-  const crest = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 1.45), M.ornCartouche);
-  crest.position.set(0, dh + 0.92, z1 - 0.06); crest.rotation.y = Math.PI;
-  g.add(crest);
+  const keyH = Math.max(0.12, (soffit - 0.03) - (dh - 0.09));
+  gilt(0.3, keyH, 0.22, 0, dh - 0.09 + keyH / 2, z1 - 0.04);
 
   // door leaves — walnut with gilt mouldings, shut
   const oak = new THREE.MeshStandardMaterial({ color: 0x513322, roughness: 0.45, metalness: 0.05, envMapIntensity: 0.8 });
@@ -876,14 +943,19 @@ function buildElevator(M) {
   });
   const brass = new THREE.MeshStandardMaterial({ color: 0xd8b169, roughness: 0.28, metalness: 1, envMapIntensity: 1.6 });
 
-  // shaft: two guide columns against the wall, with a moulded head beam
+  // Shaft: two guide columns behind the cab, with a moulded head beam. They are
+  // kept INSIDE the shaft's own footprint — the gallery deck now comes right up
+  // to the cab, so a column set outside the cage would spear straight through
+  // the walkway, and a head beam wider than the cage would hang at eye height
+  // over it.
+  const shaftZ = z + d / 2 + 0.08;
   for (const sx of [-1, 1]) {
     const col = new THREE.Mesh(new THREE.BoxGeometry(0.13, top + 1.7, 0.13), M.gilt);
-    col.position.set(x + sx * (w / 2 + 0.05), (top + 1.7) / 2, z + d / 2 + 0.08);
+    col.position.set(x + sx * (w / 2 - 0.1), (top + 1.7) / 2, shaftZ);
     col.castShadow = true; g.add(col);
   }
-  const head = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 0.2, 0.34), M.gilt);
-  head.position.set(x, top + 1.72, z + d / 2 + 0.08); head.castShadow = true; g.add(head);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, 0.34), M.gilt);
+  head.position.set(x, top + 1.72, shaftZ); head.castShadow = true; g.add(head);
   const pulley = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.035, 10, 24), M.gilt);
   pulley.position.set(x, top + 1.55, z); pulley.rotation.y = Math.PI / 2; g.add(pulley);
 
@@ -952,11 +1024,8 @@ function buildElevator(M) {
 
   cab.position.set(x, 0, z);
 
-  // marble sill bridging the gap between the gallery deck's end and the cab's
-  // open side, so stepping in at the top isn't a stride over fresh air
-  const sill = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.36), M.marble);
-  sill.position.set(x, top - 0.06, z - d / 2 - 0.15);
-  sill.receiveShadow = true; g.add(sill);
+  // No sill at the top any more: the gallery's landing ledge runs right up to
+  // the cab's open side, so the deck and the cab floor meet flush.
 
   const lift = {
     group: g, cab, buttons, y: 0, target: 0, bottom: 0, top, moving: false, chime: 0,
@@ -965,9 +1034,20 @@ function buildElevator(M) {
       this.target = Math.abs(this.y - this.bottom) < 0.02 ? this.top : this.bottom;
       this.moving = true;
     },
-    inside(p) {
-      return Math.abs(p.x - x) < w / 2 - 0.12 && Math.abs(p.z - z) < d / 2 - 0.12
-        && p.y - this.y > -0.4 && p.y - this.y < h + 1.2;
+    // The cab's marble floor plate, in world height. js/main.js's ground
+    // function returns this for anyone over the footprint — that is the whole
+    // mechanism by which the car carries you.
+    get floorY() { return this.y + 0.1; },
+    // Over the floor plate in plan. The one definition of the cab's footprint:
+    // js/main.js samples ground through it, so the ground the visitor stands on
+    // and the platform they are judged to be riding can never disagree.
+    overFloor(px, pz) {
+      return Math.abs(px - x) < w / 2 && Math.abs(pz - z) < d / 2;
+    },
+    // Actually standing ON the platform — over it AND carried by it, rather
+    // than on the deck alongside a car that happens to be parked below.
+    standingOn(px, pz, groundY) {
+      return this.overFloor(px, pz) && Math.abs(groundY - this.floorY) < 0.2;
     },
     update(dt) {
       if (!this.moving) return 0;
@@ -982,20 +1062,27 @@ function buildElevator(M) {
     },
   };
   // Pressing either plate just calls the car — Interaction.activate expects
-  // `userData.lift.open()`, the same contract as the other lift panels.
-  for (const b of buttons) b.userData.lift = { label: 'ride the lift', open: () => lift.call() };
+  // `userData.lift.open()`, the same contract as the other lift panels. The
+  // same action is handed to Interaction as a standing action while the visitor
+  // is on the platform (see js/main.js), so the car answers from anywhere in
+  // the cab at either level without having to find a 38 mm button first.
+  lift.callAction = { label: 'ride the lift', open: () => lift.call() };
+  for (const b of buttons) b.userData.lift = lift.callAction;
   return lift;
 }
 
 function buildLights(scene, group, M, tier) {
   const out = { flames: [], candleLights: [], t: 0 };
 
-  const hemi = new THREE.HemisphereLight(0xd8e6f2, 0x8a6a4e, 0.55);
+  // The hall is lit for the pictures, not for the daylight. The works flanking
+  // the end-wall glazing take the most sky, so the daylight terms are held back
+  // and the chandelier and sconces carry the room instead.
+  const hemi = new THREE.HemisphereLight(0xd8e6f2, 0x8a6a4e, 0.48);
   scene.add(hemi);
   out.hemi = hemi;
 
   // daylight raking in through the end-wall glazing
-  const sun = new THREE.DirectionalLight(0xfff2dc, 3.2);
+  const sun = new THREE.DirectionalLight(0xfff2dc, 2.4);
   sun.position.set(-3.5, 9, -18);
   sun.target.position.set(1.5, 1.2, 3);
   sun.castShadow = true;

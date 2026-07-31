@@ -2,8 +2,13 @@
 // THE RESIDENCY HANG
 //
 // Erin Carle's two series, hung in the upper residency halls:
-//   fall26  → Rococo Hall  (js/world/rococo.js — 10 gilt frames)
-//   spring1 → Nouveau Hall (js/world/nouveau.js — 8 mahogany bays)
+//   Fall Series   → Rococo Hall  (js/world/rococo.js — 10 gilt frames)
+//   Spring Series → Nouveau Hall (js/world/nouveau.js — 8 mahogany bays)
+//
+// The series NAMES below are display text — they show in the info panel's meta
+// line (js/ui/UI.js) and in the curator's blurbs (data/residencies.js). The
+// asset folders keep their original `fall26` / `spring1` spelling; renaming the
+// label is not a reason to move the files.
 //
 // Array POSITION is the slot index in that hall's `slots[]`. A null entry
 // leaves the frame's generated placeholder canvas alone.
@@ -17,31 +22,34 @@
 //
 // `title` follows each uploaded file name verbatim, spelling and all.
 // `year` / `medium` / `description` are editable placeholders — fill them in
-// per piece, and point `buyUrl` at the work's page on minicuration.com.
+// per piece. The residency works carry no `buyUrl`: the info panel hides its
+// collect button and fineprint for any piece without one (js/ui/UI.js), so
+// these read as `Inquire` and nothing else.
 // ============================================================================
 
 const ARTIST = 'Erin Carle';
-const BUY = 'https://minicuration.com/';
+const FALL = 'Fall Series';
+const SPRING = 'Spring Series';
 
 const fall = (id, title, file, px) => ({
-  id, title, artist: ARTIST, series: 'fall26',
-  year: '', medium: '', price: 'Inquire', buyUrl: BUY,
+  id, title, artist: ARTIST, series: FALL,
+  year: '', medium: '', price: 'Inquire',
   image: `assets/art/erin-carle/fall26/${file}`,
   px,
-  description: `From Erin Carle's fall26 series, in residence in the Rococo Hall.`,
+  description: `From Erin Carle's ${FALL}, in residence in the Rococo Hall.`,
 });
 
-// `extra` carries per-piece exceptions — currently only `wide`, below.
+// `extra` carries per-piece exceptions — currently `wide` and `outline`, below.
 const spring = (id, title, file, px, extra) => ({
-  id, title, artist: ARTIST, series: 'spring1',
-  year: '', medium: '', price: 'Inquire', buyUrl: BUY,
+  id, title, artist: ARTIST, series: SPRING,
+  year: '', medium: '', price: 'Inquire',
   image: `assets/art/erin-carle/spring1/${file}`,
   px,
-  description: `From Erin Carle's spring1 series, in residence in the Nouveau Hall.`,
+  description: `From Erin Carle's ${SPRING}, in residence in the Nouveau Hall.`,
   ...extra,
 });
 
-// --- Rococo Hall: all ten of fall26 -----------------------------------------
+// --- Rococo Hall: all ten of the Fall Series --------------------------------
 // Slot order is the order rococo.js hangs them: west wall lower (z −1.775 then
 // +1.775), west upper, east lower, east upper, then the two end-wall slots.
 //
@@ -67,7 +75,7 @@ export const ROCOCO_HANG = [
   /* 9 end wall */ fall('ec-american-layers', 'American Layers', 'American Layers.webp', [2048, 1755]),
 ];
 
-// --- Nouveau Hall: seven of spring1 -----------------------------------------
+// --- Nouveau Hall: seven of the Spring Series -------------------------------
 // Eight bays, seven works, so exactly one keeps its generated canvas: bay 1,
 // immediately right of the portal, where a gap reads least. The works then run
 // unbroken from bay 2 all the way round to bay 8.
@@ -98,15 +106,42 @@ export const NOUVEAU_HANG = [
 ];
 
 // --- Rococo Hall, the table -------------------------------------------------
-// Not a wall slot. 'Into Bloom' lies flat on the turning stone table in the
-// middle of the hall (js/world/rococo-plinth.js), so you walk round it rather
-// than stand in front of it.
+// Not a wall slot. 'Into Bloom' lies flat on the turning table in the middle of
+// the hall (js/world/rococo-plinth.js), so you walk round it rather than stand
+// in front of it.
 //
-// The source is a rectangular photograph with no alpha, so the extruded panel
-// takes its own edges. Give this entry an `outline` — normalised [x, y] points,
-// same convention as `outline` in data/artworks.js — and the table's panel is
-// cut to that silhouette instead.
+// The work itself is a round shaped panel, but the source file is a rectangular
+// photograph of it on a white ground and carries no alpha. Without an `outline`
+// the extrusion takes the photograph's edges and the white ground becomes table
+// top. So the silhouette is given explicitly: normalised [x, y] fractions of the
+// source image, x right and y DOWN, same convention as `outline` in
+// data/artworks.js. The panel is cut to this, and it is what the table is sized
+// from — see PLINTH.diameter in js/world/rococo-plinth.js.
+//
+// Traced from the file at 48 even angles about the painted centre (0.5006,
+// 0.4998), stopping at the last painted pixel and stepping 3 px back inside it
+// so no white fringe survives the cut. The panel is a hand-cut round, not a
+// machined disc: radii run 681–763 px, up to 2.7% off a true ellipse, and the
+// trace keeps that. Re-trace if the file is ever replaced.
+const INTO_BLOOM_OUTLINE = [
+  [0.9807, 0.4998], [0.9785, 0.5484], [0.9662, 0.5962], [0.9442, 0.6417],
+  [0.9164, 0.6853], [0.8765, 0.7227], [0.8308, 0.7549], [0.7790, 0.7802],
+  [0.7280, 0.8042], [0.6711, 0.8178], [0.6151, 0.8299], [0.5574, 0.8333],
+  [0.5006, 0.8323], [0.4444, 0.8299], [0.3888, 0.8224], [0.3328, 0.8128],
+  [0.2805, 0.7945], [0.2280, 0.7744], [0.1799, 0.7477], [0.1368, 0.7156],
+  [0.0980, 0.6794], [0.0653, 0.6392], [0.0418, 0.5948], [0.0246, 0.5482],
+  [0.0199, 0.4998], [0.0227, 0.4511], [0.0357, 0.4035], [0.0571, 0.3578],
+  [0.0876, 0.3154], [0.1268, 0.2780], [0.1710, 0.2450], [0.2207, 0.2177],
+  [0.2738, 0.1961], [0.3292, 0.1799], [0.3858, 0.1687], [0.4438, 0.1662],
+  [0.5006, 0.1658], [0.5572, 0.1677], [0.6131, 0.1752], [0.6675, 0.1885],
+  [0.7202, 0.2059], [0.7710, 0.2274], [0.8160, 0.2560], [0.8620, 0.2854],
+  [0.8984, 0.3223], [0.9325, 0.3615], [0.9552, 0.4056], [0.9741, 0.4516],
+];
+
 export const INTO_BLOOM = spring(
   'ec-into-bloom', 'Into Bloom', 'Into Bloom.webp', [1583, 2048],
-  { description: `From Erin Carle's spring1 series, laid flat on the table at the centre of the Rococo Hall.` },
+  {
+    outline: INTO_BLOOM_OUTLINE,
+    description: `From Erin Carle's ${SPRING}, laid flat on the table at the centre of the Rococo Hall.`,
+  },
 );

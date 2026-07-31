@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ARTWORKS } from '../../data/artworks.js';
 import { SLOTS } from '../world/layout.js';
 import { generatePainting } from './placeholder.js';
+import { bboxOf } from './fit.js';
 import { queueUpload } from '../utils/texqueue.js';
 
 // Hangs the collection: frame + canvas + brass placard per manifest entry.
@@ -132,16 +133,6 @@ function addBar(list, bw, bh, depth, pos, n, yaw, ox, oy) {
   const g = new THREE.BoxGeometry(bw, bh, depth);
   orient(g, pos, n, yaw, ox, oy, depth / 2);
   list.push(g);
-}
-
-// bounding box [x0,y0,x1,y1] of a list of [x,y] outline points.
-function bboxOf(outline) {
-  let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
-  for (const [x, y] of outline) {
-    x0 = Math.min(x0, x); y0 = Math.min(y0, y);
-    x1 = Math.max(x1, x); y1 = Math.max(y1, y);
-  }
-  return [x0, y0, x1, y1];
 }
 
 // Trace a rectilinear frame along the artwork's opaque silhouette. Outline

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
-  leadedGlassMaterial, mosaicFloorMaterial, mahoganyMaterial, brassMaterial, ironMaterial,
+  leadedGlassMaterial, mosaicFloorMaterial, mahoganyMaterial, brassMaterial,
   opalMaterial, friezeMaterial, inlayMaterial, stuccoMaterial, greenMarbleMaterial, nouveauArt,
 } from './nouveau-surfaces.js';
 import { fitToSlot } from '../art/fit.js';
@@ -111,7 +111,6 @@ export function buildNouveauRoom(scene, opts = {}) {
     mahoganyFine: Object.assign(mahoganyMaterial([3, 3]), { roughness: 0.42, envMapIntensity: 0.75 }),
     brass: brassMaterial(6),
     brassDeep: brassMaterial(11, { rough: 0.3 }),
-    iron: ironMaterial(),
     opal: opalMaterial(1.1),
     frieze: friezeMaterial(1),
     inlay: inlayMaterial(0.26, 4),
@@ -278,10 +277,11 @@ export function buildNouveauRoom(scene, opts = {}) {
   const lights = buildLights(scene, tier);
   group.add(buildVestibule(M, lights));
   group.add(buildPendant(M, lights));
-  for (let k = 0; k < 4; k++) {
-    const az = Math.PI / 4 + (k * Math.PI) / 2;
-    group.add(buildTorchere(M, Math.sin(az) * 4.3, Math.cos(az) * 4.3, -az, lights));
-  }
+  // Four iron torchères used to stand on the diagonals at radius 4.3. They read
+  // as furniture but sat inside the walkable ring (r 5.0) with no colliders, so
+  // you walked through them — and two of them stood 5° off the centreline of
+  // bays 1 and 8, squarely in the spot you back into to look at a picture. The
+  // hall is better lit from the cove and the pendant than from the floor.
 
   mergeStatics(group, new Set());
 
@@ -758,55 +758,21 @@ function buildPendant(M, lights) {
     arm.add(collar);
     g.add(arm);
   }
-  const l = new THREE.PointLight(0xffe0b4, 16, 15, 2);
+  const l = new THREE.PointLight(0xffe0b4, 20, 15, 2);
   l.position.y = hub - 0.4;
   g.add(l);
-  lights.lamps.push({ light: l, base: 16 });
+  lights.lamps.push({ light: l, base: 20 });
   return g;
 }
 
-function buildTorchere(M, x, z, ry, lights) {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  g.rotation.y = ry;
-  const prof = [];
-  for (const [r, y] of [[0.001, 0], [0.16, 0.02], [0.13, 0.06], [0.05, 0.16], [0.038, 0.6],
-    [0.032, 1.1], [0.045, 1.42], [0.03, 1.56], [0.024, 1.74]]) prof.push(new THREE.Vector2(r, y));
-  const stem = new THREE.Mesh(new THREE.LatheGeometry(prof, 18), M.iron);
-  stem.castShadow = true; stem.receiveShadow = true;
-  g.add(stem);
-  for (let k = 0; k < 3; k++) {
-    const a = (k / 3) * Math.PI * 2;
-    const foot = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.022, 8, 18, Math.PI * 0.55), M.iron);
-    foot.position.set(Math.cos(a) * 0.12, 0.2, Math.sin(a) * 0.12);
-    foot.rotation.set(Math.PI / 2, 0, 0);
-    foot.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), a);
-    foot.rotateX(1.3);
-    foot.castShadow = true;
-    g.add(foot);
-    const curl = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.016, 6, 20, Math.PI * 0.8), M.iron);
-    curl.position.set(0, 0.95, 0);
-    curl.rotation.set(0, a, Math.PI * 0.1);
-    g.add(curl);
-  }
-  const cage = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.018, 6, 24), M.iron);
-  cage.position.y = 1.62; cage.rotation.x = Math.PI / 2; g.add(cage);
-  const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.13, 0.26, 28, 1, true), M.opal);
-  shade.position.y = 1.86;
-  g.add(shade);
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.42, 28), M.opal);
-  disc.position.y = 1.99; disc.rotation.x = Math.PI / 2;
-  g.add(disc);
-  const l = new THREE.PointLight(0xffd9a6, 5.5, 7.5, 2);
-  l.position.y = 1.9;
-  g.add(l);
-  lights.lamps.push({ light: l, base: 5.5 });
-  return g;
-}
-
+// The four floor torchères used to carry 22 units of point light between them,
+// low down and close to the bays. With them gone the room would read a stop
+// darker than it was, so the terms that remain are opened up to cover it: the
+// hemisphere and the centre fill take most of it, and the pendant a little.
+// This is meant to be brightness-neutral, not a relight.
 function buildLights(scene, tier) {
   const out = { lamps: [], t: 0, lampScale: 1 };
-  const hemi = new THREE.HemisphereLight(0xdfe8dd, 0x4c4a34, 0.34);
+  const hemi = new THREE.HemisphereLight(0xdfe8dd, 0x4c4a34, 0.42);
   scene.add(hemi);
   out.hemi = hemi;
 
@@ -821,7 +787,7 @@ function buildLights(scene, tier) {
   scene.add(sun, sun.target);
   out.sun = sun;
 
-  const fill = new THREE.PointLight(0xd9e0bd, 1.8, 18, 2);
+  const fill = new THREE.PointLight(0xd9e0bd, 4.5, 18, 2);
   fill.position.set(0, 1.2, 0);
   scene.add(fill);
   out.fill = fill;

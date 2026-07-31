@@ -222,25 +222,43 @@ const ROOM_FACTORIES = {
     const door = returnDoor(0, 1.25, ROCOCO.z1 - 0.14, Math.PI);
     const el = room.elevator;
     const G = ROCOCO.galleryY;
-    // Cab footprint (a whisker inside the cage rails), then the three gallery
-    // deck strips. prevY gates keep the ground floor and the deck from
-    // capturing each other: you only resolve to a height you're already near.
+    // Every deck number below is derived from the room, not written out: the
+    // gallery's depth is a thing you tune (js/world/rococo.js), and hand-copied
+    // literals here drifted from it the moment it moved.
+    const { x0, x1, z0, z1, galleryDepth: DP } = ROCOCO;
+    const RAIL_Z = z1 - DP;                       // the near run's balustrade line
+    const RAIL_X0 = x0 + DP, RAIL_X1 = x1 - DP;   // the side runs' balustrade lines
+    const WALL = 0.15;                            // deck keep-in, clear of the wall face
+    // Half the gilt bead's depth. The balustrade colliders sit on the rail's
+    // VOID-side face rather than its centreline, so the visitor's body finishes
+    // over the rail the way it would if they leaned on it, instead of stopping a
+    // player-radius short of it. That 0.17 m is what decides whether the table
+    // on the floor below is visible over the rail or cut off by it: at eye
+    // height the sight line clears the bead by a wide enough margin to take in
+    // the whole disc, and 0.17 further back it does not. Nothing to clip
+    // against — the rail top is 0.72 m below the eye.
+    const LEAN = 0.17;
+    // Cab footprint (a whisker inside the cage rails). prevY gates keep the
+    // ground floor and the deck from capturing each other: you only resolve to a
+    // height you're already near.
     const CABX0 = ROCOCO_LIFT.x - ROCOCO_LIFT.w / 2, CABX1 = ROCOCO_LIFT.x + ROCOCO_LIFT.w / 2;
     const CABZ0 = ROCOCO_LIFT.z - ROCOCO_LIFT.d / 2, CABZ1 = ROCOCO_LIFT.z + ROCOCO_LIFT.d / 2;
-    // The cab's open side faces the deck. When the car isn't parked at the top
-    // that opening is a hole, so this segment closes it — the frame loop flips
-    // its level out of range whenever the cab is actually there to step into.
+    // The cab's open side faces the landing ledge. When the car isn't parked at
+    // the top that opening is a hole down the shaft, so this segment closes it —
+    // the frame loop flips its level out of range whenever the cab is there.
     const shaftGuard = seg(CABX0, CABZ0, CABX1, CABZ0, G);
     el.shaftGuard = shaftGuard;
     const ground = (x, z, prevY) => {
-      if (x > CABX0 && x < CABX1 && z > CABZ0 && z < CABZ1) {
-        const fy = el.y + 0.1;                  // the cab's marble floor plate
+      if (el.overFloor(x, z)) {
+        const fy = el.floorY;                   // the cab's marble floor plate
         if (Math.abs(prevY - fy) < 0.8) return fy;
       }
       if (prevY > 2.2) {
-        if (z > -5.5 && z < -3.9 && x > -7.5 && x < 7.5) return G;   // north run
-        if (x > -7.5 && x < -5.9 && z > -3.9 && z < 5.5) return G;   // west run
-        if (x > 5.9 && x < 7.5 && z > -3.9 && z < CABZ0 + 0.02) return G; // east run + sill
+        // near run, up to the shaft; then the ledge in front of the cab
+        if (z > RAIL_Z && z < z1 && x > x0 && x < CABX0) return G;
+        if (z > RAIL_Z && z < CABZ0 && x >= CABX0 && x < x1) return G;
+        if (x > x0 && x < RAIL_X0 && z > z0 && z < RAIL_Z) return G;   // west run
+        if (x > RAIL_X1 && x < x1 && z > z0 && z < RAIL_Z) return G;   // east run
       }
       return 0;
     };
@@ -253,27 +271,36 @@ const ROOM_FACTORIES = {
           // ground-floor keep-in, opened where the floor meets the lift cage
           seg(-6.9, -4.9, 6.9, -4.9, 0),
           seg(-6.9, -4.9, -6.9, 4.9, 0),
-          seg(-6.9, 4.9, CABX0, 4.9, 0),           // south, stops at the cage
+          seg(-6.9, 4.9, CABX0, 4.9, 0),           // near wall, stops at the cage
           seg(6.9, -4.9, 6.9, CABZ0 - 0.25, 0),    // east, stops short of the cage
           seg(6.9, CABZ0 - 0.25, CABX1, CABZ0 - 0.25, 0),
           // the cage itself: glazed east/west/south sides, open to the north
           seg(CABX0, CABZ0, CABX0, CABZ1),
           seg(CABX1, CABZ0, CABX1, CABZ1),
           seg(CABX0, CABZ1, CABX1, CABZ1),
-          // gallery deck at 4.3: perimeter walls…
-          seg(-7.35, -5.35, 7.35, -5.35, G),
-          seg(-7.35, -5.35, -7.35, 5.35, G),
-          seg(-7.35, 5.35, -5.9, 5.35, G),
-          seg(7.35, -5.35, 7.35, CABZ0, G),
+          // Gallery deck perimeter. It stands off the wall by WALL so the
+          // visitor cannot walk into the upper pictures — their frames project
+          // about 0.13 m off the wall face, so a line flush with the wall let
+          // you push your face through the canvas.
+          seg(x0 + WALL, z0 + WALL, x1 - WALL, z0 + WALL, G),
+          seg(x0 + WALL, z0 + WALL, x0 + WALL, z1 - WALL, G),
+          seg(x0 + WALL, z1 - WALL, x1 - WALL, z1 - WALL, G),
+          seg(x1 - WALL, z0 + WALL, x1 - WALL, z1 - WALL, G),
           // …and the balustrade edges nobody should step over
-          seg(-5.9, -3.9, 5.9, -3.9, G),
-          seg(-5.9, -3.9, -5.9, 5.35, G),
-          seg(5.9, -3.9, 5.9, ROCOCO_LIFT.deckCut, G),
-          seg(5.9, ROCOCO_LIFT.deckCut, 5.9, CABZ0, G),  // sill's open west edge
+          // The near run's rail stops at each side run's rail line, exactly as
+          // the balustrade does — beyond it the deck turns the corner and the
+          // east run is directly across, so there is nothing to fall off and
+          // nothing to block. That corner is the only way round to the lift.
+          seg(RAIL_X0, RAIL_Z - LEAN, RAIL_X1, RAIL_Z - LEAN, G),
+          seg(RAIL_X0 + LEAN, z0 + WALL, RAIL_X0 + LEAN, RAIL_Z, G),  // west run
+          seg(RAIL_X1 - LEAN, z0 + WALL, RAIL_X1 - LEAN, RAIL_Z, G),  // east run
           shaftGuard,
-          // the table at the centre: an octagon around the corner the panel
-          // sweeps as it turns, so a rectangle spinning inside it never clips
-          ...ringSegments(PLINTH.x, PLINTH.z, room.plinth.reach + 0.08, 8, 0),
+          // the table at the centre: a ring around the farthest point the panel
+          // sweeps as it turns, so nothing spinning inside it ever clips. The
+          // top is a round panel roughly 1.9 m across, so the barrier is walked
+          // along rather than met head-on — 16 segments, not 8, or the flats
+          // read as corners.
+          ...ringSegments(PLINTH.x, PLINTH.z, room.plinth.reach + 0.08, 16, 0),
         ],
         ground,
         background: new THREE.Color(0xdfeaf4),
@@ -429,6 +456,17 @@ renderer.setAnimationLoop(() => {
     if (glassLift.shaftGuard) {
       glassLift.shaftGuard.level = glassLift.y > glassLift.top - 0.05 ? -99 : ROCOCO.galleryY;
     }
+    // Standing in the cab calls the car without having to find a button — at
+    // the bottom it goes up, at the top it comes back down (lift.call() is a
+    // toggle). Uses the ground height the player actually resolved to, so it
+    // only fires for someone the platform is carrying.
+    interaction.setStanding(
+      glassLift.standingOn(player.position.x, player.position.z, player.walkY)
+        ? glassLift.callAction
+        : null,
+    );
+  } else {
+    interaction.setStanding(null);
   }
 
   // Behind a blurred full-screen overlay the gallery is barely visible; render
