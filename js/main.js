@@ -368,15 +368,19 @@ const ROOM_FACTORIES = {
   brutalist: () => {
     const room = buildBrutalistRoom(scene, { tier, ...artOpts, art: BRUTALIST_HANG });
     const lights = setupBrutalistLighting(scene, renderer, tier);
-    // The city the pool looks over. Same builder as the gallery's north view,
-    // yawed a quarter turn the other way so the skyline lies out along +X, past
-    // the terrace's infinity edge. `fog` is global and the gallery already set
+    // The city both openings look over. Same builder as the gallery's north
+    // view, yawed a quarter turn the other way so the skyline lies out along +X,
+    // past the pool's infinity edge. `fog` is global and the gallery already set
     // it; the sun matches setupBrutalistLighting's, or the daylight would arrive
     // from two quarters at once.
     const city = buildCityView(scene, renderer, {
       name: 'city-brutalism', seed: 5150, yaw: -Math.PI / 2, fog: false,
       sunPosition: BX_SUN, nearProps: tier.name !== 'low',
     });
+    // The skyline was authored around a 4.4 m eye. It's read from the level-1
+    // window at 6 m and from the pool at 13 m, so lift it to keep the near
+    // rooftops near the horizon rather than all of them underfoot.
+    city.group.position.y = 5.5;
     // South wall by the spawn, facing back up the hall.
     const door = returnDoor(2.6, 1.35, BX.z1 - 0.14, Math.PI);
     return {

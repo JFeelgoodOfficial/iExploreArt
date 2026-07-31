@@ -17,11 +17,13 @@ import { mulberry32 } from '../../utils/proctex.js';
 //   level 1 → level 2  north wall
 //   level 2 → level 3  east wall
 //
-// Level 3 is not a ring. It is a glass floor over the whole void: you stand on
-// it, under the skylight slot, and look 13 m straight down.
+// Level 3 is not a ring like the others. The glass over the void carries a foot
+// of water — you walk the concrete round it and look down through the pool,
+// under the skylight slot, 13 m to the floor. The water runs out through the
+// east wall and off a cantilevered infinity edge over the city.
 //
-// The level-1 east wall is missing over its northern half — the hall walks out
-// there onto a terrace with an infinity pool and the city under it.
+// The same bay is glazed two storeys lower, at level 1: the city is a window
+// there, not a door. Nothing on the east face is walk-through at any level.
 //
 // Local coordinates, centred: x −13…13, z −17…17, y up. Metres.
 //
@@ -57,14 +59,27 @@ export const STAIRS = [
   { id: 'S3', axis: 'z', wall: 'e', x0: 10.6, x1: 13, a: -9.0, b: 2.6, y0: 8.8, y1: 13.2, steps: 24 },
 ];
 
-// The terrace: level 1 walks straight out of the missing east wall.
-export const COURT = { x0: 13, x1: 25.4, z0: -17, z1: -9.0, y: 4.4, slab: 0.5, parapet: 1.05 };
-// The pool starts INSIDE. It is cut into the level-1 plate at x 9.6, runs out
-// through the missing wall, and finishes at the building edge — so you swim (or
-// at least stand) under the concrete before the water goes over the city. Its
-// tank hangs below the plate into the ground-floor storey, where the soffit of
-// it is visible from underneath.
-export const POOL = { x0: 9.6, xWall: 13, x1: COURT.x1, z0: -16.2, z1: -10.2, depth: 1.2, drop: 0.07 };
+// The one bay the east face gives up to the city. Everything that opens
+// eastward opens here: a glazed slot at level 1, and an open one at level 3
+// with the pool running out through it. Two storeys apart in the same bay, so
+// the elevation reads as one move rather than two.
+export const BAY = { z0: -16.2, z1: -10.2 };
+// Level-1 window: a punched slot with 0.75 m of upstand under it, so you see
+// the city and not your own feet.
+export const WIN = { sill: 5.15, head: 7.9, mullion: 0.28 };
+// The sky pool. A foot of water lying on the level-3 glass — you look down
+// through it, thirteen metres to the ground floor — that runs out through the
+// bay and off a cantilevered infinity edge above the city. The level-3 slab is
+// 0.45 deep with its top at 13.2, so its own edge face IS the pool wall; the
+// glass just drops far enough to leave the water somewhere to sit.
+export const SKY = {
+  depth: 0.30,                   // one foot
+  drop: 0.05,                    // surface below the level-3 deck
+  bedY: 12.85,                   // top of the pool bottom: 13.2 − drop − depth
+  outX: 21.0,                    // the infinity edge
+  slotTop: 15.4,                 // head of the level-3 wall opening
+  coping: 0.16,                  // curb round the inboard edge, so the fence is visible
+};
 
 // Freestanding fin on the ground floor, the only object in the room.
 export const FIN = { x0: -3.4, x1: 3.4, z: 6.5, t: 0.55, h: 5.4 };
@@ -273,26 +288,19 @@ export function buildBrutalistRoom(scene, opts = {}) {
   g.add(box(T, H, D + T * 2, surfaceMat(D, H, 4201), BX.x0 - T / 2, H / 2 - 0.6, 0, 'bx-wall-w'));
   g.add(box(W + T * 2, H, T, surfaceMat(W, H, 4202), 0, H / 2 - 0.6, BX.z1 + T / 2, 'bx-wall-s'));
   g.add(box(W + T * 2, H, T, surfaceMat(W, H, 4203), 0, H / 2 - 0.6, BX.z0 - T / 2, 'bx-wall-n'));
-  // East: full height south of the terrace; north of it the level-1 storey is
-  // simply not there, so the wall is built in two pieces around the opening.
-  const eFull = BX.z1 + T - COURT.z1;
-  g.add(box(T, H, eFull, surfaceMat(eFull, H, 4204), BX.x1 + T / 2, H / 2 - 0.6, (COURT.z1 + BX.z1 + T) / 2, 'bx-wall-e'));
-  const openD = COURT.z1 - (BX.z0 - T);
-  const lowH = LEVELS[1] + 0.6;                 // ground storey, under the terrace
-  // …and where the pool crosses the wall line the low wall is cut too, so the
-  // water runs through in one piece.
-  const lowPieces = [[BX.z0 - T, POOL.z0], [POOL.z1, COURT.z1]];
-  for (const [z0, z1] of lowPieces) {
-    const d = z1 - z0;
-    if (d <= 0.01) continue;
-    g.add(box(T, lowH, d, surfaceMat(d, lowH, 4205 + Math.round(z0)), BX.x1 + T / 2, lowH / 2 - 0.6, (z0 + z1) / 2, 'bx-wall-e-low'));
-  }
-  // under the pool crossing, only the strip below the tank survives
-  const underH = LEVELS[1] - POOL.depth + 0.6 - 0.2;
-  g.add(box(T, underH, POOL.z1 - POOL.z0, surfaceMat(POOL.z1 - POOL.z0, underH, 4207),
-    BX.x1 + T / 2, underH / 2 - 0.6, (POOL.z0 + POOL.z1) / 2, 'bx-wall-e-under-pool'));
-  const upY = LEVELS[2], upH = H - 0.6 - upY;   // levels 2 and 3, over the opening
-  g.add(box(T, upH, openD, surfaceMat(openD, upH, 4206), BX.x1 + T / 2, upY + upH / 2, (BX.z0 - T + COURT.z1) / 2, 'bx-wall-e-up'));
+  // East: solid, except in the one bay, where two horizontal slots are cut
+  // through it — the level-1 window and the level-3 pool opening, stacked.
+  const eWall = (z0, z1, y0, y1, seed, name) => {
+    const d = z1 - z0, h = y1 - y0;
+    if (d <= 0.01 || h <= 0.01) return;
+    g.add(box(T, h, d, surfaceMat(d, h, seed), BX.x1 + T / 2, y0 + h / 2, (z0 + z1) / 2, name));
+  };
+  const eBot = -0.6, eTop = H - 0.6;
+  eWall(BAY.z1, BX.z1 + T, eBot, eTop, 4204, 'bx-wall-e-s');
+  eWall(BX.z0 - T, BAY.z0, eBot, eTop, 4205, 'bx-wall-e-n');
+  eWall(BAY.z0, BAY.z1, eBot, WIN.sill, 4206, 'bx-wall-e-bay-low');
+  eWall(BAY.z0, BAY.z1, WIN.head, SKY.bedY - 0.2, 4207, 'bx-wall-e-bay-mid');
+  eWall(BAY.z0, BAY.z1, SKY.slotTop, eTop, 4208, 'bx-wall-e-bay-top');
 
   // --- floor plates --------------------------------------------------------
   // Levels 1 and 2 are rings: four strips round the void, with a hole left in
@@ -313,10 +321,8 @@ export function buildBrutalistRoom(scene, opts = {}) {
   strip(BX.x0, VOID.z0, S1.x1, S1.b, LEVELS[1], 5101, 'bx-l1-w');             // the landing side
   strip(BX.x0, S1.a + 0.4, S1.x1, VOID.z1, LEVELS[1], 5102, 'bx-l1-w2');      // past the foot of it
   strip(S1.x1, VOID.z0, VOID.x0, VOID.z1, LEVELS[1], 5103, 'bx-l1-w3');        // the rest of the west walk
-  strip(VOID.x1, VOID.z0, POOL.x0, VOID.z1, LEVELS[1], 5104, 'bx-l1-e');
-  strip(POOL.x0, POOL.z1, BX.x1, VOID.z1, LEVELS[1], 5107, 'bx-l1-e2');   // south of the tank
-  strip(BX.x0, BX.z0, POOL.x0, VOID.z0, LEVELS[1], 5105, 'bx-l1-n');
-  strip(POOL.x0, BX.z0, BX.x1, POOL.z0, LEVELS[1], 5108, 'bx-l1-n2');     // north of the tank
+  strip(VOID.x1, VOID.z0, BX.x1, VOID.z1, LEVELS[1], 5104, 'bx-l1-e');
+  strip(BX.x0, BX.z0, BX.x1, VOID.z0, LEVELS[1], 5105, 'bx-l1-n');
   strip(BX.x0, VOID.z1, BX.x1, BX.z1, LEVELS[1], 5106, 'bx-l1-s');
 
   // level 2 — the hole is in the north strip this time
@@ -327,16 +333,20 @@ export function buildBrutalistRoom(scene, opts = {}) {
   strip(BX.x0, VOID.z0, VOID.x0, VOID.z1, LEVELS[2], 5205, 'bx-l2-w');
   strip(VOID.x1, VOID.z0, BX.x1, VOID.z1, LEVELS[2], 5206, 'bx-l2-e');
 
-  // level 3 — the concrete ring, with the east flight's hole in it…
-  strip(BX.x0, BX.z0, BX.x1, VOID.z0, LEVELS[3], 5301, 'bx-l3-n');
+  // level 3 — a ring like the others now: the east flight's hole in it, and the
+  // bay channel cut clean through to the wall so the water can leave. The bay
+  // clears the flight's arrival by 0.8 m, which is why it sits at this end.
+  strip(BX.x0, BX.z0, VOID.x1, VOID.z0, LEVELS[3], 5301, 'bx-l3-n');
+  strip(VOID.x1, BX.z0, BX.x1, BAY.z0, LEVELS[3], 5307, 'bx-l3-n2');     // north of the channel
   strip(BX.x0, VOID.z1, BX.x1, BX.z1, LEVELS[3], 5302, 'bx-l3-s');
   strip(BX.x0, VOID.z0, VOID.x0, VOID.z1, LEVELS[3], 5303, 'bx-l3-w');
-  strip(VOID.x1, VOID.z0, S3.x0, VOID.z1, LEVELS[3], 5304, 'bx-l3-e');
-  strip(S3.x0, VOID.z0, BX.x1, S3.a - 0.4, LEVELS[3], 5305, 'bx-l3-e2');
+  strip(VOID.x1, BAY.z1, S3.x0, VOID.z1, LEVELS[3], 5304, 'bx-l3-e');    // south of the channel
+  strip(S3.x0, BAY.z1, BX.x1, S3.a - 0.4, LEVELS[3], 5305, 'bx-l3-e2');
   strip(S3.x0, S3.b, BX.x1, VOID.z1, LEVELS[3], 5306, 'bx-l3-e3');
 
-  // …and the glass floor over the void. You walk on it, and the hall drops
-  // 13 m under your feet.
+  // …and the glass over the void, dropped far enough below the deck to hold a
+  // foot of water. It is the bed of the pool now, and the hall drops 13 m under
+  // it: you read the whole height of the room through the water.
   const glassMat = tier.glassTransmission === false
     ? new THREE.MeshStandardMaterial({
         color: 0xcfe0e2, transparent: true, opacity: 0.26,
@@ -347,19 +357,20 @@ export function buildBrutalistRoom(scene, opts = {}) {
         ior: 1.52, thickness: 0.05, transparent: true, side: THREE.DoubleSide,
       });
   const glass = new THREE.Mesh(new THREE.BoxGeometry(VOID.x1 - VOID.x0, 0.06, VOID.z1 - VOID.z0), glassMat);
-  glass.position.set(0, LEVELS[3] - 0.03, 0);
+  glass.position.set(0, SKY.bedY - 0.03, 0);
   glass.name = 'bx-glass-floor';
   glass.receiveShadow = false;
   g.add(glass);
 
   // Steel bearers under the glass on a 2.5 m grid — the thing that makes it
-  // read as a floor you can stand on rather than a hole with a tint.
+  // read as a held pane rather than a hole with a tint.
   const steel = new THREE.MeshStandardMaterial({ color: 0x35363a, roughness: 0.42, metalness: 0.8 });
+  const bearerY = SKY.bedY - 0.17;
   for (let x = VOID.x0 + 2.5; x < VOID.x1 - 0.1; x += 2.5) {
-    g.add(box(0.09, 0.22, VOID.z1 - VOID.z0, steel, x, LEVELS[3] - 0.17, 0, 'bx-bearer'));
+    g.add(box(0.09, 0.22, VOID.z1 - VOID.z0, steel, x, bearerY, 0, 'bx-bearer'));
   }
   for (let z = VOID.z0 + 2.5; z < VOID.z1 - 0.1; z += 2.5) {
-    g.add(box(VOID.x1 - VOID.x0, 0.22, 0.09, steel, 0, LEVELS[3] - 0.17, z, 'bx-bearer'));
+    g.add(box(VOID.x1 - VOID.x0, 0.22, 0.09, steel, 0, bearerY, z, 'bx-bearer'));
   }
 
   // --- void balustrades ----------------------------------------------------
@@ -455,75 +466,136 @@ export function buildBrutalistRoom(scene, opts = {}) {
     ? [[x, (BX.z0 + S.z0) / 2, 1, S.z0 - BX.z0], [x, (S.z1 + BX.z1) / 2, 1, BX.z1 - S.z1]]
     : [[x, 0, 1, D]]));
 
-  // --- the terrace, the pool, the edge -------------------------------------
-  const courtW = COURT.x1 - COURT.x0, courtD = COURT.z1 - COURT.z0;
-  const podium = box(courtW, COURT.y + 0.6, courtD, surfaceMat(courtW, COURT.y + 0.6, 8001, { tone: 164, roughness: 0.95 }),
-    (COURT.x0 + COURT.x1) / 2, (COURT.y + 0.6) / 2 - 0.6, (COURT.z0 + COURT.z1) / 2, 'bx-podium');
-  podium.castShadow = false;
-  g.add(podium);
+  // --- the level-1 window --------------------------------------------------
+  // Glazed in three lights between two concrete mullions, with the wall's own
+  // 0.5 m of thickness showing as reveals all round. Unlike the opening it
+  // replaces, you cannot walk through it.
+  const bayD = BAY.z1 - BAY.z0, winH = WIN.head - WIN.sill;
+  const revealMat1 = surfaceMat(bayD, 0.7, 8101, { tone: 196, roughness: 0.9 });
+  g.add(box(T, 0.06, bayD, revealMat1, BX.x1 + T / 2, WIN.sill + 0.03, (BAY.z0 + BAY.z1) / 2, 'bx-win-reveal-b'));
+  g.add(box(T, 0.06, bayD, revealMat1, BX.x1 + T / 2, WIN.head - 0.03, (BAY.z0 + BAY.z1) / 2, 'bx-win-reveal-t'));
 
-  const paveMat = surfaceMat(courtW, courtD, 8002, { tone: 190, roughness: 0.9 });
-  const pave = (x0, z0, x1, z1) => {
-    if (x1 - x0 <= 0.01 || z1 - z0 <= 0.01) return;
-    const m = box(x1 - x0, COURT.slab, z1 - z0, paveMat, (x0 + x1) / 2, COURT.y - COURT.slab / 2, (z0 + z1) / 2, 'bx-terrace');
-    m.castShadow = false;
-    g.add(m);
-  };
-  pave(COURT.x0, COURT.z0, COURT.x1, POOL.z0);
-  pave(COURT.x0, POOL.z1, COURT.x1, COURT.z1);
+  const glassFor = (name) => (tier.glassTransmission === false
+    ? new THREE.MeshStandardMaterial({
+        color: 0xcfe0e2, transparent: true, opacity: 0.2,
+        roughness: 0.08, metalness: 0.2, side: THREE.DoubleSide, depthWrite: false, name,
+      })
+    : new THREE.MeshPhysicalMaterial({
+        color: 0xe2eeee, transmission: 0.96, roughness: 0.05, metalness: 0,
+        ior: 1.52, thickness: 0.02, transparent: true, side: THREE.DoubleSide, name,
+      }));
 
-  // basin — open on the city side, its rim 70 mm under the surface. Pale blue
-  // tile, which is most of why pool water looks like pool water.
-  const tankMat = new THREE.MeshStandardMaterial({ color: 0x3f9ec6, roughness: 0.22 });
-  const basinY = COURT.y - POOL.depth;
-  g.add(box(POOL.x1 - POOL.x0, 0.2, POOL.z1 - POOL.z0, tankMat, (POOL.x0 + POOL.x1) / 2, basinY - 0.1, (POOL.z0 + POOL.z1) / 2, 'bx-pool-floor'));
-  const wallHt = COURT.y - POOL.drop - basinY;
-  const wallY = basinY + wallHt / 2;
-  g.add(box(0.18, wallHt, POOL.z1 - POOL.z0, tankMat, POOL.x0 + 0.09, wallY, (POOL.z0 + POOL.z1) / 2, 'bx-pool-w'));
-  g.add(box(POOL.x1 - POOL.x0, wallHt, 0.18, tankMat, (POOL.x0 + POOL.x1) / 2, wallY, POOL.z0 + 0.09, 'bx-pool-n'));
-  g.add(box(POOL.x1 - POOL.x0, wallHt, 0.18, tankMat, (POOL.x0 + POOL.x1) / 2, wallY, POOL.z1 - 0.09, 'bx-pool-s'));
+  const winGlass = glassFor('bx-win-glass');
+  const lights = 3;
+  for (let i = 0; i < lights; i++) {
+    const z0 = BAY.z0 + (bayD * i) / lights, z1 = BAY.z0 + (bayD * (i + 1)) / lights;
+    const inset = i === 0 ? 0 : WIN.mullion / 2, inset1 = i === lights - 1 ? 0 : WIN.mullion / 2;
+    const pane = new THREE.Mesh(
+      new THREE.PlaneGeometry(z1 - z0 - inset - inset1, winH), winGlass
+    );
+    pane.rotation.y = Math.PI / 2;
+    pane.position.set(BX.x1 + 0.06, WIN.sill + winH / 2, (z0 + inset + z1 - inset1) / 2);
+    pane.castShadow = false;
+    pane.name = 'bx-win-glass';
+    g.add(pane);
+    if (i < lights - 1) {
+      g.add(box(T, winH, WIN.mullion, revealMat1, BX.x1 + T / 2, WIN.sill + winH / 2, z1, 'bx-win-mullion'));
+    }
+  }
+  // a timber sill inside — the one warm thing in the hall, kept from the bench
+  // that used to sit on the terrace
+  const timber = new THREE.MeshStandardMaterial({ color: 0x8a5f37, roughness: 0.55 });
+  g.add(box(0.5, 0.14, bayD, timber, BX.x1 - 0.25, WIN.sill + 0.07, (BAY.z0 + BAY.z1) / 2, 'bx-win-sill'));
 
-  // The water itself. Physical, refracting, with two ripple normals crossing
-  // each other; the surface is subdivided so the environment does not smear
-  // across one enormous quad.
+  // --- the sky pool --------------------------------------------------------
+  // The void's glass is the bed; from VOID.x1 out it is cast concrete, running
+  // through the bay, through the wall, and out over the city on a cantilever
+  // with nothing under it.
+  const bedMat = new THREE.MeshStandardMaterial({ color: 0x3f9ec6, roughness: 0.22 });
+  const chanX0 = VOID.x1, chanX1 = SKY.outX;
+  g.add(box(chanX1 - chanX0, 0.2, bayD, bedMat, (chanX0 + chanX1) / 2, SKY.bedY - 0.1, (BAY.z0 + BAY.z1) / 2, 'bx-sky-bed'));
+  // the structure that carries it, and the soffit you read from below. Nothing
+  // holds the far end up: eight metres of cantilever, thirteen metres up.
+  const outW = chanX1 - BX.x1;
+  const shelfMat = surfaceMat(outW, bayD, 8201, { tone: 168, roughness: 0.95 });
+  const shelf = box(outW, 0.62, bayD + 0.5, shelfMat,
+    (BX.x1 + chanX1) / 2, SKY.bedY - 0.51, (BAY.z0 + BAY.z1) / 2, 'bx-sky-shelf');
+  shelf.castShadow = true;
+  g.add(shelf);
+  // Side upstands, flush with the deck, outside the wall only — indoors the cut
+  // face of the level-3 slab is already the channel's side. Nothing to the
+  // east: that is the edge.
+  const upMat = surfaceMat(outW, 0.55, 8202, { tone: 184 });
+  for (const z of [BAY.z0 - 0.125, BAY.z1 + 0.125]) {
+    g.add(box(outW, LEVELS[3] - SKY.bedY + 0.2, 0.25, upMat,
+      (BX.x1 + chanX1) / 2, (SKY.bedY - 0.2 + LEVELS[3]) / 2, z, 'bx-sky-upstand'));
+  }
+  // A low curb round the inboard edge of the pool. Without it the player walks
+  // into an invisible line at a water surface flush with the deck.
+  const copeMat = surfaceMat(24, SKY.coping, 8203, { tone: 188 });
+  const cope = (x0, z0, x1, z1, name) => g.add(box(
+    Math.max(0.18, x1 - x0), SKY.coping, Math.max(0.18, z1 - z0), copeMat,
+    (x0 + x1) / 2, LEVELS[3] + SKY.coping / 2, (z0 + z1) / 2, name));
+  cope(VOID.x0 - 0.18, VOID.z0 - 0.18, VOID.x0, VOID.z1 + 0.18, 'bx-cope-w');
+  cope(VOID.x0 - 0.18, VOID.z0 - 0.18, VOID.x1 + 0.18, VOID.z0, 'bx-cope-n');
+  cope(VOID.x0 - 0.18, VOID.z1, VOID.x1 + 0.18, VOID.z1 + 0.18, 'bx-cope-s');
+  // the east side is broken by the channel, so it comes in two pieces
+  cope(VOID.x1, VOID.z0 - 0.18, VOID.x1 + 0.18, BAY.z0, 'bx-cope-e');
+  cope(VOID.x1, BAY.z1, VOID.x1 + 0.18, VOID.z1 + 0.18, 'bx-cope-e2');
+  // …and along the channel itself, out to the wall
+  cope(VOID.x1, BAY.z0 - 0.18, BX.x1, BAY.z0, 'bx-cope-chan-n');
+  cope(VOID.x1, BAY.z1, BX.x1, BAY.z1 + 0.18, 'bx-cope-chan-s');
+
+  // The water. Physical, refracting, with two ripple normals crossing each
+  // other; the surface is subdivided so the environment does not smear across
+  // one enormous quad. Shallow, so it stays clear enough to read the 13 m drop
+  // through — which is the whole reason the glass is there.
+  // It comes in two sheets — the one over the void and the one running out
+  // through the bay — which meet in the open with no edge between them. So each
+  // gets its own copy of the ripple maps, repeated at the same metres-per-tile:
+  // one shared texture would tile per-sheet and the join would read as a seam.
   const rippleA = rippleNormal(256, 5);
   const rippleB = rippleNormal(256, 19);
-  const poolW = POOL.x1 - POOL.x0 + 0.06, poolD = POOL.z1 - POOL.z0;
-  rippleA.repeat.set(poolW / 2.2, poolD / 2.2);
-  rippleB.repeat.set(poolW / 3.7, poolD / 3.7);
-  const waterMat = new THREE.MeshPhysicalMaterial({
-    color: 0x1f7fa3,
-    roughness: 0.035,
-    metalness: 0,
-    transmission: tier.glassTransmission === false ? 0 : 0.78,
-    thickness: POOL.depth,
-    ior: 1.333,
-    attenuationColor: new THREE.Color(0x0d6a94),
-    attenuationDistance: 3.4,
-    clearcoat: 1,
-    clearcoatRoughness: 0.04,
-    clearcoatNormalMap: rippleB,
-    clearcoatNormalScale: new THREE.Vector2(0.35, 0.35),
-    normalMap: rippleA,
-    normalScale: new THREE.Vector2(0.22, 0.22),
-    transparent: tier.glassTransmission === false,
-    opacity: tier.glassTransmission === false ? 0.86 : 1,
-    envMapIntensity: 1.5,
-    side: THREE.DoubleSide,
-  });
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(poolW, poolD, 48, 32), waterMat);
-  water.rotation.x = -Math.PI / 2;
-  water.position.set((POOL.x0 + POOL.x1) / 2 + 0.03, COURT.y - POOL.drop + 0.012, (POOL.z0 + POOL.z1) / 2);
-  water.name = 'bx-water';
-  g.add(water);
+  const ripples = [];
+  const waterY = LEVELS[3] - SKY.drop;
+  const sheet = (x0, z0, x1, z1, dy, name) => {
+    const w = x1 - x0, d = z1 - z0;
+    const a = rippleA.clone(), b = rippleB.clone();
+    a.repeat.set(w / 2.2, d / 2.2);
+    b.repeat.set(w / 3.7, d / 3.7);
+    ripples.push(a, b);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d, 48, 32), new THREE.MeshPhysicalMaterial({
+      color: 0x53a8c4,
+      roughness: 0.035,
+      metalness: 0,
+      transmission: tier.glassTransmission === false ? 0 : 0.92,
+      thickness: SKY.depth,
+      ior: 1.333,
+      attenuationColor: new THREE.Color(0x2f8fb4),
+      attenuationDistance: 9,
+      clearcoat: 1,
+      clearcoatRoughness: 0.04,
+      clearcoatNormalMap: b,
+      clearcoatNormalScale: new THREE.Vector2(0.35, 0.35),
+      normalMap: a,
+      normalScale: new THREE.Vector2(0.22, 0.22),
+      transparent: true,
+      opacity: tier.glassTransmission === false ? 0.6 : 1,
+      envMapIntensity: 1.5,
+      side: THREE.DoubleSide,
+    }));
+    m.rotation.x = -Math.PI / 2;
+    m.position.set((x0 + x1) / 2, waterY + dy, (z0 + z1) / 2);
+    m.name = name;
+    g.add(m);
+    return m;
+  };
+  const water = sheet(VOID.x0, VOID.z0, VOID.x1, VOID.z1, 0, 'bx-water');
+  // dropped 2 mm and overlapped a little, so the join never z-fights
+  sheet(VOID.x1 - 0.06, BAY.z0, chanX1, BAY.z1, -0.002, 'bx-water-out');
 
-  // parapets: a blade to the north, a low upstand south, nothing to the east
-  const parMat = surfaceMat(courtW, 3.2, 8003, { tone: 186 });
-  g.add(box(courtW, 3.2, 0.4, parMat, (COURT.x0 + COURT.x1) / 2, COURT.y + 1.6, COURT.z0 + 0.2, 'bx-court-blade-n'));
-  g.add(box(courtW, COURT.parapet, 0.34, parMat, (COURT.x0 + COURT.x1) / 2, COURT.y + COURT.parapet / 2, COURT.z1 - 0.17, 'bx-court-parapet-s'));
-
-  const timber = new THREE.MeshStandardMaterial({ color: 0x8a5f37, roughness: 0.55 });
-  g.add(box(0.55, 0.42, 3.4, timber, COURT.x0 + 0.6, COURT.y + 0.21, -12.4, 'bx-court-bench'));
+  // the catch trough just under and beyond the lip — where the water is going
+  g.add(box(0.55, 0.5, bayD + 0.5, shelfMat, chanX1 + 0.275, SKY.bedY - 0.45, (BAY.z0 + BAY.z1) / 2, 'bx-sky-trough'));
 
   // --- the fin, monoliths, pods -------------------------------------------
   g.add(box(FIN.x1 - FIN.x0, FIN.h, FIN.t, surfaceMat(FIN.x1 - FIN.x0, FIN.h, 9001, { tone: 190 }),
@@ -582,18 +654,21 @@ export function buildBrutalistRoom(scene, opts = {}) {
   return {
     group: g, interactables, spawn: SPAWN, slots: SLOTS, water,
     update(dt) {
-      rippleA.offset.x += dt * 0.014;
-      rippleA.offset.y += dt * 0.009;
-      rippleB.offset.x -= dt * 0.008;
-      rippleB.offset.y += dt * 0.012;
+      // every sheet's pair drifts identically, so the two read as one body
+      for (let i = 0; i < ripples.length; i += 2) {
+        ripples[i].offset.x += dt * 0.014;
+        ripples[i].offset.y += dt * 0.009;
+        ripples[i + 1].offset.x -= dt * 0.008;
+        ripples[i + 1].offset.y += dt * 0.012;
+      }
     },
   };
 }
 
 // ---------------------------------------------------------------------------
-// Light. One sun over the city, low enough to come in through the missing
-// level-1 wall and rake the full height of the west wall; the slot drops a
-// second blade through the glass floor and all the way to the ground. Shadows
+// Light. One sun over the city, low enough to come in through the level-1
+// window and rake the full height of the west wall; the slot drops a second
+// blade through the pool and its glass, all the way to the ground. Shadows
 // bake once per entry (Lighting.js turns shadowMap.autoUpdate off).
 export function setupBrutalistLighting(scene, renderer, tier = {}) {
   const hemi = new THREE.HemisphereLight(0xd7dee4, 0x6d6357, 0.45);
@@ -642,13 +717,18 @@ export function setupBrutalistLighting(scene, renderer, tier = {}) {
   wash(-4.5, 18.2, -13.0, -4.5, 16.7, BX.z0 + 0.4, 30, 0.6);
   wash(10.0, 18.2, 6.0, BX.x1 - 0.3, 16.7, 6.0, 30, 0.6);
 
-  // bounce off the water and the pale terrace, back in through the opening
-  const courtBounce = new THREE.PointLight(0xbfd8dd, 45, 34, 2);
-  courtBounce.position.set(COURT.x0 + 3.0, COURT.y + 2.2, -13.0);
-  scene.add(courtBounce);
+  // bounce off the sky pool, back in through the level-3 opening
+  const poolBounce = new THREE.PointLight(0xbfd8dd, 45, 34, 2);
+  poolBounce.position.set(BX.x1 + 3.0, LEVELS[3] + 1.6, (BAY.z0 + BAY.z1) / 2);
+  scene.add(poolBounce);
+  // …and daylight standing in the level-1 window, so the glazed bay still reads
+  // as the room's other source now that it isn't a hole
+  const winBounce = new THREE.PointLight(0xcfe0e6, 22, 20, 2);
+  winBounce.position.set(BX.x1 - 1.4, (WIN.sill + WIN.head) / 2, (BAY.z0 + BAY.z1) / 2);
+  scene.add(winBounce);
 
   return {
-    hemi, sun, spots, shaft, under, courtBounce,
+    hemi, sun, spots, shaft, under, poolBounce, winBounce,
     bake: () => { renderer.shadowMap.needsUpdate = true; },
   };
 }
@@ -665,12 +745,7 @@ export function brutalistGround(x, z, prevY = 0) {
   if (prevY > LEVELS[3] - 1.6 && onLevel(3, x, z)) return LEVELS[3];
   if (prevY > LEVELS[2] - 1.6 && onLevel(2, x, z)) return LEVELS[2];
   if (prevY > LEVELS[1] - 1.6 && onLevel(1, x, z)) return LEVELS[1];
-  if (prevY > LEVELS[1] - 1.6 && inCourt(x, z)) return COURT.y;
   return 0;
-}
-
-export function inCourt(x, z) {
-  return x >= COURT.x0 && x <= COURT.x1 && z >= COURT.z0 && z <= COURT.z1;
 }
 
 function stairY(s, x, z) {
@@ -683,14 +758,14 @@ function stairY(s, x, z) {
   return s.y0 + (s.y1 - s.y0) * clamp01((x - s.a) / (s.b - s.a));
 }
 
-// A plate is the footprint minus the void (levels 1 and 2), minus the hole the
-// flight above arrives through.
+// A plate is the footprint minus the void, minus the hole the flight above
+// arrives through. Level 3 is a ring like the other two now: the water over the
+// void is not standable, and neither is the channel that carries it out.
 function onLevel(n, x, z) {
   if (x < BX.x0 || x > BX.x1 || z < BX.z0 || z > BX.z1) return false;
   const inVoid = x > VOID.x0 && x < VOID.x1 && z > VOID.z0 && z < VOID.z1;
   if (n === 1) {
     if (inVoid) return false;
-    if (x > POOL.x0 && x < BX.x1 && z > POOL.z0 && z < POOL.z1) return false;   // the tank
     const S1 = STAIRS[0];
     if (x <= S1.x1 && z > S1.b && z < S1.a + 0.4) return false;
     return true;
@@ -701,9 +776,11 @@ function onLevel(n, x, z) {
     if (z <= S2.z1 && x > S2.a - 0.4 && x < S2.b) return false;
     return true;
   }
+  if (inVoid) return false;                                     // the pool
+  if (x >= VOID.x1 && z > BAY.z0 && z < BAY.z1) return false;    // the channel out
   const S3 = STAIRS[2];
-  if (x >= S3.x0 && z > S3.a - 0.4 && z < S3.b) return false;   // the last hole
-  return true;                                                        // glass over the void
+  if (x >= S3.x0 && z > S3.a - 0.4 && z < S3.b) return false;    // the last hole
+  return true;
 }
 
 function clamp01(v) { return Math.min(1, Math.max(0, v)); }
@@ -730,15 +807,16 @@ export function brutalistSegments() {
   const c = [];
   const [S1, S2, S3] = STAIRS;
 
-  // perimeter. The east line is solid at every level except the terrace's.
+  // perimeter. The east line is solid at every level: the window is glazed and
+  // the pool's opening above it is water, not a way out.
   c.push(seg(BX.x0, BX.z0, BX.x1, BX.z0));
   c.push(seg(BX.x1, BX.z1, BX.x0, BX.z1));
   c.push(seg(BX.x0, BX.z1, BX.x0, BX.z0));
-  c.push(seg(BX.x1, COURT.z1, BX.x1, BX.z1));
-  for (const lv of [LEVELS[0], LEVELS[2], LEVELS[3]]) c.push(seg(BX.x1, BX.z0, BX.x1, COURT.z1, lv));
+  c.push(seg(BX.x1, BX.z0, BX.x1, BX.z1));
 
-  // void edges on levels 1 and 2 — you cannot step off a plate into the drop
-  for (const y of [LEVELS[1], LEVELS[2]]) {
+  // void edges on every ring — you cannot step off a plate into the drop, and
+  // on level 3 the same line keeps you out of the water
+  for (const y of [LEVELS[1], LEVELS[2], LEVELS[3]]) {
     c.push(seg(VOID.x0, VOID.z0, VOID.x0, VOID.z1, y));
     c.push(seg(VOID.x1, VOID.z0, VOID.x1, VOID.z1, y));
     c.push(seg(VOID.x0, VOID.z0, VOID.x1, VOID.z0, y));
@@ -758,12 +836,11 @@ export function brutalistSegments() {
   c.push(...rampGuard(S2.a, S2.z1, S2.b, S2.z1, S2.y0, S2.y1));
   c.push(...rampGuard(S3.x0, S3.a, S3.x0, S3.b, S3.y0, S3.y1));
 
-  // the terrace and its pool
-  c.push(seg(COURT.x0, COURT.z0, COURT.x1, COURT.z0, COURT.y));
-  c.push(seg(COURT.x0, COURT.z1, COURT.x1, COURT.z1, COURT.y));
-  c.push(seg(COURT.x1, COURT.z0, COURT.x1, COURT.z1, COURT.y));
-  c.push(...rect(POOL.x0, POOL.z0, POOL.x1, POOL.z1, COURT.y));
-  c.push(...rect(COURT.x0 + 0.3, -14.1, COURT.x0 + 0.9, -10.7, COURT.y));   // bench
+  // the channel the pool leaves through: both long sides, and its mouth north
+  // of where the void fence above already reaches
+  c.push(seg(VOID.x1, BAY.z0, BX.x1, BAY.z0, LEVELS[3]));
+  c.push(seg(VOID.x1, BAY.z1, BX.x1, BAY.z1, LEVELS[3]));
+  c.push(seg(VOID.x1, BAY.z0, VOID.x1, VOID.z0, LEVELS[3]));
 
   // ground-floor objects
   c.push(...rect(FIN.x0, FIN.z - FIN.t / 2, FIN.x1, FIN.z + FIN.t / 2, LEVELS[0]));
