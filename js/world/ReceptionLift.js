@@ -149,7 +149,7 @@ export function buildReceptionLift(scene, mats) {
       if (y >= targetY - 1e-4) {
         y = targetY; car.position.y = y;
         phase = 'arriving'; t = 0;
-        onVeil?.(true);
+        onVeil?.(true, dest);   // the residency, so the cover can name it
       }
       return;
     }

@@ -58,8 +58,20 @@ const WIN = { w: 1.8, sill: 0.95, spring: 2.4, apex: 3.35 };
 // source of truth for the player's floor: since the lift is the only way to
 // change storeys, the player's walking height always equals liftY, so the shaft
 // footprint is always flush with their level — no fall-through, even with the
-// hole cut through the ring slabs for the cabin to travel.
+// hole cut through the ring slabs for the cabin to travel. That holds because
+// the only control is the panel *inside* the cabin: an exterior call plate
+// would let the car leave a floor someone is standing on and open a shaft mouth
+// they could walk into, so adding one means adding colliders that toggle with
+// the car (the way main.js's shaftGuard does for the rococo lift).
 export const LIFT = { x0: -8.7, z0: -8.7, x1: -6.5, z1: -6.5 };
+// Cabin openings. Only two of the four faces front a hallway — South looks down
+// the West arm, East looks down the North arm — and both now carry a doorway,
+// so neither approach ends at the back of a box. `pier` is the post left in the
+// shared SE corner: without it the two openings merge into one wrapping void and
+// the car stops reading as a car. Geometry (buildLiftCabin) and colliders
+// (buildColliders) are both cut from these numbers so they cannot drift apart.
+// PLAYER.radius is 0.35, so a 1.2 m gap is a comfortable walk-through.
+const CABIN = { doorW: 1.2, pier: 0.30, H: 2.6, wallT: 0.08 };
 const LIFT_SPEED = 2.4;      // m/s cabin travel
 let liftY = 0;               // current cabin height (= player floor height)
 let liftTargetY = 0;         // requested floor height
@@ -716,36 +728,61 @@ function ringSlab(y) {
 
 // ---------------------------------------------------------------------------
 // Elevator cabin: a small wood-panelled car in the NW corner. It rides in Y
-// (set each frame to liftY). The back two sides sit against the perimeter walls
-// (already solid via the keep-in box); the East side is a solid wall carrying
-// the button panel, and the South side is a partial wall leaving a doorway.
+// (set each frame to liftY). The North and West sides back onto the perimeter
+// walls and stay solid (they're already sealed by the keep-in box anyway); the
+// South and East sides each front a hallway arm, so each carries a doorway —
+// a short back run against the perimeter, then a CABIN.doorW gap, then the
+// shared corner post. The gaps are headed so they read as doorways rather than
+// as walls someone forgot to build.
 function buildLiftCabin(M) {
   const g = new THREE.Group();
   g.name = 'liftCabin';
   const cx = (LIFT.x0 + LIFT.x1) / 2, cz = (LIFT.z0 + LIFT.z1) / 2;
-  const w = LIFT.x1 - LIFT.x0, d = LIFT.z1 - LIFT.z0, H = 2.6;
+  const w = LIFT.x1 - LIFT.x0, d = LIFT.z1 - LIFT.z0;
+  const { H, wallT: T, doorW, pier } = CABIN;
   const wall = M.woodDark, floorMat = M.stone;
+  // Where the back runs stop: the far edge of the doorway, measured back from
+  // the corner post. Mirrored on both faces, so one number serves each.
+  const backEnd = LIFT.x1 - doorW - pier;      // = LIFT.z1 - doorW - pier
+  const backLen = backEnd - LIFT.x0;
 
   const floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, d), floorMat);
   floor.position.set(cx, -0.06, cz); floor.receiveShadow = true; g.add(floor);
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), wall);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(w, T, d), wall);
   roof.position.set(cx, H, cz); g.add(roof);
-  const north = new THREE.Mesh(new THREE.BoxGeometry(w, H, 0.08), wall);
-  north.position.set(cx, H / 2, LIFT.z0 + 0.04); g.add(north);
-  const west = new THREE.Mesh(new THREE.BoxGeometry(0.08, H, d), wall);
-  west.position.set(LIFT.x0 + 0.04, H / 2, cz); g.add(west);
-  const east = new THREE.Mesh(new THREE.BoxGeometry(0.08, H, d), wall);
-  east.position.set(LIFT.x1 - 0.04, H / 2, cz); g.add(east);
-  const southW = new THREE.Mesh(new THREE.BoxGeometry(1.0, H, 0.08), wall);  // partial → doorway
-  southW.position.set(LIFT.x0 + 0.5, H / 2, LIFT.z1 - 0.04); g.add(southW);
+  const north = new THREE.Mesh(new THREE.BoxGeometry(w, H, T), wall);
+  north.position.set(cx, H / 2, LIFT.z0 + T / 2); g.add(north);
+  const west = new THREE.Mesh(new THREE.BoxGeometry(T, H, d), wall);
+  west.position.set(LIFT.x0 + T / 2, H / 2, cz); g.add(west);
 
-  // button panel on the East wall, facing into the cabin (-X)
+  // South face: back run against the West wall, then the doorway.
+  const southW = new THREE.Mesh(new THREE.BoxGeometry(backLen, H, T), wall);
+  southW.position.set(LIFT.x0 + backLen / 2, H / 2, LIFT.z1 - T / 2); g.add(southW);
+  // East face: the mirror of it, against the North wall.
+  const eastW = new THREE.Mesh(new THREE.BoxGeometry(T, H, backLen), wall);
+  eastW.position.set(LIFT.x1 - T / 2, H / 2, LIFT.z0 + backLen / 2); g.add(eastW);
+  // The post the two openings share. One box rather than two thin stubs, so
+  // there are no coplanar faces to z-fight in the corner.
+  const post = new THREE.Mesh(new THREE.BoxGeometry(pier, H, pier), wall);
+  post.position.set(LIFT.x1 - pier / 2, H / 2, LIFT.z1 - pier / 2);
+  post.castShadow = true; g.add(post);
+
+  // Headers over both openings, carried on the post at one end and the back run
+  // at the other.
+  const hdrH = 0.18, hdrY = H - hdrH / 2;
+  const southH = new THREE.Mesh(new THREE.BoxGeometry(doorW, hdrH, T), wall);
+  southH.position.set(backEnd + doorW / 2, hdrY, LIFT.z1 - T / 2); g.add(southH);
+  const eastH = new THREE.Mesh(new THREE.BoxGeometry(T, hdrH, doorW), wall);
+  eastH.position.set(LIFT.x1 - T / 2, hdrY, backEnd + doorW / 2); g.add(eastH);
+
+  // Button panel on the North wall, facing into the cabin (+Z) — the East wall
+  // it used to sit on is a doorway now, and North is what you face walking in
+  // from the South arm.
   const panel = new THREE.Mesh(
     new THREE.PlaneGeometry(0.5, 0.92),
     new THREE.MeshStandardMaterial({ map: liftPanelTex(), roughness: 0.5, metalness: 0.1 })
   );
-  panel.position.set(LIFT.x1 - 0.09, 1.35, cz);
-  panel.rotation.y = -Math.PI / 2;
+  panel.position.set(cx, 1.35, LIFT.z0 + T + 0.01);
   panel.name = 'liftPanel';
   g.add(panel);
   g.userData.panel = panel;
@@ -994,11 +1031,16 @@ export function buildColliders() {
     add(-6 - b, -6, -6 + b, 6, lvl);           // W edge
   }
 
-  // elevator cabin: solid East wall + a partial South wall leaving a doorway on
-  // the +X end. The North & West sides are covered by the perimeter keep-in box.
-  // 'all' levels — the cabin is always at the player's floor (liftY invariant).
-  add(LIFT.x1 - 0.06, LIFT.z0, LIFT.x1 + 0.06, LIFT.z1, 'all');          // east wall
-  add(LIFT.x0, LIFT.z1 - 0.06, LIFT.x0 + 1.0, LIFT.z1 + 0.06, 'all');    // south wall (doorway past x0+1.0)
+  // Elevator cabin: the South and East faces each carry a back run and a
+  // doorway, sharing a post in the corner between them (see buildLiftCabin —
+  // same CABIN numbers, so the two can't drift). North & West are covered by
+  // the perimeter keep-in box. 'all' levels — the cabin is always at the
+  // player's floor (liftY invariant).
+  const t = 0.06;
+  const backEnd = LIFT.x1 - CABIN.doorW - CABIN.pier;   // = LIFT.z1 - doorW - pier
+  add(LIFT.x0, LIFT.z1 - t, backEnd, LIFT.z1 + t, 'all');                     // south back run
+  add(LIFT.x1 - t, LIFT.z0, LIFT.x1 + t, backEnd, 'all');                     // east back run
+  add(LIFT.x1 - CABIN.pier, LIFT.z1 - CABIN.pier, LIFT.x1 + t, LIFT.z1 + t, 'all');  // corner post
   return c;
 }
 

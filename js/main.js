@@ -232,7 +232,10 @@ const ROOM_FACTORIES = {
     // the lift set into the stair hall's west wall rides back to reception
     // (entering 'gallery' spawns you inside the reception cabin, doors open)
     const liftDoor = doorHitbox(1.6, 2.3, -4.1, 1.25, 8.5, Math.PI / 2, 'nouveau-lift-to-reception');
-    liftDoor.userData.door = { label: 'ride the lift to reception', onEnter: () => travelTo('gallery') };
+    liftDoor.userData.door = {
+      label: 'ride the lift to reception',
+      onEnter: () => travelTo('gallery', { lift: true, dest: 'Reception Hall', dir: 'down' }),
+    };
     scene.add(liftDoor);
     return {
       room,
@@ -367,22 +370,32 @@ async function ensureRoom(id) {
 }
 
 // A veiled hop between rooms for doors and lifts that don't ride the reception
-// cabin: fade to black, switch (building the destination if this is its first
-// visit), fade back. `travelling` gates re-entrant presses and freezes walking.
+// cabin: cover the screen, switch (building the destination if this is its first
+// visit), uncover. `travelling` gates re-entrant presses and freezes walking.
+//
+// `opts.lift` picks the cover: lift doors with the floors running past for a
+// ride, the plain fade for a doorway you walk through — an elevator door over
+// the arch between the Nouveau stair hall and the Rococo gallery would be a lie
+// about what just happened.
 let travelling = false;
-async function travelTo(id) {
+async function travelTo(id, opts = {}) {
   if (travelling) return;
   travelling = true;
+  const lifting = !!opts.lift;
   try {
-    ui.veil(true);
-    await new Promise((r) => setTimeout(r, 600));  // #veil's CSS fade is 0.5 s
+    if (lifting) ui.ride({ dest: opts.dest, dir: opts.dir });
+    else ui.veil(true);
+    // long enough for the cover to land: the veil's CSS fade is 0.5 s, the
+    // doors' slide 0.55 s.
+    await new Promise((r) => setTimeout(r, lifting ? 700 : 600));
     await ensureRoom(id);
     rooms.enter(id);
     if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
   } catch (e) {
     console.error('[travel] failed', e);
   } finally {
-    ui.veil(false);
+    if (lifting) ui.rideEnd();
+    else ui.veil(false);
     travelling = false;
   }
 }
@@ -416,8 +429,11 @@ rooms.define('courtyard', {
 rooms.start('gallery');
 
 // Reception lift: press E inside the cabin → pick a residency → it rides up and
-// arrives behind the veil.
-lift.onVeil = (on) => ui.veil(on);
+// arrives behind the doors. `instant`, because the cabin's own bronze leaves
+// have already shut in front of you — the overlay takes the ride over from
+// there rather than sliding a second pair of doors across the first.
+lift.onVeil = (on, dest) =>
+  (on ? ui.ride({ dest: dest && dest.name, dir: 'up', instant: true }) : ui.rideEnd());
 lift.onArrive = async (id) => {
   await ensureRoom(id);              // first visit: build it behind the veil
   rooms.enter(id);
@@ -442,7 +458,9 @@ cyLift.panel.userData.lift = {
   open: () => ui.openLift(
     ['★ Reception Hall', ...cyLift.labels],
     cyLift.currentIndex() + 1,
-    (i) => (i === 0 ? travelTo('gallery') : cyLift.selectFloor(i - 1))
+    (i) => (i === 0
+      ? travelTo('gallery', { lift: true, dest: 'Reception Hall', dir: 'down' })
+      : cyLift.selectFloor(i - 1))
   ),
 };
 

@@ -209,6 +209,128 @@ body.touch .desktop-hint { display: none; }
 }
 #veil.on { opacity: 1; }
 
+/* ---------- the ride: lift doors + the light of passing floors ----------- */
+/* Riding between halls used to be this same flat black rectangle, and on a
+   first visit to Nouveau or Rococo the room is BUILT behind it — several
+   seconds of synchronous work that pins the main thread (see main.js's
+   ensureRoom). So the wait reads as a stall rather than as a journey.
+
+   Two leaves shut over the old room, the light of each floor passes under the
+   door while the destination builds, then the leaves part on the new hall.
+   EVERY animated property here is transform or opacity, and nothing is driven
+   from JS — those run on the compositor, so the doors keep closing and the
+   floors keep passing straight through the build freeze. A rAF-driven overlay
+   would go rigid at exactly the moment it is most needed. */
+
+/* In ride mode the leaves do the covering, not the black fill: the fill would
+   hide the doors closing on the old room and opening on the new one, which is
+   the whole point. #ride fades in instead, so an already-shut ride (the
+   reception lift, whose real doors have closed in front of you already) still
+   arrives softly rather than snapping. */
+#veil.ride { background: transparent; opacity: 1; transition: none; }
+/* Set for one frame at the end of a ride so the veil's opacity is already 0 by
+   the time .ride comes off. Without it the black fill snaps back under a 1 → 0
+   transition and washes the new room for half a second. */
+#veil.ride.done { opacity: 0; }
+#ride { position: absolute; inset: 0; opacity: 0; overflow: hidden; }
+#veil.ride #ride { opacity: 1; transition: opacity 0.3s ease; }
+
+/* The shaft light and the readout belong behind a shut door, so they wait for
+   the leaves to land rather than glowing over the room you're leaving. On the
+   way out they fade as the leaves part. */
+.ride-inner { position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s ease; }
+#veil.ride.shut .ride-inner { opacity: 1; transition: opacity 0.35s ease 0.45s; }
+#veil.ride.instant .ride-inner { transition-delay: 0s; }
+
+/* 51% each so the pair overlaps at the seam — at 50% a sub-pixel rounding gap
+   opens down the middle and the scene shows through the closed door. */
+.leaf {
+  position: absolute; top: 0; bottom: 0; width: 51%;
+  will-change: transform;
+  background:
+    repeating-linear-gradient(100deg,
+      rgba(255, 255, 255, 0.035) 0 2px, rgba(0, 0, 0, 0.05) 2px 5px),
+    linear-gradient(96deg, #3a2b19 0%, #6f5233 38%, #8a6a42 52%, #5b4229 72%, #33261a 100%);
+  box-shadow: inset 0 -40px 60px -40px rgba(0, 0, 0, 0.85);
+}
+.leaf.left  { left: 0;  transform: translateX(-100%); border-right: 1px solid #a88b52; }
+.leaf.right { right: 0; transform: translateX(100%);  border-left:  1px solid #a88b52; }
+#veil.ride.shut .leaf { transform: translateX(0); }
+/* 0.55s matches VEIL_TIME in js/world/ReceptionLift.js, so the screen-space
+   doors and the cabin's real ones keep the same tempo. */
+#veil.ride .leaf { transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1); }
+/* Held for a single style flush when a ride starts already shut, so the leaves
+   land without sliding. It comes straight back off — the doors PARTING on the
+   new room is the moment worth keeping, and a permanent `transition: none`
+   would take it away too. */
+#veil.ride.noanim .leaf { transition: none; }
+
+/* The undercut: the sliver of shaft visible below the leaves. */
+.ride-shaft {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: clamp(11px, 2.4vh, 26px);
+  background: #070603; overflow: hidden;
+  box-shadow: 0 0 30px 8px rgba(255, 206, 122, 0.35);
+}
+/* A stack of light bands scrolled past the undercut by transform.
+   Every length here is a PERCENTAGE of this element, never a pixel: the strip
+   it shows through is barely a dozen pixels tall, and a gradient measured in px
+   would either fill it solid or never scroll a band into it at all. At 400%
+   tall with a 50% period, the strip frames half a period — so each floor
+   arrives as a distinct pulse with dark shaft between, and translating exactly
+   one period loops seamlessly at any viewport height. */
+.ride-lights {
+  position: absolute; left: 0; right: 0; top: 0; height: 400%;
+  will-change: transform;
+  background: repeating-linear-gradient(to bottom,
+    transparent 0 18%,
+    rgba(255, 214, 140, 0.85) 21%,
+    rgba(255, 248, 224, 1) 25%,
+    rgba(255, 214, 140, 0.85) 29%,
+    transparent 32% 50%);
+  animation: ridepass 1.15s linear infinite;
+}
+/* Light washing up the face of the door as each floor goes by. Screened, so it
+   adds light to the bronze instead of fogging it grey. */
+.ride-spill {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 26vh;
+  background: linear-gradient(to top, rgba(255, 206, 122, 0.85), transparent 88%);
+  mix-blend-mode: screen;
+  animation: ridespill 1.15s linear infinite;
+}
+/* Descending reads as descending. */
+#veil.ride.down .ride-lights { animation-direction: reverse; }
+
+@keyframes ridepass  { to { transform: translate3d(0, -50%, 0); } }
+@keyframes ridespill { 0%, 100% { opacity: 0.12; } 45% { opacity: 0.8; } }
+
+/* Where you're going, over the seam. The chevron keeps moving even while the
+   main thread is gone, so a long first build never looks frozen. */
+.ride-dest {
+  position: absolute; left: 0; right: 0; top: 50%; margin: 0;
+  transform: translateY(-50%);
+  text-align: center; font: 500 0.95rem "Inter", sans-serif;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(251, 248, 243, 0.82);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+}
+.ride-dest .chev {
+  display: block; margin-bottom: 0.55rem; font-size: 1.05rem; line-height: 1;
+  color: #f0c98a;
+  animation: ridechev 1.15s ease-in-out infinite;
+}
+#veil.ride.down .ride-dest .chev { transform: rotate(180deg); }
+@keyframes ridechev { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+
+/* Someone who has asked for less motion still needs the room swap covered —
+   they just get a crossfade behind a still door instead of a ride. */
+@media (prefers-reduced-motion: reduce) {
+  #veil.ride .leaf { transition: none; transform: translateX(0); }
+  #veil.ride.shut .ride-inner { transition-delay: 0s; }
+  .ride-lights, .ride-spill, .ride-dest .chev { animation: none; }
+  .ride-spill { opacity: 0.4; }
+}
+
 /* ---------- touch controls ---------- */
 #joystick {
   position: fixed; z-index: 15; width: 118px; height: 118px; border-radius: 50%;

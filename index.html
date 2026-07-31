@@ -98,8 +98,21 @@
     </div>
   </div>
 
-  <!-- Ride veil: the opaque wipe the lift arrives behind -->
-  <div id="veil" aria-hidden="true"></div>
+  <!-- Ride veil: the wipe the lift arrives behind. Plain, it is just the black
+       fill (doorways you walk through). In .ride mode the two leaves do the
+       covering and the strip under them runs the light of passing floors. -->
+  <div id="veil" aria-hidden="true">
+    <div id="ride">
+      <div class="leaf left"></div>
+      <div class="leaf right"></div>
+      <!-- everything that only makes sense once the leaves have landed -->
+      <div class="ride-inner">
+        <p class="ride-dest"><span class="chev">▲</span><span id="ride-dest"></span></p>
+        <div class="ride-spill"></div>
+        <div class="ride-shaft"><div class="ride-lights"></div></div>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>

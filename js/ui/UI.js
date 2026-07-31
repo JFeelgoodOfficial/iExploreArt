@@ -30,6 +30,7 @@ export class UI {
       liftText: document.getElementById('lift-text'),
       liftChoices: document.getElementById('lift-choices'),
       veil: document.getElementById('veil'),
+      rideDest: document.getElementById('ride-dest'),
     };
 
     document.getElementById('resume-btn').addEventListener('click', () => this._resume());
@@ -62,9 +63,63 @@ export class UI {
 
   showPause(show) { this.el.pause.hidden = !show; }
 
-  // Full-screen wipe used by the lift between rooms. A pure CSS transition —
-  // the caller times the room switch, so nothing here waits on transitionend.
+  // Full-screen wipe used between rooms, for doorways you walk through. A pure
+  // CSS transition — the caller times the room switch, so nothing here waits on
+  // transitionend.
   veil(on) { this.el.veil.classList.toggle('on', !!on); }
+
+  // The same wipe dressed as a lift ride: the leaves shut over the room you're
+  // leaving, the light of passing floors runs under the door while the
+  // destination is built, and the leaves part on the new hall.
+  //
+  // Everything after this call is CSS. It has to be: a first ride to Nouveau or
+  // Rococo builds the room synchronously behind the door (main.js ensureRoom),
+  // and the several seconds that takes belong to the main thread — a JS-driven
+  // overlay would freeze solid right where the wait is longest, which is the
+  // problem this replaced. Transform and opacity keep running on the compositor.
+  //
+  //   dest    — the name over the seam
+  //   dir     — 'up' | 'down', which way the floors go past
+  //   instant — skip the closing slide. The reception lift's own bronze leaves
+  //             have already shut in front of you by the time it veils, so
+  //             sliding a second pair over them reads as a stutter.
+  ride({ dest = '', dir = 'up', instant = false } = {}) {
+    const v = this.el.veil;
+    this.el.rideDest.textContent = dest;
+    clearTimeout(this._rideT);
+    v.classList.remove('up', 'down', 'instant', 'done', 'noanim');
+    v.classList.add('ride', dir);
+    if (instant) {
+      // Land shut without sliding, then hand the transition straight back so
+      // the leaves still part on arrival.
+      v.classList.add('instant', 'noanim', 'shut');
+      void v.offsetHeight;
+      v.classList.remove('noanim');
+    } else {
+      // Flush the open state first, or the leaves are born shut and there is
+      // nothing to animate. A reflush rather than a rAF: rAF is paced by the
+      // render loop, which on a slow machine is exactly where this is needed
+      // and exactly where frames are scarce.
+      void v.offsetHeight;
+      v.classList.add('shut');
+    }
+  }
+
+  rideEnd() {
+    const v = this.el.veil;
+    if (!v.classList.contains('ride')) return;
+    v.classList.remove('shut');            // the leaves part on the new room
+    clearTimeout(this._rideT);
+    this._rideT = setTimeout(() => {
+      // Blank it while still in ride mode (where the veil has no transition),
+      // then drop the classes a frame later, so the black fill never fades
+      // back in over the room that just arrived.
+      v.classList.add('done');
+      void v.offsetHeight;
+      v.classList.remove('ride', 'on', 'up', 'down', 'instant', 'noanim', 'done');
+    }, 620);                               // the 0.55 s slide, plus a margin
+  }
+
   _resume() { this.showPause(false); this.controls.lock(); }
 
   // true when a full-screen overlay (info/dialogue panel or the pause screen)
