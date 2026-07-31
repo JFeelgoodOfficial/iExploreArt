@@ -528,6 +528,18 @@ function buildStair(M, lights) {
   const rad = (i) => ((a0 + i * da) * Math.PI) / 180;
   const at = (r, a) => [cx + Math.cos(a) * r, cz + Math.sin(a) * r];
 
+  // Where the balustrade stops. It is NOT the top of the flight: the helix
+  // over-rotates past the landing, and carried the whole way (i = steps + 1,
+  // a = 65°) the rail reached x 2.58, z 11.30 — the doorway upstairs is centred
+  // on x 2.6, z 11.46 with a half-width of 0.71, so the handrail and the brass
+  // under-rail ran straight across the door panel. Stopping at i = steps - 2
+  // (a = 35°) puts the end at x 3.50, z 10.53: clear of the door in both axes,
+  // and east of the stair-head → door walking line (roughly x 2.0–3.3), so the
+  // terminal isn't standing in a path with no collider to keep you out of it.
+  // The last two treads are still walked — they are under the landing slab,
+  // which carries its own guarding.
+  const RAIL_END = steps - 2;
+
   for (let i = 0; i < steps; i++) {
     const a = rad(i), y = (i + 1) * rise;
     const [tx, tz] = at(rMid, a);
@@ -542,14 +554,15 @@ function buildStair(M, lights) {
     riser.rotation.y = -a;
     riser.receiveShadow = true;
     g.add(riser);
-    // baluster
+    // baluster — only under the run of rail that survives (see RAIL_END)
+    if (i > RAIL_END) continue;
     const [bx, bz] = at(rRail, a);
     const bal = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, 0.92, 8), M.brass);
     bal.position.set(bx, y + 0.46, bz);
     bal.castShadow = true;
     g.add(bal);
     // whiplash scroll between balusters, in the Horta manner
-    if (i < steps - 1) {
+    if (i < RAIL_END) {
       const scroll = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.012, 6, 18, Math.PI * 1.3), M.brass);
       scroll.position.set(bx, y + 0.3, bz);
       scroll.rotation.set(Math.PI / 2, 0, 0);
@@ -558,10 +571,10 @@ function buildStair(M, lights) {
       g.add(scroll);
     }
   }
-  // handrail and stringer as tubes along the helix
-  const curve = (r, dy) => {
+  // handrail and stringer as tubes along the helix, cut at RAIL_END
+  const curve = (r, dy, iEnd = RAIL_END) => {
     const pts = [];
-    for (let i = -1; i <= steps + 1; i++) {
+    for (let i = -1; i <= iEnd; i++) {
       const a = rad(i), y = Math.max(0, Math.min(steps, i + 1)) * rise + dy;
       const [px, pz] = at(r, a);
       pts.push(new THREE.Vector3(px, y, pz));
@@ -576,6 +589,24 @@ function buildStair(M, lights) {
   stringer.castShadow = true; g.add(stringer);
   const inner = new THREE.Mesh(new THREE.TubeGeometry(curve(rIn + 0.04, -0.16), 90, 0.08, 8, false), M.mahoganyFine);
   g.add(inner);
+
+  // The cut end, finished rather than sliced off: a newel dropped from the rail
+  // to the stringer and the same whiplash scroll the balusters carry, returned
+  // over the last tread so the flight's rail reads as ending on a flourish.
+  {
+    const aEnd = rad(RAIL_END);
+    const [ex, ez] = at(rRail, aEnd);
+    const yEnd = Math.min(steps, RAIL_END + 1) * rise;
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.036, 1.14, 10), M.brass);
+    post.position.set(ex, yEnd + 0.4, ez);
+    post.castShadow = true; g.add(post);
+    const volute = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.035, 8, 22, Math.PI * 1.5), M.mahoganyFine);
+    volute.position.set(ex, yEnd + 0.94, ez);
+    volute.rotation.set(Math.PI / 2, 0, 0);
+    volute.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), -aEnd);
+    volute.rotateX(1.1);
+    volute.castShadow = true; g.add(volute);
+  }
 
   // landing at the head of the flight
   const topY = steps * rise;
@@ -602,6 +633,21 @@ function buildStair(M, lights) {
     const bz = lz - 0.3 + (i / 4) * (backZ - 0.2 - (lz - 0.3));
     const bal = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, 0.92, 8), M.brass);
     bal.position.set(1.6, topY + 0.46, bz);
+    g.add(bal);
+  }
+  // …and along the landing's south edge, east of the flight. nouveauSegments()
+  // has guarded that drop since the landing was built (the seg at z 10.11,
+  // x 3.35 → 4.3) but nothing was ever drawn there. With the helix rail now
+  // stopping short of the door, this is also what the flight's rail hands off
+  // to — without it the balustrade simply stopped in mid-air.
+  const southZ = (lz - 0.5 + backZ) / 2 - (backZ - lz + 1.0) / 2;   // the slab's own south face
+  const southPts = [new THREE.Vector3(3.35, topY + 0.94, southZ), new THREE.Vector3(4.3, topY + 0.94, southZ)];
+  const southRail = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(southPts), 8, 0.035, 8, false), M.mahoganyFine);
+  southRail.castShadow = true; g.add(southRail);
+  for (let i = 0; i <= 3; i++) {
+    const bx = 3.35 + (i / 3) * (4.3 - 3.35);
+    const bal = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, 0.92, 8), M.brass);
+    bal.position.set(bx, topY + 0.46, southZ);
     g.add(bal);
   }
 
@@ -671,7 +717,12 @@ function buildFrame(M, w, h, index, art = null, aniso = 8, maxEdge = 0) {
   const artMat = new THREE.MeshStandardMaterial({
     map: art ? null : nouveauArt(index, 512, Math.round(512 * h / w)),
     color: art ? 0x322a22 : 0xffffff,
-    roughness: 0.55, metalness: 0, envMapIntensity: 0.55,
+    // A canvas is the one surface in here that should read as pigment rather
+    // than as a polished thing catching the dome. Its share of the environment
+    // is held well below the mahogany and brass around it for the same reason
+    // the rococo hall holds its canvases at 0.34 — it is what keeps the works
+    // on the sunlit bays from going pale.
+    roughness: 0.55, metalness: 0, envMapIntensity: 0.34,
   });
   const canvas = new THREE.Mesh(new THREE.PlaneGeometry(w, h), artMat);
   canvas.position.z = 0.045;
@@ -772,22 +823,33 @@ function buildPendant(M, lights) {
 // This is meant to be brightness-neutral, not a relight.
 function buildLights(scene, tier) {
   const out = { lamps: [], t: 0, lampScale: 1 };
-  const hemi = new THREE.HemisphereLight(0xdfe8dd, 0x4c4a34, 0.42);
+  const hemi = new THREE.HemisphereLight(0xdfe8dd, 0x4c4a34, 0.55);
   scene.add(hemi);
   out.hemi = hemi;
 
-  const sun = new THREE.DirectionalLight(0xffeed6, 1.55);
-  sun.position.set(-5.5, 15, -7);
-  sun.target.position.set(1, 1.2, 2);
+  // The sun used to stand at (-5.5, 15, -7) aimed at (1, 1.2, 2) — a beam whose
+  // horizontal direction was (0.586, 0.810), 16° off the normal of bay 5. That
+  // bay is the one hung `wide` (Dance of the Willis 3, data/residency-artworks.js),
+  // so the widest picture in the hall took the sun almost square on at 1.55, and
+  // it blew out white. Steeper and dimmer fixes it without relighting the room:
+  // aimed at the floor centre from further out and higher up, the horizontal
+  // share of the light vector drops from 0.63 of its length to 0.46, so what
+  // lands on any picture wall falls by about a quarter before the intensity cut
+  // even applies. The beam now rakes the mosaic and the dome, which is where it
+  // reads best anyway. What the walls lose, the hemisphere and the centre fill
+  // put back — this is meant to be brightness-neutral, like the torchère removal.
+  const sun = new THREE.DirectionalLight(0xffeed6, 0.95);
+  sun.position.set(-7, 22, -9);
+  sun.target.position.set(0, 0.4, 0);
   sun.castShadow = true;
   sun.shadow.mapSize.setScalar(tier.shadowSize || 1024);
   const c = sun.shadow.camera;
-  c.left = -10; c.right = 10; c.top = 10; c.bottom = -10; c.near = 4; c.far = 36;
+  c.left = -10; c.right = 10; c.top = 10; c.bottom = -10; c.near = 4; c.far = 44;
   sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
   scene.add(sun, sun.target);
   out.sun = sun;
 
-  const fill = new THREE.PointLight(0xd9e0bd, 4.5, 18, 2);
+  const fill = new THREE.PointLight(0xd9e0bd, 6, 18, 2);
   fill.position.set(0, 1.2, 0);
   scene.add(fill);
   out.fill = fill;

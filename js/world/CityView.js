@@ -3,31 +3,64 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { mulberry32 } from '../utils/proctex.js';
 
-// The view through the north window: a real 3D city, not a poster.
+// The view out of a window: a real 3D city, not a poster.
 // Near buildings give true parallax; scene fog supplies aerial perspective;
 // a facade shader draws window grids; birds and clouds keep it alive.
+//
+// The city is authored looking down −Z, which is where the gallery's north
+// window points. A second instance serves the courtyard room's west windows;
+// `opts` is what lets one builder cover both:
+//
+//   name         group name, so the two are tellable apart in the scene graph
+//   seed         PRNG seed — a different skyline for a different window
+//   yaw          rotates the whole city about Y. +π/2 swings the −Z spread onto
+//                −X, which is what a west-facing window looks at.
+//   fog          set scene.fog. Global and shared, so only the first caller
+//                should; the distances suit any room whose interior is under
+//                ~20 m across, which both of ours are.
+//   sky          add a Sky dome
+//   sunPosition  where that dome puts the sun. Match it to the room's own
+//                directional light or the daylight reads from two directions.
+//   nearProps    rooftop clutter (parapets, AC boxes, tanks). Off on the low
+//                tier for a second instance — it is the fiddliest geometry here
+//                and the least legible at distance.
+//
+// Everything is parented to `group`, INCLUDING the sky, so a caller wrapping
+// this in RoomManager.captureLayer gets a city that hides with its room.
 
 const HAZE = new THREE.Color(0xc6d2dc);
 
-export function buildCityView(scene, renderer) {
+export function buildCityView(scene, renderer, opts = {}) {
+  const {
+    name = 'city', seed = 4242, yaw = 0, fog = true, sky: wantSky = true,
+    sunPosition = new THREE.Vector3(-21, 30, 21), nearProps: wantNearProps = true,
+  } = opts;
+
   const group = new THREE.Group();
-  group.name = 'city';
+  group.name = name;
+  group.rotation.y = yaw;
 
   // --- atmosphere -----------------------------------------------------------
-  scene.fog = new THREE.Fog(HAZE, 55, 430);
+  if (fog) scene.fog = new THREE.Fog(HAZE, 55, 430);
 
-  const sky = new Sky();
-  sky.scale.setScalar(2000);
-  const su = sky.material.uniforms;
-  su.turbidity.value = 7;
-  su.rayleigh.value = 1.6;
-  su.mieCoefficient.value = 0.004;
-  su.mieDirectionalG.value = 0.8;
-  // matches the interior sun (high, from the south-west behind the gallery)
-  const sunDir = new THREE.Vector3(-21, 30, 21).normalize();
-  su.sunPosition.value.copy(sunDir);
-  scene.add(sky);
-  scene.background = null;
+  // The sun direction the caller asked for, expressed in the group's own frame
+  // so the sky still lights from the right quarter after `yaw` turns the city.
+  const sunDir = sunPosition.clone().normalize();
+  const localSunDir = sunDir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -yaw);
+  if (wantSky) {
+    const sky = new Sky();
+    sky.scale.setScalar(2000);
+    const su = sky.material.uniforms;
+    su.turbidity.value = 7;
+    su.rayleigh.value = 1.6;
+    su.mieCoefficient.value = 0.004;
+    su.mieDirectionalG.value = 0.8;
+    su.sunPosition.value.copy(localSunDir);
+    group.add(sky);
+    // Only the instance that owns the atmosphere clears the scene background;
+    // every other room sets its own through RoomManager on entry.
+    if (fog) scene.background = null;
+  }
 
   // --- facade material ------------------------------------------------------
   const facadeMat = new THREE.MeshLambertMaterial({ color: 0xcfc8ba });
@@ -35,7 +68,7 @@ export function buildCityView(scene, renderer) {
 
   const rooftopMat = new THREE.MeshLambertMaterial({ color: 0x8e8a82 });
 
-  const rand = mulberry32(4242);
+  const rand = mulberry32(seed);
 
   // --- near ring: hand-authored rooftops (25–70m out) — the parallax stars -
   const near = [];
@@ -51,6 +84,10 @@ export function buildCityView(scene, renderer) {
     { x: -14, z: -58, top: 12, w: 12, d: 12 },
     { x: 22, z: -70, top: 16, w: 15, d: 13 },
   ];
+  // The prop draws are made either way and only kept when wanted, so dropping
+  // them doesn't shift the PRNG under the tower rings that follow — the two
+  // tiers see the same skyline, one of them just without the clutter on it.
+  const keepProp = (g) => { if (wantNearProps) nearProps.push(g); return g; };
   for (const b of nearDefs) {
     const h = b.top + 45; // extend well below the visible horizon
     const g = new THREE.BoxGeometry(b.w, h, b.d);
@@ -58,27 +95,27 @@ export function buildCityView(scene, renderer) {
     near.push(g);
     // rooftop props: parapet, AC boxes, the occasional antenna/water tank
     const pw = 0.35;
-    nearProps.push(strip(b.x, b.top, b.z, b.w, b.d, pw));
+    keepProp(strip(b.x, b.top, b.z, b.w, b.d, pw));
     const nAC = 1 + Math.floor(rand() * 3);
     for (let i = 0; i < nAC; i++) {
       const ac = new THREE.BoxGeometry(0.9 + rand() * 1.4, 0.7 + rand() * 0.5, 0.9 + rand());
       ac.translate(b.x + (rand() - 0.5) * (b.w - 3), b.top + 0.35, b.z + (rand() - 0.5) * (b.d - 3));
-      nearProps.push(ac);
+      keepProp(ac);
     }
     if (rand() > 0.55) {
       const ant = new THREE.CylinderGeometry(0.04, 0.07, 3 + rand() * 4, 6);
       ant.translate(b.x + (rand() - 0.5) * (b.w - 4), b.top + 2, b.z + (rand() - 0.5) * (b.d - 4));
-      nearProps.push(ant);
+      keepProp(ant);
     }
     if (rand() > 0.7) {
       const tank = new THREE.CylinderGeometry(1.1, 1.1, 1.8, 10);
       tank.translate(b.x + (rand() - 0.5) * (b.w - 4), b.top + 1.4, b.z + (rand() - 0.5) * (b.d - 4));
-      nearProps.push(tank);
+      keepProp(tank);
     }
   }
   const nearMesh = new THREE.Mesh(mergeGeometries(near), facadeMat);
-  const propsMesh = new THREE.Mesh(mergeGeometries(nearProps), rooftopMat);
-  group.add(nearMesh, propsMesh);
+  group.add(nearMesh);
+  if (nearProps.length) group.add(new THREE.Mesh(mergeGeometries(nearProps), rooftopMat));
 
   // --- mid + far rings: instanced towers -----------------------------------
   group.add(instancedRing(facadeMat, rand, 80, 75, 190, 10, 45, 12));

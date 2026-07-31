@@ -42,6 +42,17 @@ export const CR = {
   floors: [0, 4.4, 8.8],
 };
 
+// ---- open windows in the West hallway wall ---------------------------------
+// The one perimeter wall that carries no art on any storey, so it is the one
+// that gets the view out. Positions are `u` along the wall — toSide('W', …) maps
+// local +X onto world −Z, so these are world z ∈ {6, 3, 0, −3}. They stop well
+// short of u 6.5, where the elevator shaft (LIFT, below) stands against the
+// wall: a window behind the cabin would look at the back of a wooden box.
+// Heights are per-storey offsets from CR.floors[n]; standing eye level is
+// base + ~1.7, which puts the city square in the opening on every floor.
+const WINDOW_U = [-6, -3, 0, 3];
+const WIN = { w: 1.8, sill: 0.95, spring: 2.4, apex: 3.35 };
+
 // ---- corner elevator (NW), the only connector between the three storeys -----
 // Footprint nested into the North+West perimeter corner. `liftY` is the single
 // source of truth for the player's floor: since the lift is the only way to
@@ -68,10 +79,21 @@ export function courtyardGround(x, z, prevY = 0) {
 
 // Per-storey arcade tuning: bay count, pier width, arch spring/apex, and the
 // balustrade height across the opening (0 = open, walkable, ground floor).
+//
+// `spring` is the number that decides what you can see from an upper hallway.
+// bayPanel() only draws the screen ABOVE the arch line, so everything under the
+// spring is clear across the full 12 m of a side — and the impost band laid at
+// base + spring (below) is a solid 12.9 m ring. The top storey used to spring at
+// 1.75, which put that band dead across standing eye level (base + ~1.7) and cut
+// the far wall's hang in half from anywhere on the deck. It also ran eight 1.5 m
+// bays, so the arch haunches came back down to eye level every metre and a half.
+// Both upper storeys now spring well above the eye and carry four wide bays, so
+// you can stand on any deck and take in the opposite wall at a glance. `apex`
+// has to stay under the cornice band at base + FH - 0.36 = 4.04.
 const STOREYS = [
   { base: 0.0, bays: 4, pier: 0.34, spring: 2.6, apex: 4.02, rail: 0.0, door: 2.4 },
-  { base: 4.4, bays: 4, pier: 0.34, spring: 2.5, apex: 3.9, rail: 0.98, door: 2.2 },
-  { base: 8.8, bays: 8, pier: 0.22, spring: 1.75, apex: 3.0, rail: 0.9, door: 2.1 },
+  { base: 4.4, bays: 4, pier: 0.34, spring: 2.85, apex: 4.0, rail: 0.92, door: 2.2 },
+  { base: 8.8, bays: 4, pier: 0.34, spring: 2.75, apex: 4.0, rail: 0.92, door: 2.1 },
 ];
 const SCREEN_T = 0.4;   // arcade screen thickness (thinner arches → more open views)
 
@@ -351,6 +373,40 @@ function bayPanel(bw, fh, t, _pier, spring, apex) {
   return g;
 }
 
+// One window opening, as a hole for the perimeter-wall shape below: a pointed
+// arch drawn with the same pair of quadratics bayPanel() uses for the arcade,
+// so the windows read as the same Venetian-Gothic family as the arches they
+// face. Authored in the wall's own local XY (x across the wall, y up).
+function windowHole(u, sill, spring, apex, w) {
+  const hw = w / 2;
+  const p = new THREE.Path();
+  p.moveTo(u - hw, sill);
+  p.lineTo(u - hw, spring);
+  p.quadraticCurveTo(u - hw, apex, u, apex);
+  p.quadraticCurveTo(u + hw, apex, u + hw, spring);
+  p.lineTo(u + hw, sill);
+  p.closePath();
+  return p;
+}
+
+// A perimeter hallway wall pierced by open windows. `holes` are windowHole()
+// paths in the wall's own local XY — one per storey per position — cut clean
+// through the 0.5 m wall, so the reveal reads as real thickness from inside
+// and there is nothing glazing the opening. Returns the wall geometry in local
+// XY/Z, ready for toSide().
+function piercedWall(width, height, t, holes) {
+  const hw = width / 2;
+  const s = new THREE.Shape();
+  s.moveTo(-hw, 0); s.lineTo(hw, 0); s.lineTo(hw, height); s.lineTo(-hw, height);
+  s.closePath();
+  for (const h of holes) s.holes.push(h);
+  const g = new THREE.ExtrudeGeometry(s, { depth: t, bevelEnabled: false, curveSegments: 18 });
+  g.translate(0, 0, -t / 2);
+  const uv = g.attributes.uv, pos = g.attributes.position;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i), pos.getY(i));
+  return g;
+}
+
 // place a local geometry (authored facing +Z, along local +X) onto a side of
 // the square ring at radius r. side: 'N'|'S'|'E'|'W'. u = offset along side.
 function toSide(g, side, r, u = 0) {
@@ -452,10 +508,14 @@ export function buildCourtyardRoom(scene, mats, tier) {
       const rY = st.base;
       stoneGeos.push(...ringBand(CR.R, rY + st.rail - 0.12, rY + st.rail, 0.22, 12.6));  // top rail
       stoneGeos.push(...ringBand(CR.R, rY + 0.02, rY + 0.16, 0.28, 12.6));               // bottom rail
+      // Thinner balusters, more widely spaced. They sit below eye level either
+      // way, but at 30 a side they read as a picket fence across the atrium and
+      // muddied the view down onto the garden; at 20 the rail reads as an open
+      // screen you look through rather than over.
       for (const side of SIDES) {
-        for (let b = 0; b < 30; b++) {
-          const u = -5.85 + (11.7 / 29) * b;
-          const bg = new THREE.CylinderGeometry(0.05, 0.06, st.rail - 0.16, 6);
+        for (let b = 0; b < 20; b++) {
+          const u = -5.85 + (11.7 / 19) * b;
+          const bg = new THREE.CylinderGeometry(0.038, 0.046, st.rail - 0.16, 6);
           bg.translate(0, rY + 0.08 + (st.rail - 0.16) / 2, 0);
           toSide(bg, side, CR.R, u);
           balusterGeos.push(bg);
@@ -476,11 +536,36 @@ export function buildCourtyardRoom(scene, mats, tier) {
   for (let fl = 1; fl <= 2; fl++) stoneGeos.push(...ringSlab(CR.floors[fl]));
 
   // --- perimeter hallway walls ---------------------------------------------
+  // Three of them are plain slabs behind the hang. The West wall carries no art
+  // on any storey — the elevator is in its North corner and the pictures skip it
+  // (below) — so it read as 19.5 m of blank plaster three storeys high. It is
+  // pierced instead with open windows onto the city, one bank per storey.
+  const WALL_W = CR.half * 2 + CR.wallT;
   for (const side of SIDES) {
-    const g = new THREE.BoxGeometry(CR.half * 2 + CR.wallT, CR.eaveY, CR.wallT);
+    if (side === 'W') continue;
+    const g = new THREE.BoxGeometry(WALL_W, CR.eaveY, CR.wallT);
     worldUV(g); g.translate(0, CR.eaveY / 2, 0);
     toSide(g, side, CR.wallMid);
     plasterGeos.push(g);
+  }
+  {
+    const holes = [];
+    for (const base of CR.floors) {
+      for (const u of WINDOW_U) {
+        holes.push(windowHole(u, base + WIN.sill, base + WIN.spring, base + WIN.apex, WIN.w));
+        // stone sill and jambs, proud of both faces so the reveal reads
+        const sill = new THREE.BoxGeometry(WIN.w + 0.34, 0.14, CR.wallT + 0.22);
+        worldUV(sill); sill.translate(0, base + WIN.sill - 0.07, 0);
+        stoneGeos.push(toSide(sill, 'W', CR.wallMid, u));
+        for (const sx of [-1, 1]) {
+          const jamb = new THREE.BoxGeometry(0.13, WIN.spring - WIN.sill, CR.wallT + 0.12);
+          worldUV(jamb);
+          jamb.translate(sx * (WIN.w / 2 + 0.065), base + (WIN.sill + WIN.spring) / 2, 0);
+          stoneGeos.push(toSide(jamb, 'W', CR.wallMid, u));
+        }
+      }
+    }
+    plasterGeos.push(toSide(piercedWall(WALL_W, CR.eaveY, CR.wallT, holes), 'W', CR.wallMid));
   }
 
   // --- hanging space on every hallway back wall, every storey ---------------
@@ -929,7 +1014,13 @@ export function setupCourtyardLighting(scene, renderer, tier) {
   const hemi = new THREE.HemisphereLight(0xf4f7fa, 0xa89a80, 1.2);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight(0xfff2df, 3.3);
+  // Opening the upper arcades (see STOREYS) took a lot of screen out from
+  // between the glazed roof and the top hallway, and at 3.3 the third floor's
+  // walls and the hang on them went to white — you could see all the way across
+  // and there was nothing legible when you got there. The lower floors are shaded
+  // by the ring slabs and barely notice the difference; the hemisphere below
+  // carries them.
+  const sun = new THREE.DirectionalLight(0xfff2df, 2.1);
   sun.position.set(13, 34, 15);
   sun.target.position.set(-1, 0, -2);
   sun.castShadow = true;

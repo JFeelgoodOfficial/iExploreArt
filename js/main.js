@@ -14,7 +14,7 @@ import { buildCourtyard } from './world/Courtyard.js';
 import { buildCourtyardRoom, setupCourtyardLighting, CR } from './world/CourtyardRoom.js';
 import { buildReceptionLift } from './world/ReceptionLift.js';
 import { buildNouveauRoom, nouveauGround, nouveauSegments, LANDING } from './world/nouveau.js';
-import { buildRococoRoom, ROOM as ROCOCO, LIFT as ROCOCO_LIFT } from './world/rococo.js';
+import { buildRococoRoom, ROOM as ROCOCO, LIFT as ROCOCO_LIFT, LOBE } from './world/rococo.js';
 import { RESIDENCIES } from '../data/residencies.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
 import { PLINTH } from './world/rococo-plinth.js';
@@ -130,6 +130,22 @@ function ringSegments(cx, cz, r, sides = 8, level = 'all') {
   return out;
 }
 
+// An open run of colliders along an arc — a curved balustrade, as opposed to
+// ringSegments' closed fence around an object. Chords, so `steps` has to be
+// generous enough that the flats don't read as corners under a hand on the rail.
+function arcSegments(cx, cz, r, a0, a1, steps = 10, level = 'all') {
+  const pt = (i) => {
+    const a = a0 + ((a1 - a0) * i) / steps;
+    return [cx + Math.cos(a) * r, cz + Math.sin(a) * r];
+  };
+  const out = [];
+  for (let i = 0; i < steps; i++) {
+    const [ax, az] = pt(i), [bx, bz] = pt(i + 1);
+    out.push(seg(ax, az, bx, bz, level));
+  }
+  return out;
+}
+
 // Every residency's way back: an invisible plane by the spawn, facing the way
 // the visitor arrived. Hub and spoke — you ride up, you walk back.
 function returnDoor(x, y, z, rotY) {
@@ -143,11 +159,25 @@ function returnDoor(x, y, z, rotY) {
 const { value: cy, layer: courtyardLayer } = rooms.captureLayer(() => {
   const room = buildCourtyardRoom(scene, materials, tier);
   const lights = setupCourtyardLighting(scene, renderer, tier);
+  // The city seen through the west hallway windows. Same builder as the
+  // gallery's north view, yawed a quarter turn so its skyline lies out along −X
+  // instead of −Z, and given its own seed so it isn't the same street twice.
+  // scene.fog is global and already set by the gallery instance, so this one
+  // leaves it alone; its sun matches setupCourtyardLighting's, or the daylight
+  // would arrive from two different quarters at once.
+  const city = buildCityView(scene, renderer, {
+    name: 'city-courtyard',
+    seed: 91_827,
+    yaw: Math.PI / 2,
+    fog: false,
+    sunPosition: new THREE.Vector3(13, 34, 15),
+    nearProps: tier.name !== 'low',
+  });
   // South hallway wall by the spawn, facing −Z toward the garden. Offset to
   // x = 2.25 — the pictures hang at x ∈ {−4.5, 0, 4.5}, and a door hitbox laid
   // over one of them would prompt "return to reception" while you look at art.
   const door = returnDoor(2.25, 1.2, 8.8, Math.PI);
-  return { room, lights, door };
+  return { room, lights, door, city };
 });
 const courtyardRoom = cy.room;
 
@@ -238,6 +268,10 @@ const ROOM_FACTORIES = {
     // the whole disc, and 0.17 further back it does not. Nothing to clip
     // against — the rail top is 0.72 m below the eye.
     const LEAN = 0.17;
+    // Where a side run's bowed end hands back to its straight rail, measured on
+    // the collider line rather than the rail line — so the arc's own endpoint
+    // lands on it and the two meet without a notch to slip through.
+    const LOBE_TIP = LOBE.z + LOBE.r + LEAN;
     // Cab footprint (a whisker inside the cage rails). prevY gates keep the
     // ground floor and the deck from capturing each other: you only resolve to a
     // height you're already near.
@@ -259,6 +293,10 @@ const ROOM_FACTORIES = {
         if (z > RAIL_Z && z < CABZ0 && x >= CABX0 && x < x1) return G;
         if (x > x0 && x < RAIL_X0 && z > z0 && z < RAIL_Z) return G;   // west run
         if (x > RAIL_X1 && x < x1 && z > z0 && z < RAIL_Z) return G;   // east run
+        // …and the bowed ends those two runs finish on, which stand out past
+        // the rail line into the room (js/world/rococo.js, LOBE)
+        if (x >= RAIL_X0 && Math.hypot(x - RAIL_X0, z - LOBE.z) < LOBE.r) return G;
+        if (x <= RAIL_X1 && Math.hypot(x - RAIL_X1, z - LOBE.z) < LOBE.r) return G;
       }
       return 0;
     };
@@ -292,8 +330,17 @@ const ROOM_FACTORIES = {
           // east run is directly across, so there is nothing to fall off and
           // nothing to block. That corner is the only way round to the lift.
           seg(RAIL_X0, RAIL_Z - LEAN, RAIL_X1, RAIL_Z - LEAN, G),
-          seg(RAIL_X0 + LEAN, z0 + WALL, RAIL_X0 + LEAN, RAIL_Z, G),  // west run
-          seg(RAIL_X1 - LEAN, z0 + WALL, RAIL_X1 - LEAN, RAIL_Z, G),  // east run
+          // Each side run's rail is now straight only as far as its bowed end,
+          // where it swings out on LOBE.r and comes back — same LEAN offset,
+          // measured outward from the lobe's centre instead of sideways off the
+          // rail line. The short stub is the 0.17 jog between the two, which the
+          // player would otherwise slip through at the junction.
+          seg(RAIL_X0 + LEAN, LOBE_TIP, RAIL_X0 + LEAN, RAIL_Z, G),   // west run
+          seg(RAIL_X1 - LEAN, LOBE_TIP, RAIL_X1 - LEAN, RAIL_Z, G),   // east run
+          seg(RAIL_X0, LOBE_TIP, RAIL_X0 + LEAN, LOBE_TIP, G),
+          seg(RAIL_X1, LOBE_TIP, RAIL_X1 - LEAN, LOBE_TIP, G),
+          ...arcSegments(RAIL_X0, LOBE.z, LOBE.r + LEAN, -Math.PI / 2, Math.PI / 2, 10, G),
+          ...arcSegments(RAIL_X1, LOBE.z, LOBE.r + LEAN, Math.PI / 2, Math.PI * 1.5, 10, G),
           shaftGuard,
           // the table at the centre: a ring around the farthest point the panel
           // sweeps as it turns, so nothing spinning inside it ever clips. The
@@ -491,6 +538,7 @@ renderer.setAnimationLoop(() => {
   interaction.update(dt);
   tickWind(t);
   city.update(t);
+  cy.city.update(t);         // clouds + birds past the courtyard's west windows
   details.update(t);
   equalizer.update(t);
   fountain.update(t);
@@ -558,4 +606,4 @@ window.addEventListener('resize', () => {
 });
 
 // debug/testing handle (harmless in production)
-window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music, equalizer, audio, rooms, courtyardRoom, lift, residencyRooms, ensureRoom };
+window.__gallery = { player, camera, scene, renderer, controls, lighting, ui, interaction, curator, details, city, fountain, music, equalizer, audio, rooms, courtyardRoom, lift, residencyRooms, ensureRoom, effects };
