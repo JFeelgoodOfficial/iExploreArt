@@ -9,11 +9,17 @@ import { PLAYER, IS_TOUCH } from './config.js';
 // aiming at a 38 mm call button is a poor way to ask for a floor when you are
 // already in the cab. It answers wherever you look, but only when the ray hits
 // nothing, so a painting seen from inside a cab still opens as a painting.
+//
+// And on touch there is a third way in: `activate(px, py)` casts through the
+// point the player actually touched rather than the crosshair, so tapping a
+// lift button picks THAT button. A keyboard press has no screen point, so
+// `activate()` with no arguments keeps meaning "whatever's under the reticle".
 
 export class Interaction {
-  constructor(camera, ui) {
+  constructor(camera, ui, domElement = null) {
     this.camera = camera;
     this.ui = ui;
+    this.domElement = domElement;
     this.raycaster = new THREE.Raycaster();
     this.raycaster.far = PLAYER.interactDistance;
     this.targets = [];
@@ -44,11 +50,24 @@ export class Interaction {
     if (this._accum < 0.1) return;
     this._accum = 0;
     if (!this.enabled) { this._setHovered(null); return; }
+    this._setHovered(this._pick(0, 0));
+  }
 
+  // Nearest target along the ray through one point in normalised device
+  // coordinates, or null.
+  _pick(ndcX, ndcY) {
     this.camera.updateMatrixWorld();
-    this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+    this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
     const hits = this.raycaster.intersectObjects(this.targets, false);
-    this._setHovered(hits.length ? hits[0].object : null);
+    return hits.length ? hits[0].object : null;
+  }
+
+  // Screen pixels → NDC against the canvas, or null if we can't tell.
+  _toNDC(px, py) {
+    if (!this.domElement || px == null || py == null) return null;
+    const r = this.domElement.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    return [((px - r.left) / r.width) * 2 - 1, -((py - r.top) / r.height) * 2 + 1];
   }
 
   // Every prompt goes through here. With nothing under the crosshair the
@@ -88,16 +107,22 @@ export class Interaction {
     } else if (obj.userData.door) {
       this._prompt(`${key} — ${obj.userData.door.label}`);
     } else if (obj.userData.lift) {
-      this._prompt(`${key} — use the lift`);
+      // A single floor button names its own floor; the plate as a whole doesn't.
+      this._prompt(`${key} — ${obj.userData.lift.label || 'use the lift'}`);
     }
   }
 
-  // returns true if something was activated
-  activate() {
-    const obj = this.hovered;
-    // nothing under the crosshair — fall through to whatever you're standing on
+  // returns true if something was activated. (px, py) are optional screen
+  // pixels — a touch point. A touch that lands on nothing still falls back to
+  // the crosshair, so an off-by-a-thumb tap does the expected thing rather than
+  // nothing at all.
+  activate(px, py) {
+    if (!this.enabled) return false;
+    const ndc = this._toNDC(px, py);
+    const obj = (ndc && this._pick(ndc[0], ndc[1])) || this.hovered;
+    // nothing under the crosshair either — fall through to what you're standing on
     if (!obj) {
-      if (!this.standing || !this.enabled) return false;
+      if (!this.standing) return false;
       this.standing.open();
       return true;
     }

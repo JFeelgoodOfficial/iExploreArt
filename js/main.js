@@ -65,8 +65,10 @@ const lighting = setupLighting(scene, renderer, tier);
 const player = new Player(camera);
 const controls = IS_TOUCH ? new TouchControls(canvas, player) : new DesktopControls(canvas, player);
 const ui = new UI(controls);
-const interaction = new Interaction(camera, ui);
-controls.onInteract = () => interaction.activate();
+const interaction = new Interaction(camera, ui, canvas);
+// Touch passes the point it was tapped at; the keyboard passes nothing and
+// means "whatever the crosshair is on".
+controls.onInteract = (px, py) => interaction.activate(px, py);
 
 // --- loading flow ---
 const loadingEl = document.getElementById('loading');
@@ -106,7 +108,9 @@ function doorHitbox(w, h, x, y, z, rotY, name) {
 // only way to an artist residency. Built before the gallery snapshot so the
 // cabin belongs to the gallery layer.
 const lift = buildReceptionLift(scene, materials);
-interaction.register([lift.panel]);
+// The floor buttons first: aiming at one rides straight to that floor, and the
+// plate behind them is the fallback that opens the picker list.
+interaction.register([...lift.buttons, lift.panel]);
 
 // Snapshot everything currently in the scene as the gallery "layer", and the
 // current interaction targets (artworks + curator + the lift panel).
@@ -457,6 +461,8 @@ lift.onArrive = async (id) => {
   // (renderer.compile gathers lights from visible objects only).
   if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
 };
+// Aiming at the plate itself — between the buttons — still opens the list, so
+// there is always a way through even if the discs are awkward to hit.
 lift.panel.userData.lift = {
   label: 'call the lift',
   open: () => ui.openLift(

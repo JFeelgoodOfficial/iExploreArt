@@ -102,17 +102,53 @@ export function buildReceptionLift(scene, mats) {
   });
 
   // ---- the button panel ---------------------------------------------------
+  const PANEL_W = 0.42;
+  const { texture: panelMap, discs } = panelTex();
   const panel = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.42, 0.86),
-    new THREE.MeshStandardMaterial({ map: panelTex(), roughness: 0.45, metalness: 0.2 })
+    new THREE.PlaneGeometry(PANEL_W, PANEL_H),
+    new THREE.MeshStandardMaterial({ map: panelMap, roughness: 0.45, metalness: 0.2 })
   );
   // Raised from 1.3: the cabin is only 2.3 m deep, so the plate is read from
   // under a metre away and its lower half sits a long way below the 1.65 m eye.
   // See panelTex() — the bottom disc is the one that decides this number.
-  panel.position.set(cx + 0.25, PANEL_Y, CAB.z0 + CAB.wallT + 0.01);
+  const PANEL_X = cx + 0.25, PANEL_Z = CAB.z0 + CAB.wallT + 0.01;
+  panel.position.set(PANEL_X, PANEL_Y, PANEL_Z);
   panel.rotation.y = 0;
   panel.name = 'reception-lift-panel';
   car.add(panel);
+
+  // A real brass cap over each painted disc, so a floor is something you aim at
+  // or touch directly instead of something you pick off a menu afterwards.
+  // `discs` comes back from panelTex() in canvas pixels; the plate is that
+  // canvas, so the conversion to metres is just a scale.
+  const buttons = [];
+  for (const d of discs) {
+    const action = {
+      label: `${d.residency.name}, floor ${d.residency.floor}`,
+      open: () => ride(d.residency),
+    };
+    const y = PANEL_Y + d.v * PANEL_H;
+    // The whole row answers, not just the disc: on a phone the disc is barely a
+    // thumb across, and the name beside it is the part you read and reach for.
+    const row = new THREE.Mesh(
+      new THREE.PlaneGeometry(PANEL_W, d.rowH * PANEL_H),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    row.position.set(PANEL_X, y, PANEL_Z + 0.002);
+    row.name = `reception-lift-row-${d.residency.id}`;
+    row.userData.lift = action;
+    car.add(row);
+
+    const b = new THREE.Mesh(
+      new THREE.CircleGeometry(d.r * PANEL_W, 24),
+      new THREE.MeshStandardMaterial({ map: discTex(d.residency.floor), roughness: 0.42, metalness: 0.25 })
+    );
+    b.position.set(PANEL_X + d.u * PANEL_W, y, PANEL_Z + 0.005);
+    b.name = `reception-lift-btn-${d.residency.id}`;
+    b.userData.lift = action;
+    car.add(b);
+    buttons.push(row, b);
+  }
 
   // No shaft lining: the cabin is sealed on all six sides once the leaves shut,
   // and it is always back at ground level whenever anyone is in the gallery to
@@ -209,6 +245,7 @@ export function buildReceptionLift(scene, mats) {
   return {
     group,
     panel,
+    buttons,      // one row hitbox + one disc per residency, all raycastable
     colliders,
     // Where the gallery drops you: inside the cabin, facing out into the hall.
     spawn: { x: cx, z: CAB_CZ, yaw: -Math.PI / 2 },
@@ -225,8 +262,13 @@ export function buildReceptionLift(scene, mats) {
   };
 }
 
-// Canvas texture for the call panel: a brass disc per residency, numbered by
-// floor. Same conventions as CourtyardRoom's liftPanelTex (sRGB, Georgia).
+// Canvas texture for the call panel: the plate, its header and one residency
+// name per row. The numbered discs are NOT painted here — each is a real mesh
+// laid over the plate (see `buttons` above) so it can be aimed at, touched and
+// lit individually. This returns where those discs go, in plate-normalised
+// units: u across (−0.5…0.5 of the width), v up (−0.5…0.5 of the height), and
+// r as a fraction of the width.
+// Same conventions as CourtyardRoom's liftPanelTex (sRGB, Georgia).
 function panelTex() {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 512;
@@ -259,20 +301,48 @@ function panelTex() {
   const top = BAND_TOP + ((BAND_BOT - BAND_TOP) - gap * (n - 1)) / 2;
   const R = n > 1 ? Math.min(34, gap / 2 - 6) : 34;
 
-  RESIDENCIES.forEach((r, i) => {
+  const discs = RESIDENCIES.map((r, i) => {
     const cy = top + i * gap;
-    ctx.fillStyle = '#e7dcc5';
-    ctx.beginPath(); ctx.arc(76, cy, R, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#2b2723'; ctx.font = `bold ${Math.round(R)}px Georgia`;
-    ctx.fillText(String(r.floor), 76, cy + 2);
+    // a shallow recess for the disc to sit in, so the plate still reads as a
+    // plate where the mesh doesn't cover it
+    ctx.fillStyle = '#232019';
+    ctx.beginPath(); ctx.arc(76, cy, R + 3, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#e7dcc5';
     let fs = 22;
     do { ctx.font = `${fs}px Georgia`; } while (ctx.measureText(r.name).width > 118 && (fs -= 2) > 12);
     ctx.textAlign = 'left';
     ctx.fillText(r.name, 122, cy + 2);
     ctx.textAlign = 'center';
+    return {
+      residency: r,
+      u: 76 / c.width - 0.5,
+      v: 0.5 - cy / c.height,
+      r: R / c.width,
+      rowH: Math.min(gap || 2 * R + 16, 2 * R + 16) / c.height,
+    };
   });
 
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return { texture: t, discs };
+}
+
+// The face of one floor button: a pale brass disc with its floor number on it.
+// Its own texture rather than a slice of the plate's, so the hover highlight
+// (Interaction._setHovered promotes `map` to `emissiveMap`) lights the number
+// along with the disc.
+function discTex(floor) {
+  const S = 96;
+  const c = document.createElement('canvas');
+  c.width = S; c.height = S;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#e7dcc5';
+  ctx.beginPath(); ctx.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2b2723';
+  ctx.font = `bold ${Math.round(S * 0.52)}px Georgia`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(floor), S / 2, S / 2 + 2);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
