@@ -65,8 +65,10 @@ const lighting = setupLighting(scene, renderer, tier);
 const player = new Player(camera);
 const controls = IS_TOUCH ? new TouchControls(canvas, player) : new DesktopControls(canvas, player);
 const ui = new UI(controls);
-const interaction = new Interaction(camera, ui);
-controls.onInteract = () => interaction.activate();
+const interaction = new Interaction(camera, ui, canvas);
+// Touch passes the point it was tapped at; the keyboard passes nothing and
+// means "whatever the crosshair is on".
+controls.onInteract = (px, py) => interaction.activate(px, py);
 
 // --- loading flow ---
 const loadingEl = document.getElementById('loading');
@@ -106,7 +108,9 @@ function doorHitbox(w, h, x, y, z, rotY, name) {
 // only way to an artist residency. Built before the gallery snapshot so the
 // cabin belongs to the gallery layer.
 const lift = buildReceptionLift(scene, materials);
-interaction.register([lift.panel]);
+// The floor buttons first: aiming at one rides straight to that floor, and the
+// plate behind them is the fallback that opens the picker list.
+interaction.register([...lift.buttons, lift.panel]);
 
 // Snapshot everything currently in the scene as the gallery "layer", and the
 // current interaction targets (artworks + curator + the lift panel).
@@ -364,15 +368,19 @@ const ROOM_FACTORIES = {
   brutalist: () => {
     const room = buildBrutalistRoom(scene, { tier, ...artOpts, art: BRUTALIST_HANG });
     const lights = setupBrutalistLighting(scene, renderer, tier);
-    // The city the pool looks over. Same builder as the gallery's north view,
-    // yawed a quarter turn the other way so the skyline lies out along +X, past
-    // the terrace's infinity edge. `fog` is global and the gallery already set
+    // The city both openings look over. Same builder as the gallery's north
+    // view, yawed a quarter turn the other way so the skyline lies out along +X,
+    // past the pool's infinity edge. `fog` is global and the gallery already set
     // it; the sun matches setupBrutalistLighting's, or the daylight would arrive
     // from two quarters at once.
     const city = buildCityView(scene, renderer, {
       name: 'city-brutalism', seed: 5150, yaw: -Math.PI / 2, fog: false,
       sunPosition: BX_SUN, nearProps: tier.name !== 'low',
     });
+    // The skyline was authored around a 4.4 m eye. It's read from the level-1
+    // window at 6 m and from the pool at 13 m, so lift it to keep the near
+    // rooftops near the horizon rather than all of them underfoot.
+    city.group.position.y = 5.5;
     // South wall by the spawn, facing back up the hall.
     const door = returnDoor(2.6, 1.35, BX.z1 - 0.14, Math.PI);
     return {
@@ -457,6 +465,8 @@ lift.onArrive = async (id) => {
   // (renderer.compile gathers lights from visible objects only).
   if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
 };
+// Aiming at the plate itself — between the buttons — still opens the list, so
+// there is always a way through even if the discs are awkward to hit.
 lift.panel.userData.lift = {
   label: 'call the lift',
   open: () => ui.openLift(

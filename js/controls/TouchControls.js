@@ -1,5 +1,15 @@
 // Mobile controls: left-half virtual joystick to walk, right-half drag to
 // look, short tap to interact. Mirrors the DesktopControls interface.
+//
+// A tap is judged by how the finger MOVED, not by where it landed. The half of
+// the screen a pointer starts on decides what dragging it does — walk or look —
+// but a stationary touch is a tap either way, and it reports where it happened
+// so the interaction layer can hit-test that point instead of the crosshair.
+// (Before this, a tap on the left half was swallowed whole by the joystick, so
+// touching a lift button drawn on the left of your view did nothing at all.)
+
+const TAP_SLOP = 12;      // px of travel that still counts as a tap
+const TAP_TIME = 260;     // ms a tap may last
 
 export class TouchControls {
   constructor(canvas, player) {
@@ -16,7 +26,7 @@ export class TouchControls {
     this._lookId = null;
     this._joyCenter = { x: 0, y: 0 };
     this._lookLast = { x: 0, y: 0 };
-    this._tapStart = null;
+    this._taps = new Map();   // pointerId → { x, y, t } while it could still be a tap
 
     canvas.addEventListener('pointerdown', (e) => this._down(e));
     canvas.addEventListener('pointermove', (e) => this._move(e));
@@ -40,12 +50,18 @@ export class TouchControls {
     } else if (this._lookId === null) {
       this._lookId = e.pointerId;
       this._lookLast = { x: e.clientX, y: e.clientY };
-      this._tapStart = { x: e.clientX, y: e.clientY, t: performance.now() };
       this.canvas.setPointerCapture(e.pointerId);
+    } else {
+      return;                                   // a third finger: not ours
     }
+    this._taps.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() });
   }
 
   _move(e) {
+    const tap = this._taps.get(e.pointerId);
+    if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > TAP_SLOP) {
+      this._taps.delete(e.pointerId);           // it's a drag now, whichever half it's on
+    }
     if (e.pointerId === this._moveId) {
       const dx = e.clientX - this._joyCenter.x;
       const dy = e.clientY - this._joyCenter.y;
@@ -63,13 +79,12 @@ export class TouchControls {
       const dy = e.clientY - this._lookLast.y;
       this._lookLast = { x: e.clientX, y: e.clientY };
       this.player.look(dx * 0.0042, dy * 0.0042);
-      if (this._tapStart && Math.hypot(e.clientX - this._tapStart.x, e.clientY - this._tapStart.y) > 12) {
-        this._tapStart = null;
-      }
     }
   }
 
   _up(e) {
+    const tap = this._taps.get(e.pointerId);
+    this._taps.delete(e.pointerId);
     if (e.pointerId === this._moveId) {
       this._moveId = null;
       this.intent.forward = 0;
@@ -78,11 +93,12 @@ export class TouchControls {
       this.nubEl.style.transform = 'translate(0px, 0px)';
       this.joyEl.classList.remove('visible');
     } else if (e.pointerId === this._lookId) {
-      if (this._tapStart && performance.now() - this._tapStart.t < 260 && this.onInteract) {
-        this.onInteract();
-      }
       this._lookId = null;
-      this._tapStart = null;
+    }
+    // Hand the touch point on: the player aimed with their finger, not the
+    // crosshair, and what they touched is what they meant.
+    if (tap && performance.now() - tap.t < TAP_TIME && this.onInteract) {
+      this.onInteract(tap.x, tap.y);
     }
   }
 }

@@ -40,7 +40,7 @@ export const RESIDENCIES = [
     name: 'Brutalism Hall',
     floor: 4,
     artist: 'Chad Rea',
-    blurb: 'four storeys of board-formed concrete round one void — galleries ringing it at two levels, three cantilevered flights each against a different wall, and a glass floor at the top you stand on to look the whole way down; ten works hung flat on the concrete, unframed, and a terrace with an infinity pool over the city',
+    blurb: 'four storeys of board-formed concrete round one void — galleries ringing it at two levels, three cantilevered flights each against a different wall, and a foot of water lying on the glass at the top that you look down through, thirteen metres, to the floor; ten works hung flat on the concrete, unframed, and the pool runs out through the east wall to an edge with the city under it',
   },
 ];
 
