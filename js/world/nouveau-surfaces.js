@@ -374,22 +374,6 @@ export function brassMaterial(seed = 6, { rough = 0.22 } = {}) {
   });
 }
 
-export function ironMaterial() {
-  const S = 256;
-  const [c, ctx] = makeCanvas(S, S);
-  const f = fbmField(S, S, 91, 4, 9);
-  const img = ctx.createImageData(S, S);
-  for (let i = 0; i < S * S; i++) {
-    const n = (f[i] - 0.5) * 30;
-    img.data[i * 4] = cl(44 + n); img.data[i * 4 + 1] = cl(46 + n); img.data[i * 4 + 2] = cl(48 + n);
-    img.data[i * 4 + 3] = 255;
-  }
-  ctx.putImageData(img, 0, 0);
-  return new THREE.MeshStandardMaterial({
-    map: tex(c, { srgb: true, repeat: [2, 2] }), roughness: 0.44, metalness: 0.86, envMapIntensity: 1.2,
-  });
-}
-
 // Opal glass for the lamp shades.
 export function opalMaterial(glow = 1.1) {
   const m = new THREE.MeshStandardMaterial({
