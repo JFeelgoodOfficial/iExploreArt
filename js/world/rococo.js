@@ -414,8 +414,14 @@ function buildEndWall(M, perMetre, uv1) {
   for (const x of DOOR_X) paneFor(x, 1.45, 2.25, 4.85);
   g.add(glassGroup);
 
+  // Daylight behind the glazing, and the brightest thing in the hall. It is
+  // MeshBasicMaterial with `toneMapped: false`, so this colour reaches the
+  // frame exactly as written — no ACES rolloff pulling it back, and no light
+  // falloff with distance. At 0xeaf1f7 the glazing read as a lightbox and the
+  // two pictures flanking it at x ±5.35 lost their darks against it. This is
+  // still plainly daylight, a stop or so down.
   const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(16, 12), new THREE.MeshBasicMaterial({
-    color: 0xeaf1f7, toneMapped: false,
+    color: 0xd2dfea, toneMapped: false,
   }));
   backdrop.position.set(0, 4, z0 - 1.4);
   backdrop.name = 'daylight-backdrop';
@@ -643,7 +649,11 @@ function buildFrame(M, w, h, index, art = null, aniso = 8, maxEdge = 0) {
   const artMat = new THREE.MeshStandardMaterial({
     map: art ? null : placeholderArt(index, 512, Math.round(512 * h / w)),
     color: art ? 0x3a3129 : 0xffffff,
-    roughness: 0.52, metalness: 0, envMapIntensity: 0.5,
+    // The hall is lit far more by the HDR environment than by any of its own
+    // lamps, and a canvas is the one surface here that should read as pigment
+    // rather than as a polished thing catching the sky. Taking its share of the
+    // environment down is what keeps the works by the glazing from going pale.
+    roughness: 0.52, metalness: 0, envMapIntensity: 0.34,
   });
   const canvas = new THREE.Mesh(new THREE.PlaneGeometry(w, h), artMat);
   canvas.position.z = 0.05;
@@ -965,9 +975,20 @@ function buildElevator(M) {
       this.target = Math.abs(this.y - this.bottom) < 0.02 ? this.top : this.bottom;
       this.moving = true;
     },
-    inside(p) {
-      return Math.abs(p.x - x) < w / 2 - 0.12 && Math.abs(p.z - z) < d / 2 - 0.12
-        && p.y - this.y > -0.4 && p.y - this.y < h + 1.2;
+    // The cab's marble floor plate, in world height. js/main.js's ground
+    // function returns this for anyone over the footprint — that is the whole
+    // mechanism by which the car carries you.
+    get floorY() { return this.y + 0.1; },
+    // Over the floor plate in plan. The one definition of the cab's footprint:
+    // js/main.js samples ground through it, so the ground the visitor stands on
+    // and the platform they are judged to be riding can never disagree.
+    overFloor(px, pz) {
+      return Math.abs(px - x) < w / 2 && Math.abs(pz - z) < d / 2;
+    },
+    // Actually standing ON the platform — over it AND carried by it, rather
+    // than on the deck alongside a car that happens to be parked below.
+    standingOn(px, pz, groundY) {
+      return this.overFloor(px, pz) && Math.abs(groundY - this.floorY) < 0.2;
     },
     update(dt) {
       if (!this.moving) return 0;
@@ -982,20 +1003,27 @@ function buildElevator(M) {
     },
   };
   // Pressing either plate just calls the car — Interaction.activate expects
-  // `userData.lift.open()`, the same contract as the other lift panels.
-  for (const b of buttons) b.userData.lift = { label: 'ride the lift', open: () => lift.call() };
+  // `userData.lift.open()`, the same contract as the other lift panels. The
+  // same action is handed to Interaction as a standing action while the visitor
+  // is on the platform (see js/main.js), so the car answers from anywhere in
+  // the cab at either level without having to find a 38 mm button first.
+  lift.callAction = { label: 'ride the lift', open: () => lift.call() };
+  for (const b of buttons) b.userData.lift = lift.callAction;
   return lift;
 }
 
 function buildLights(scene, group, M, tier) {
   const out = { flames: [], candleLights: [], t: 0 };
 
-  const hemi = new THREE.HemisphereLight(0xd8e6f2, 0x8a6a4e, 0.55);
+  // The hall is lit for the pictures, not for the daylight. The works flanking
+  // the end-wall glazing take the most sky, so the daylight terms are held back
+  // and the chandelier and sconces carry the room instead.
+  const hemi = new THREE.HemisphereLight(0xd8e6f2, 0x8a6a4e, 0.48);
   scene.add(hemi);
   out.hemi = hemi;
 
   // daylight raking in through the end-wall glazing
-  const sun = new THREE.DirectionalLight(0xfff2dc, 3.2);
+  const sun = new THREE.DirectionalLight(0xfff2dc, 2.4);
   sun.position.set(-3.5, 9, -18);
   sun.target.position.set(1.5, 1.2, 3);
   sun.castShadow = true;

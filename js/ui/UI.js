@@ -21,6 +21,7 @@ export class UI {
       infoDesc: document.getElementById('info-desc'),
       infoPrice: document.getElementById('info-price'),
       infoBuy: document.getElementById('info-buy'),
+      infoFineprint: document.getElementById('info-fineprint'),
       dialogue: document.getElementById('dialogue'),
       dialogueText: document.getElementById('dialogue-text'),
       dialogueChoices: document.getElementById('dialogue-choices'),
@@ -80,7 +81,10 @@ export class UI {
     this.el.infoMeta.textContent = [art.year, art.medium, art.series, art.artist || GALLERY_INFO.artist]
       .filter(Boolean).join(' · ');
     this.el.infoDesc.textContent = art.description;
-    // price / buy link are optional — hide them when a piece has none
+    // price / buy link are optional — hide them when a piece has none. The
+    // fineprint only describes the buy link, so it goes with it; the residency
+    // works carry no buyUrl and would otherwise be left naming a checkout that
+    // isn't on screen.
     this.el.infoPrice.textContent = art.price || '';
     this.el.infoPrice.hidden = !art.price;
     if (art.buyUrl) {
@@ -90,6 +94,7 @@ export class UI {
       this.el.infoBuy.removeAttribute('href');
       this.el.infoBuy.hidden = true;
     }
+    this.el.infoFineprint.hidden = !art.buyUrl;
     this.el.info.hidden = false;
   }
 

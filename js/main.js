@@ -233,8 +233,8 @@ const ROOM_FACTORIES = {
     const shaftGuard = seg(CABX0, CABZ0, CABX1, CABZ0, G);
     el.shaftGuard = shaftGuard;
     const ground = (x, z, prevY) => {
-      if (x > CABX0 && x < CABX1 && z > CABZ0 && z < CABZ1) {
-        const fy = el.y + 0.1;                  // the cab's marble floor plate
+      if (el.overFloor(x, z)) {
+        const fy = el.floorY;                   // the cab's marble floor plate
         if (Math.abs(prevY - fy) < 0.8) return fy;
       }
       if (prevY > 2.2) {
@@ -271,9 +271,12 @@ const ROOM_FACTORIES = {
           seg(5.9, -3.9, 5.9, ROCOCO_LIFT.deckCut, G),
           seg(5.9, ROCOCO_LIFT.deckCut, 5.9, CABZ0, G),  // sill's open west edge
           shaftGuard,
-          // the table at the centre: an octagon around the corner the panel
-          // sweeps as it turns, so a rectangle spinning inside it never clips
-          ...ringSegments(PLINTH.x, PLINTH.z, room.plinth.reach + 0.08, 8, 0),
+          // the table at the centre: a ring around the farthest point the panel
+          // sweeps as it turns, so nothing spinning inside it ever clips. The
+          // top is a round panel roughly 1.9 m across, so the barrier is walked
+          // along rather than met head-on — 16 segments, not 8, or the flats
+          // read as corners.
+          ...ringSegments(PLINTH.x, PLINTH.z, room.plinth.reach + 0.08, 16, 0),
         ],
         ground,
         background: new THREE.Color(0xdfeaf4),
@@ -429,6 +432,17 @@ renderer.setAnimationLoop(() => {
     if (glassLift.shaftGuard) {
       glassLift.shaftGuard.level = glassLift.y > glassLift.top - 0.05 ? -99 : ROCOCO.galleryY;
     }
+    // Standing in the cab calls the car without having to find a button — at
+    // the bottom it goes up, at the top it comes back down (lift.call() is a
+    // toggle). Uses the ground height the player actually resolved to, so it
+    // only fires for someone the platform is carrying.
+    interaction.setStanding(
+      glassLift.standingOn(player.position.x, player.position.z, player.walkY)
+        ? glassLift.callAction
+        : null,
+    );
+  } else {
+    interaction.setStanding(null);
   }
 
   // Behind a blurred full-screen overlay the gallery is barely visible; render
