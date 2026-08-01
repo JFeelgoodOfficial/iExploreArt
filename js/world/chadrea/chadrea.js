@@ -32,7 +32,13 @@ import * as THREE from 'three';
 
 export const HALL = { x0: -8, x1: 4, z0: -11, z1: 11, h: 8.6 };
 export const MEZZ = { x0: -8, x1: -3.2, z0: -11, z1: -1, top: 4.2, t: 0.42 };
-export const STAIR = { xb: 3.5, xt: -3.2, z0: -10.9, z1: -9.3, top: 4.2 };
+// `open` is where the flight's upstand begins. East of it the bottom treads are
+// open to the hall, which is the only way onto the stair: the sketch ran the
+// upstand the whole length at every height, and the sole way round its east end
+// was a 0.15 m slot against the pier — narrower than the player, so the flight
+// could not be reached at all. Everything east of `open` is under 0.35 m up, so
+// stepping on is a stride rather than a hop.
+export const STAIR = { xb: 3.5, xt: -3.2, z0: -10.9, z1: -9.3, top: 4.2, open: 2.6 };
 // h 6.0, not the sketch's 5.2: the arch crowns at 5.6, so a 5.2 ceiling let the
 // top of the opening look straight over the wing's roof into open sky.
 export const WING = { x0: 4.9, x1: 13, z0: 0, z1: 11, h: 6.0 };
@@ -551,26 +557,35 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     soff.rotation.z = -ANG;
     soff.castShadow = true; soff.receiveShadow = true;
     g.add(soff);
-    // Three broad steps spilling out of the foot. In the sketch these were
-    // 1.5 m wide and ran straight through the pier wall; they stop at its face
-    // now, and chadreaGround() hands back their 0.17 lip.
+    // The bottom treads spill south into the hall, so the foot reads as an
+    // invitation rather than a kerb. Each is one tread deep and steps down
+    // toward the room; they replace the sketch's three broad slabs, which sat
+    // 0.17 above a flight whose own foot was at zero and ran through the pier.
     for (let i = 0; i < 3; i++) {
-      box(PIER.x - STAIR.xb, 0.17, (STAIR.z1 - STAIR.z0) + 0.5 + i * 0.5, sm,
-        (STAIR.xb + PIER.x) / 2, 0.085 + i * 0.001, (STAIR.z0 + STAIR.z1) / 2 + 0.4 + i * 0.22);
+      const x = STAIR.xb - (i + 0.5) * run;
+      box(run + 0.04, rise * 0.42, (STAIR.z1 - STAIR.z0) + (3 - i) * 0.42, sm,
+        x, (i + 1) * rise - rise * 0.21, (STAIR.z0 + STAIR.z1) / 2 + (3 - i) * 0.21);
     }
-    // slim steel balustrade on the open (south) side of the flight
+    // Slim steel balustrade on the open (south) side — starting at STAIR.open,
+    // so the bottom of the flight is walked onto rather than fenced off.
     const bal = new THREE.InstancedMesh(new THREE.BoxGeometry(0.02, 1.0, 0.02), steel, 70);
     bal.castShadow = true;
     let n = 0;
     for (let i = 0; i <= Math.floor(stairLen / 0.115); i++) {
-      const x = STAIR.xb - i * 0.115, y = STAIR.top * (STAIR.xb - x) / stairLen;
+      const x = STAIR.xb - i * 0.115;
+      if (x > STAIR.open) continue;
+      const y = STAIR.top * (STAIR.xb - x) / stairLen;
       M.makeTranslation(x, y + 0.52, STAIR.z1 - 0.05);
       bal.setMatrixAt(n++, M);
     }
     bal.count = n;
     g.add(bal);
-    const rail = box(Math.hypot(stairLen, STAIR.top), 0.032, 0.05, steel,
-      (STAIR.xb + STAIR.xt) / 2, STAIR.top / 2 + 1.02, STAIR.z1 - 0.05);
+    // the handrail spans only the guarded run, and its centre is read off the
+    // flight so it stays on top of the balusters wherever `open` is moved to
+    const railRun = STAIR.open - STAIR.xt;
+    const railCx = (STAIR.xt + STAIR.open) / 2;
+    const rail = box(Math.hypot(railRun, STAIR.top * railRun / stairLen), 0.032, 0.05, steel,
+      railCx, STAIR.top * (STAIR.xb - railCx) / stairLen + 1.02, STAIR.z1 - 0.05);
     rail.rotation.z = -ANG;   // rakes with the treads, same reason as the soffit
   }
 
@@ -728,41 +743,44 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     cushion(OT.w, 0.30, OT.d, OT.x, 0.23, OT.z);              // body
     cushion(OT.w - 0.06, 0.09, OT.d - 0.06, OT.x, 0.425, OT.z, 0.12);   // top pad, seamed
 
-    // walnut coffee table
-    box(1.7, 0.09, 1.15, woodMat(), 0.35, 0.40, 2.35);
-    box(1.2, 0.36, 0.75, woodMat(true), 0.35, 0.19, 2.35);
-    box(0.42, 0.055, 0.3, new THREE.MeshStandardMaterial({ color: 0x1e1a18, roughness: 0.55 }), 0.05, 0.47, 2.15);
-    const bowlPts = [];
-    for (let i = 0; i <= 12; i++) { const u = i / 12; bowlPts.push(new THREE.Vector2(0.05 + 0.20 * u, u * u * 0.16)); }
-    const bowl = new THREE.Mesh(new THREE.LatheGeometry(bowlPts, 36), ceramicMat(0x1d1917));
-    bowl.position.set(0.85, 0.44, 2.5);
-    bowl.castShadow = true;
-    g.add(bowl);
-
-    // round travertine pedestal table
+    // The round travertine pedestal table, standing where the walnut coffee
+    // table used to. The rectangular one is gone; everything that was set out
+    // on either of them comes with this one. TOP is the stone's upper face —
+    // every object on it is placed off that rather than off a literal, so the
+    // whole setting moves with the table.
     const tv = travertineMat();
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(1.32, 1.32, 0.11, 64), tv);
-    top.position.set(2.5, 0.74, 5.6);
+    const TB = { x: 0.35, z: 2.35, r: 1.32 };
+    const TOP = 0.795;
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(TB.r, TB.r, 0.11, 64), tv);
+    top.position.set(TB.x, TOP - 0.055, TB.z);
     top.castShadow = true; top.receiveShadow = true;
     g.add(top);
     const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.52, 0.69, 48), tv);
-    base.position.set(2.5, 0.345, 5.6);
+    base.position.set(TB.x, 0.345, TB.z);
     base.castShadow = true; base.receiveShadow = true;
     g.add(base);
+    const bowlPts = [];
+    for (let i = 0; i <= 12; i++) { const u = i / 12; bowlPts.push(new THREE.Vector2(0.05 + 0.20 * u, u * u * 0.16)); }
+    const bowl = new THREE.Mesh(new THREE.LatheGeometry(bowlPts, 36), ceramicMat(0x1d1917));
+    bowl.position.set(TB.x + 0.50, TOP, TB.z + 0.15);
+    bowl.castShadow = true;
+    g.add(bowl);
+    box(0.42, 0.055, 0.3, new THREE.MeshStandardMaterial({ color: 0x1e1a18, roughness: 0.55 }),
+      TB.x - 0.20, TOP + 0.03, TB.z + 0.52);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.29, 28, 20), ceramicMat(0x2a2320));
     bulb.scale.set(1, 0.86, 1);
-    bulb.position.set(2.0, 1.05, 5.2);
+    bulb.position.set(TB.x - 0.50, TOP + 0.25, TB.z - 0.40);
     bulb.castShadow = true;
     g.add(bulb);
     const platPts = [];
     for (let i = 0; i <= 10; i++) { const u = i / 10; platPts.push(new THREE.Vector2(0.08 + 0.32 * u, u * u * 0.10)); }
     const platter = new THREE.Mesh(new THREE.LatheGeometry(platPts, 40), ceramicMat(0x7a6349));
-    platter.position.set(3.05, 0.8, 5.95);
+    platter.position.set(TB.x + 0.55, TOP, TB.z + 0.35);
     platter.castShadow = true;
     g.add(platter);
-    // dried stems beside the arch
+    // dried stems out of the vessel
     const g2 = new THREE.Group();
-    g2.position.set(2.0, 1.2, 5.2);
+    g2.position.set(TB.x - 0.50, TOP + 0.40, TB.z - 0.40);
     g.add(g2);
     const twig = new THREE.MeshStandardMaterial({ color: 0x40342a, roughness: 0.9 });
     for (let i = 0; i < 20; i++) {
@@ -961,14 +979,30 @@ export function chadreaGround(x, z, prevY = 0) {
   const s = stairY(x, z);
   if (s !== null && s <= prevY + 0.75) return s;
   if (prevY > MEZZ.top - 1.6 && onMezz(x, z)) return MEZZ.top;
-  // the broad steps at the foot of the flight
-  if (x >= STAIR.xb && x <= PIER.x && z >= STAIR.z0 - 0.2 && z <= -8.3 && prevY < 1.0) return 0.17;
+  // the bottom treads spilling south out of the flight, walked on from the hall
+  const b = bottomTreadY(x, z);
+  if (b !== null && b <= prevY + 0.75) return b;
   return 0;
 }
 
 function stairY(x, z) {
   if (x < STAIR.xt || x > STAIR.xb || z < STAIR.z0 || z > STAIR.z1) return null;
   return STAIR.top * (STAIR.xb - x) / (STAIR.xb - STAIR.xt);
+}
+
+// The three bottom treads run further south than the flight proper, each one
+// shallower than the last, so you climb onto the stair from the room rather
+// than stepping up 0.19 m off its side.
+function bottomTreadY(x, z) {
+  const run = (STAIR.xb - STAIR.xt) / 22;
+  for (let i = 0; i < 3; i++) {
+    const x1 = STAIR.xb - i * run, x0 = x1 - run;
+    if (x < x0 || x > x1) continue;
+    if (z < STAIR.z0 || z > STAIR.z1 + (3 - i) * 0.42) continue;
+    // the flight's own ramp height, so crossing z1 onto the spill is seamless
+    return STAIR.top * (STAIR.xb - x) / (STAIR.xb - STAIR.xt);
+  }
+  return null;
 }
 
 function onMezz(x, z) {
@@ -988,6 +1022,17 @@ const rect = (x0, z0, x1, z1, level = 'all') => [
   seg(x0, z0, x1, z0, level), seg(x1, z0, x1, z1, level),
   seg(x1, z1, x0, z1, level), seg(x0, z1, x0, z0, level),
 ];
+// A closed fence of chords round a round object. Same idea as main.js's
+// ringSegments; kept local so the room's colliders are all in one file.
+function ringSegments(cx, cz, r, sides = 12, level = 'all') {
+  const out = [];
+  for (let i = 0; i < sides; i++) {
+    const a = (i / sides) * Math.PI * 2, b = ((i + 1) / sides) * Math.PI * 2;
+    out.push(seg(cx + Math.cos(a) * r, cz + Math.sin(a) * r,
+      cx + Math.cos(b) * r, cz + Math.sin(b) * r, level));
+  }
+  return out;
+}
 
 export function chadreaSegments() {
   const c = [];
@@ -1005,9 +1050,16 @@ export function chadreaSegments() {
 
   // --- the flight's open side ---------------------------------------------
   // 'all' on purpose: it is a cast upstand off the floor, not a rail, so it
-  // also closes the pocket north of the flight at ground level. It stops at the
-  // foot so the broad steps below stay reachable from the hall.
-  c.push(seg(STAIR.xt, STAIR.z1, STAIR.xb, STAIR.z1));
+  // also closes the pocket north of the flight at ground level. It stops at
+  // STAIR.open — that gap is the way onto the stair.
+  c.push(seg(STAIR.xt, STAIR.z1, STAIR.open, STAIR.z1));
+  // …and the bottom treads' own south edge, stepping out with them, so you
+  // walk up the spill rather than off its side.
+  for (let i = 0; i < 3; i++) {
+    const run = (STAIR.xb - STAIR.xt) / 22;
+    const x1 = STAIR.xb - i * run, x0 = x1 - run;
+    c.push(seg(x0, STAIR.z1 + (3 - i) * 0.42, x0, STAIR.z1 + (2 - i) * 0.42));
+  }
 
   // --- the mezzanine's rails, only while you're on the deck ---------------
   // The east run starts where the flight lands, so the mouth stays open.
@@ -1019,8 +1071,10 @@ export function chadreaSegments() {
   c.push(...rect(-7.95, 0.40, -7.17, 5.00, F));    // console, its vessels inside it
   c.push(...rect(1.84, -8.21, 2.26, -7.79, F));    // plinth by the flight
   c.push(...rect(-2.80, 1.42, -1.20, 2.58, F));    // the ottoman
-  c.push(...rect(-0.50, 1.77, 1.20, 2.93, F));     // the walnut coffee table
-  c.push(...rect(1.20, 4.30, 3.80, 6.90, F));      // travertine pedestal
+  // The travertine table. A ring, not the square the other pieces get: it is
+  // 2.6 m across and stands in the middle of the walking route, so square
+  // corners would push you off it a stride early on the diagonal.
+  c.push(...ringSegments(0.35, 2.35, 1.40, 14, F));
   c.push(...rect(12.33, 7.80, 12.83, 10.40, F));   // the wing's bench
   return c;
 }
