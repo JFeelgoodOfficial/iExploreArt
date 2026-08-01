@@ -242,21 +242,6 @@ function woodMat(dark = false) {
   });
 }
 
-function linenMat() {
-  const c = cv(512), x = c.getContext('2d');
-  x.fillStyle = '#ded7c9'; x.fillRect(0, 0, 512, 512);
-  for (let i = 0; i < 512; i += 2) {
-    x.fillStyle = `rgba(255,255,255,${rnd(0.02, 0.09)})`;
-    x.fillRect(i, 0, 1, 512); x.fillRect(0, i, 512, 1);
-  }
-  blotch(x, 512, 512, 50, 30, 140, ['198,190,176', '246,242,234'], 0.25);
-  grain(x, 512, 512, 10);
-  return new THREE.MeshStandardMaterial({
-    color: 0xf0ece2, roughness: 0.9, metalness: 0,
-    map: tex(c, 4, 4, true), bumpMap: tex(c, 4, 4), bumpScale: 0.006,
-  });
-}
-
 const steelMat = () => new THREE.MeshPhysicalMaterial({
   color: 0x171615, roughness: 0.44, metalness: 0.85, envMapIntensity: 0.7,
 });
@@ -699,28 +684,12 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     g.add(v);
   }
 
-  // --- furniture: rug, L sofa, coffee table, travertine pedestal -----------
+  // --- furniture: the rug and the one table standing on it -----------------
+  // Nothing else. The sketch's L sofa became an ottoman and the ottoman is now
+  // gone too — the room reads better with the concrete uninterrupted.
   {
-    const linen = linenMat();
-    const cushion = (w, h, d, x, y, z, soft = 0.06) => {
-      const geo = new THREE.BoxGeometry(w, h, d, 3, 3, 3);
-      const p = geo.attributes.position;
-      // round the edges a touch so linen doesn't read as a crate
-      for (let i = 0; i < p.count; i++) {
-        p.setXYZ(i,
-          p.getX(i) * (1 - soft * 0.3),
-          p.getY(i) * (1 - soft * 0.2) + Math.sin(p.getX(i) * 2) * 0.006,
-          p.getZ(i) * (1 - soft * 0.3));
-      }
-      geo.computeVertexNormals();
-      const m = new THREE.Mesh(geo, linen);
-      m.position.set(x, y, z);
-      m.castShadow = true; m.receiveShadow = true;
-      g.add(m);
-      return m;
-    };
-
-    const rug = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 5.2), (() => {
+    const RUG = { x: -1.4, z: 2.0, w: 6.6, d: 5.2 };
+    const rug = new THREE.Mesh(new THREE.PlaneGeometry(RUG.w, RUG.d), (() => {
       const c = cv(512), x = c.getContext('2d');
       x.fillStyle = '#8e877c'; x.fillRect(0, 0, 512, 512);
       blotch(x, 512, 512, 120, 20, 180, ['122,116,106', '168,162,150'], 0.35);
@@ -728,28 +697,18 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
       return new THREE.MeshStandardMaterial({ color: 0xa9a297, roughness: 0.95, map: tex(c, 1, 1, true) });
     })());
     rug.rotation.x = -Math.PI / 2;
-    rug.position.set(-1.4, 0.012, 2.0);
+    rug.position.set(RUG.x, 0.012, RUG.z);
     rug.receiveShadow = true;
     g.add(rug);
 
-    // One ottoman. The sketch had an L sofa here, but it was built as bare
-    // stacked cushion slabs — no back, no arms, nothing under it — so at eye
-    // height it read as a bed with a mattress parked beside it. A single
-    // upholstered block is what this room wants anyway: the seating is not the
-    // subject, the concrete is.
-    const OT = { x: -2.0, z: 2.0, w: 1.60, d: 1.15 };
-    // recessed dark base, so the linen floats on a shadow gap
-    box(OT.w - 0.14, 0.08, OT.d - 0.14, blackenedMat(), OT.x, 0.04, OT.z);
-    cushion(OT.w, 0.30, OT.d, OT.x, 0.23, OT.z);              // body
-    cushion(OT.w - 0.06, 0.09, OT.d - 0.06, OT.x, 0.425, OT.z, 0.12);   // top pad, seamed
-
-    // The round travertine pedestal table, standing where the walnut coffee
-    // table used to. The rectangular one is gone; everything that was set out
-    // on either of them comes with this one. TOP is the stone's upper face —
-    // every object on it is placed off that rather than off a literal, so the
-    // whole setting moves with the table.
+    // The round travertine pedestal, standing a little off the rug's centre —
+    // dead centre would read as a showroom set-piece, and the offset is toward
+    // the arch so the table sits in the light coming through it. Everything
+    // that was ever set out on a table in this room is on this one now. TOP is
+    // the stone's upper face; every object is placed off that rather than off
+    // a literal, so the whole setting moves with the table.
     const tv = travertineMat();
-    const TB = { x: 0.35, z: 2.35, r: 1.32 };
+    const TB = { x: RUG.x + 0.55, z: RUG.z + 0.35, r: 1.32 };
     const TOP = 0.795;
     const top = new THREE.Mesh(new THREE.CylinderGeometry(TB.r, TB.r, 0.11, 64), tv);
     top.position.set(TB.x, TOP - 0.055, TB.z);
@@ -1070,11 +1029,11 @@ export function chadreaSegments() {
   const F = 0;
   c.push(...rect(-7.95, 0.40, -7.17, 5.00, F));    // console, its vessels inside it
   c.push(...rect(1.84, -8.21, 2.26, -7.79, F));    // plinth by the flight
-  c.push(...rect(-2.80, 1.42, -1.20, 2.58, F));    // the ottoman
-  // The travertine table. A ring, not the square the other pieces get: it is
-  // 2.6 m across and stands in the middle of the walking route, so square
-  // corners would push you off it a stride early on the diagonal.
-  c.push(...ringSegments(0.35, 2.35, 1.40, 14, F));
+  // The travertine table, the only thing standing on the rug. A ring, not the
+  // square the other pieces get: it is 2.6 m across and stands in the walking
+  // route, so square corners would push you off it a stride early on the
+  // diagonal. Centre must track TB in buildChadreaRoom.
+  c.push(...ringSegments(-0.85, 2.35, 1.40, 14, F));
   c.push(...rect(12.33, 7.80, 12.83, 10.40, F));   // the wing's bench
   return c;
 }
