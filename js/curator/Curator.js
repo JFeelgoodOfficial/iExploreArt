@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CURATOR_POS } from '../world/layout.js';
 import { DIALOGUE } from '../../data/dialogue.js';
 import { ARTWORKS } from '../../data/artworks.js';
-import { RESIDENCIES, findResidency } from '../../data/residencies.js';
+import { OPEN_RESIDENCIES, findResidency } from '../../data/residencies.js';
 import { queueUpload } from '../utils/texqueue.js';
 
 // Mira, the curator: a photographic billboard behind the reception desk that
@@ -209,16 +209,18 @@ export class Curator {
         return;
       }
       if (a.type === 'residencyList') {
-        const choices = RESIDENCIES.map(r => ({
+        // Only the rooms the lift will actually take you to — she shouldn't send
+        // anyone to a floor that isn't open yet (data/residencies.js, `pending`).
+        const choices = OPEN_RESIDENCIES.map(r => ({
           label: `${r.artist} — ${r.name}`,
           action: { type: 'residency', id: r.id },
         }));
         choices.push({ label: 'Back.', next: 'start' });
         // one artist can hold more than one room, so count people, not rooms
-        const names = new Set(RESIDENCIES.map(r => r.artist));
-        const who = names.size === RESIDENCIES.length
+        const names = new Set(OPEN_RESIDENCIES.map(r => r.artist));
+        const who = names.size === OPEN_RESIDENCIES.length
           ? `${count(names.size)} artists are in residence`
-          : `${count(names.size)} artists are in residence across ${count(RESIDENCIES.length)} rooms`;
+          : `${count(names.size)} artists are in residence across ${count(OPEN_RESIDENCIES.length)} rooms`;
         this.ui.showDialogueNode(
           `${who[0].toUpperCase()}${who.slice(1)}. Ask me about any of them:`,
           choices,

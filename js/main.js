@@ -19,7 +19,6 @@ import {
   buildBrutalistRoom, setupBrutalistLighting,
   brutalistGround, brutalistSegments, SPAWN as BX_SPAWN, BX, SUN_POS as BX_SUN,
 } from './world/brutalism/brutalist.js';
-import { RESIDENCIES } from '../data/residencies.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
 import { BRUTALIST_HANG } from '../data/brutalist-artworks.js';
 import { PLINTH } from './world/rococo-plinth.js';
@@ -471,7 +470,9 @@ lift.panel.userData.lift = {
   label: 'call the lift',
   open: () => ui.openLift(
     lift.labels, -1,
-    (i) => lift.ride(RESIDENCIES[i]),
+    // indexed against lift.labels, so read the destinations back off the lift —
+    // it offers only the rooms that exist (data/residencies.js, `pending`)
+    (i) => lift.ride(lift.residencies[i]),
     { speaker: 'Reception lift', title: 'Which residency?' }
   ),
 };

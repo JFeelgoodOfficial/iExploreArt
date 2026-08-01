@@ -5,7 +5,7 @@ import { generatePainting } from '../../art/placeholder.js';
 import { mulberry32 } from '../../utils/proctex.js';
 
 // ---------------------------------------------------------------------------
-// BRUTALISM HALL — residency four (room id `brutalist`).
+// BRUTALISM HALL — residency five (room id `brutalist`).
 //
 // One volume, four storeys, board-formed concrete. The floor plates are rings
 // around a single void, so from anywhere on the ground you can see all the way
