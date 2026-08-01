@@ -50,6 +50,48 @@ export const SKY = { x0: -1.4, x1: -0.6, z0: HALL.z0, z1: -5.4 };
 // whole southern half of the pier then arrives as an unlit black wall.
 export const COVE = { z0: -7.1, z1: 9.0, y: 7.3 };
 
+// The curtail steps — the flight's bottom three, cast much broader than the
+// treads above and with their outer corners rounded, cascading south into the
+// hall. Each one is a landing at the height the flight has reached at its west
+// edge (so top(i) is exactly the ramp at x0(i)) and runs the full way back to
+// the north wall, east to the pier. Derived from STAIR so the two cannot drift.
+export const CURTAIL = (() => {
+  const run = (STAIR.xb - STAIR.xt) / 22, rise = STAIR.top / 22;
+  //          how far south of the flight it throws, how far past the tread line
+  //          it reaches west, and its corner radius. A curtail step is the
+  //          biggest in every direction, so the bottom one leads on all three —
+  //          the westward reach is what carries the stone under the volute's
+  //          curl, instead of leaving its balusters standing on the floor.
+  const proj = [1.70, 1.15, 0.60];
+  const ext = [0.55, 0.30, 0.05];
+  const rad = [0.50, 0.38, 0.26];
+  return proj.map((p, i) => ({
+    top: (i + 1) * rise,
+    x0: STAIR.xb - (i + 1) * run - ext[i],
+    x1: PIER.x - 0.06,
+    z0: STAIR.z0,
+    z1: STAIR.z1 + p,
+    r: rad[i],
+  }));
+})();
+
+// The volute's path, [x, z, y]. It leaves the rake at the flight's south edge,
+// runs down past each curtail step's rounded west end about a metre above it,
+// then scrolls back on itself. One array drives the tube, the balusters and the
+// colliders, so the rail you see and the rail you bump into are the same curve.
+export const VOLUTE = [
+  [2.586, -9.35, 1.593],
+  [2.566, -9.00, 1.585],
+  [2.600, -8.72, 1.545],
+  [2.700, -8.44, 1.470],
+  [2.891, -8.17, 1.402],
+  [3.020, -7.99, 1.320],
+  [3.070, -7.83, 1.240],
+  [2.960, -7.75, 1.203],
+  [2.850, -7.82, 1.196],
+  [2.860, -7.95, 1.196],
+];
+
 // Ground floor at the south end, facing north up the hall: the arch is on your
 // right, the flight and the skylight ahead. Yaw 0 looks along −z.
 export const SPAWN = { x: 0.6, z: 7.4, yaw: 0 };
@@ -526,10 +568,15 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     const treads = new THREE.InstancedMesh(tg, sm, risers);
     treads.castShadow = true; treads.receiveShadow = true;
     const M = new THREE.Matrix4();
-    for (let i = 0; i < risers; i++) {
+    // The bottom CURTAIL.length treads are cast as the broad steps below, so
+    // the instanced run starts above them — an instance there would z-fight the
+    // curtail step's own top face, which sits at exactly the same height.
+    let t = 0;
+    for (let i = CURTAIL.length; i < risers; i++) {
       M.makeTranslation(STAIR.xb - (i + 0.5) * run, (i + 1) * rise - rise * 0.21, (STAIR.z0 + STAIR.z1) / 2);
-      treads.setMatrixAt(i, M);
+      treads.setMatrixAt(t++, M);
     }
+    treads.count = t;
     g.add(treads);
     // raking soffit beam under the flight
     const soff = new THREE.Mesh(
@@ -542,14 +589,26 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     soff.rotation.z = -ANG;
     soff.castShadow = true; soff.receiveShadow = true;
     g.add(soff);
-    // The bottom treads spill south into the hall, so the foot reads as an
-    // invitation rather than a kerb. Each is one tread deep and steps down
-    // toward the room; they replace the sketch's three broad slabs, which sat
-    // 0.17 above a flight whose own foot was at zero and ran through the pier.
-    for (let i = 0; i < 3; i++) {
-      const x = STAIR.xb - (i + 0.5) * run;
-      box(run + 0.04, rise * 0.42, (STAIR.z1 - STAIR.z0) + (3 - i) * 0.42, sm,
-        x, (i + 1) * rise - rise * 0.21, (STAIR.z0 + STAIR.z1) / 2 + (3 - i) * 0.21);
+    // The curtail steps. Each is an extruded plan with its two outer corners
+    // rounded, so the cascade finishes on a curve rather than a corner — the
+    // bottom one throws 1.7 m into the hall and is the widest radius. Solid
+    // from the floor up, so they read as cast masonry rather than plates.
+    for (const c of CURTAIL) {
+      const s = new THREE.Shape();
+      s.moveTo(c.x0, c.z0);
+      s.lineTo(c.x1, c.z0);
+      s.lineTo(c.x1, c.z1 - c.r);
+      s.quadraticCurveTo(c.x1, c.z1, c.x1 - c.r, c.z1);
+      s.lineTo(c.x0 + c.r, c.z1);
+      s.quadraticCurveTo(c.x0, c.z1, c.x0, c.z1 - c.r);
+      s.lineTo(c.x0, c.z0);
+      const geo = new THREE.ExtrudeGeometry(s, { depth: c.top, bevelEnabled: false, curveSegments: 20 });
+      const m = new THREE.Mesh(geo, sm);
+      // the shape is drawn in plan; stand it up so its depth becomes height
+      m.rotation.x = Math.PI / 2;
+      m.position.y = c.top;
+      m.castShadow = true; m.receiveShadow = true;
+      g.add(m);
     }
     // Slim steel balustrade on the open (south) side — starting at STAIR.open,
     // so the bottom of the flight is walked onto rather than fenced off.
@@ -572,6 +631,34 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     const rail = box(Math.hypot(railRun, STAIR.top * railRun / stairLen), 0.032, 0.05, steel,
       railCx, STAIR.top * (STAIR.xb - railCx) / stairLen + 1.02, STAIR.z1 - 0.05);
     rail.rotation.z = -ANG;   // rakes with the treads, same reason as the soffit
+
+    // The volute. Where the rake ends the rail keeps going, turning off the
+    // flight and down across the curtail steps, following their rounded west
+    // ends and curling back on itself at the bottom. VOLUTE is the same path
+    // chadreaSegments() fences, so you cannot walk through what you can see —
+    // and it curls WEST, away from the mouth, leaving the bottom step's south
+    // face clear to walk up.
+    const vp = VOLUTE.map(([x, z, y]) => new THREE.Vector3(x, y, z));
+    const curve = new THREE.CatmullRomCurve3(vp, false, 'catmullrom', 0.4);
+    const volute = new THREE.Mesh(new THREE.TubeGeometry(curve, 72, 0.024, 8, false), steel);
+    volute.castShadow = true;
+    g.add(volute);
+    // balusters fanning down the curl, each stopping on whatever step it lands on
+    const vb = new THREE.InstancedMesh(new THREE.BoxGeometry(0.02, 1, 0.02), steel, 40);
+    vb.castShadow = true;
+    let vn = 0;
+    const SAMPLES = 22;
+    for (let i = 1; i <= SAMPLES; i++) {
+      const p = curve.getPoint(i / SAMPLES);
+      const foot = curtailTop(p.x, p.z) ?? 0;
+      const h = p.y - foot;
+      if (h < 0.25) continue;
+      M.makeScale(1, h, 1);
+      M.setPosition(p.x, foot + h / 2, p.z);
+      vb.setMatrixAt(vn++, M);
+    }
+    vb.count = vn;
+    g.add(vb);
   }
 
   // --- ten works, hung flat on the concrete --------------------------------
@@ -933,14 +1020,18 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
 // while walking underneath.
 
 export function chadreaGround(x, z, prevY = 0) {
+  // The curtail steps and the ramp overlap where the broad steps have replaced
+  // the flight's bottom treads, so take whichever is higher — the steps are
+  // solid masonry and the ramp underneath them is notional.
+  let y = 0;
+  const c = curtailTop(x, z);
+  if (c !== null) y = c;
+  const s = stairY(x, z);
+  if (s !== null && s > y) y = s;
   // The flight is cantilevered over open floor, so its height is only offered
   // to someone already near it; otherwise you walk beneath it.
-  const s = stairY(x, z);
-  if (s !== null && s <= prevY + 0.75) return s;
+  if (y > 0 && y <= prevY + 0.75) return y;
   if (prevY > MEZZ.top - 1.6 && onMezz(x, z)) return MEZZ.top;
-  // the bottom treads spilling south out of the flight, walked on from the hall
-  const b = bottomTreadY(x, z);
-  if (b !== null && b <= prevY + 0.75) return b;
   return 0;
 }
 
@@ -949,17 +1040,18 @@ function stairY(x, z) {
   return STAIR.top * (STAIR.xb - x) / (STAIR.xb - STAIR.xt);
 }
 
-// The three bottom treads run further south than the flight proper, each one
-// shallower than the last, so you climb onto the stair from the room rather
-// than stepping up 0.19 m off its side.
-function bottomTreadY(x, z) {
-  const run = (STAIR.xb - STAIR.xt) / 22;
-  for (let i = 0; i < 3; i++) {
-    const x1 = STAIR.xb - i * run, x0 = x1 - run;
-    if (x < x0 || x > x1) continue;
-    if (z < STAIR.z0 || z > STAIR.z1 + (3 - i) * 0.42) continue;
-    // the flight's own ramp height, so crossing z1 onto the spill is seamless
-    return STAIR.top * (STAIR.xb - x) / (STAIR.xb - STAIR.xt);
+// The curtail steps, highest first — they overlap, and the one on top is the
+// one you stand on. Their rounded outer corners are honoured, so you don't walk
+// out onto air where the plan curves away.
+function curtailTop(x, z) {
+  for (let i = CURTAIL.length - 1; i >= 0; i--) {
+    const c = CURTAIL[i];
+    if (x < c.x0 || x > c.x1 || z < c.z0 || z > c.z1) continue;
+    if (z > c.z1 - c.r) {
+      if (x < c.x0 + c.r && Math.hypot(x - (c.x0 + c.r), z - (c.z1 - c.r)) > c.r) continue;
+      if (x > c.x1 - c.r && Math.hypot(x - (c.x1 - c.r), z - (c.z1 - c.r)) > c.r) continue;
+    }
+    return c.top;
   }
   return null;
 }
@@ -1012,12 +1104,11 @@ export function chadreaSegments() {
   // also closes the pocket north of the flight at ground level. It stops at
   // STAIR.open — that gap is the way onto the stair.
   c.push(seg(STAIR.xt, STAIR.z1, STAIR.open, STAIR.z1));
-  // …and the bottom treads' own south edge, stepping out with them, so you
-  // walk up the spill rather than off its side.
-  for (let i = 0; i < 3; i++) {
-    const run = (STAIR.xb - STAIR.xt) / 22;
-    const x1 = STAIR.xb - i * run, x0 = x1 - run;
-    c.push(seg(x0, STAIR.z1 + (3 - i) * 0.42, x0, STAIR.z1 + (2 - i) * 0.42));
+  // …then the volute picks it up and carries it down across the curtail steps,
+  // fenced on the same path the tube is drawn on. It curls west, away from the
+  // bottom step's south face, which is the way up.
+  for (let i = 0; i < VOLUTE.length - 1; i++) {
+    c.push(seg(VOLUTE[i][0], VOLUTE[i][1], VOLUTE[i + 1][0], VOLUTE[i + 1][1]));
   }
 
   // --- the mezzanine's rails, only while you're on the deck ---------------
