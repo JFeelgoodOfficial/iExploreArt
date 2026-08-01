@@ -79,22 +79,69 @@ export const CURTAIL = (() => {
   }));
 })();
 
-// The volute's path, [x, z, y]. It leaves the rake at the flight's south edge,
-// runs down past each curtail step's rounded west end about a metre above it,
-// then scrolls back on itself. One array drives the tube, the balusters and the
-// colliders, so the rail you see and the rail you bump into are the same curve.
-export const VOLUTE = [
-  [2.586, -9.35, 1.593],
-  [2.566, -9.00, 1.585],
-  [2.600, -8.72, 1.545],
-  [2.700, -8.44, 1.470],
-  [2.891, -8.17, 1.402],
-  [3.020, -7.99, 1.320],
-  [3.070, -7.83, 1.240],
-  [2.960, -7.75, 1.203],
-  [2.850, -7.82, 1.196],
-  [2.860, -7.95, 1.196],
-];
+// The walnut plinth and its vessel, standing off the cascade's west edge. The
+// volute wraps it and chadreaSegments fences it, so it lives here rather than
+// being written out in three places that could drift apart.
+export const PLINTH = { x: 2.05, z: -8.0, w: 0.42, h: 1.32, r: 0.56 };
+
+// The volute's path, [x, z, y] — GENERATED from the stone rather than authored
+// by hand, so the rail follows the steps instead of merely resembling them. It
+// leaves the rake, turns down the cascade's west edge, swings the long way
+// round the plinth so the statue sits inside the curve, comes back to the edge
+// and finishes on the bottom step's own rounded corner, tracing its radius.
+// One array drives the tube, the balusters and the colliders, so the rail you
+// see and the rail you bump into are the same curve.
+export const VOLUTE = (() => {
+  const OFF = 0.07;                          // stands this far clear of the stone
+  const c0 = CURTAIL[0], c2 = CURTAIL[2];
+  const X = c0.x0 - OFF;                     // the west line it runs down
+  // One smooth rake over the whole cascade. A handrail ramps; it does not step
+  // once per tread, and sampling the step tops directly puts a 0.19 m jolt in it.
+  const zTop = STAIR.z1 + 0.05, zBot = c0.z1 - 0.20;
+  const yTop = c2.top + 1.02, yBot = c0.top + 1.02;
+  const yAt = (z) => {
+    const t = Math.min(1, Math.max(0, (z - zTop) / (zBot - zTop)));
+    return yTop + (yBot - yTop) * t;
+  };
+  const pts = [];
+
+  // off the rake, turning south onto the west line
+  const yRake = STAIR.top * (STAIR.xb - STAIR.open) / (STAIR.xb - STAIR.xt) + 1.02;
+  pts.push([STAIR.open, STAIR.z1 - 0.05, yRake]);
+  pts.push([STAIR.open - 0.20, STAIR.z1 + 0.02, yAt(STAIR.z1 + 0.02)]);
+  pts.push([X + 0.03, STAIR.z1 + 0.20, yAt(STAIR.z1 + 0.20)]);
+
+  // where the plinth's circle cuts the west line, in and out
+  const dz = Math.sqrt(Math.max(0.01, PLINTH.r ** 2 - (X - PLINTH.x) ** 2));
+  const zIn = PLINTH.z - dz, zOut = PLINTH.z + dz;
+  pts.push([X, zIn - 0.34, yAt(zIn - 0.34)]);
+
+  // …round the statue, the long way west, so it stands inside the curve
+  const aIn = Math.atan2(zIn - PLINTH.z, X - PLINTH.x);
+  const aOut = Math.atan2(zOut - PLINTH.z, X - PLINTH.x);
+  const LOOP = 20;
+  for (let i = 0; i <= LOOP; i++) {
+    const t = i / LOOP;
+    const a = aIn + t * ((aOut - Math.PI * 2) - aIn);
+    pts.push([
+      PLINTH.x + Math.cos(a) * PLINTH.r,
+      PLINTH.z + Math.sin(a) * PLINTH.r,
+      yAt(zIn) + (yAt(zOut) - yAt(zIn)) * t,
+    ]);
+  }
+
+  // …back onto the west line, then round the bottom step's own corner radius,
+  // stopping a third of the way so its south face stays open to walk up
+  const cx = c0.x0 + c0.r, cz = c0.z1 - c0.r, R = c0.r + OFF;
+  pts.push([X, zOut + 0.05, yAt(zOut + 0.05)]);
+  const ARC = 10;
+  for (let i = 0; i <= ARC; i++) {
+    const a = Math.PI - (i / ARC) * (Math.PI / 3);
+    const z = cz + Math.sin(a) * R;
+    pts.push([cx + Math.cos(a) * R, z, yAt(z)]);
+  }
+  return pts;
+})();
 
 // Ground floor at the south end, facing north up the hall: the arch is on your
 // right, the flight and the skylight ahead. Yaw 0 looks along −z.
@@ -654,7 +701,7 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     // spaced along the curve's ARC length, not its parameter — the curl is far
     // tighter than the run above it, and even parameter spacing bunches them
     // into a cage there
-    const SAMPLES = Math.max(3, Math.round(curve.getLength() / 0.23));
+    const SAMPLES = Math.max(3, Math.round(curve.getLength() / 0.34));
     for (let i = 1; i <= SAMPLES; i++) {
       const p = curve.getPointAt(i / SAMPLES);
       const foot = curtailTop(p.x, p.z) ?? 0;
@@ -764,16 +811,16 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     box(0.3, 0.05, 0.42, new THREE.MeshStandardMaterial({ color: 0x24201d, roughness: 0.7 }), cx, 0.93, cz + 0.1);
   }
 
-  // dark plinth + vessel by the foot of the flight
+  // dark plinth + vessel by the foot of the flight — the volute's newel
   {
-    box(0.42, 1.32, 0.42, woodMat(true), 2.05, 0.66, -8.0);
+    box(PLINTH.w, PLINTH.h, PLINTH.w, woodMat(true), PLINTH.x, PLINTH.h / 2, PLINTH.z);
     const pts = [];
     for (let i = 0; i <= 16; i++) {
       const u = i / 16;
       pts.push(new THREE.Vector2(0.30 * Math.sin(Math.PI * (0.18 + u * 0.74)), u * 0.52));
     }
     const v = new THREE.Mesh(new THREE.LatheGeometry(pts, 40), ceramicMat(0x4a3c30));
-    v.position.set(2.05, 1.32, -8.0);
+    v.position.set(PLINTH.x, PLINTH.h, PLINTH.z);
     v.castShadow = true;
     g.add(v);
   }
@@ -1126,7 +1173,8 @@ export function chadreaSegments() {
   // --- what stands on the ground floor ------------------------------------
   const F = 0;
   c.push(...rect(-7.95, 0.40, -7.17, 5.00, F));    // console, its vessels inside it
-  c.push(...rect(1.84, -8.21, 2.26, -7.79, F));    // plinth by the flight
+  c.push(...rect(PLINTH.x - PLINTH.w / 2, PLINTH.z - PLINTH.w / 2,
+                 PLINTH.x + PLINTH.w / 2, PLINTH.z + PLINTH.w / 2, F));   // the plinth
   // The travertine table, the only thing standing on the rug. A ring, not the
   // square the other pieces get: it is 2.6 m across and stands in the walking
   // route, so square corners would push you off it a stride early on the
