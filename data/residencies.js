@@ -12,6 +12,10 @@
 //            further up the residency, the longer the ride.
 //   artist : resident's name. ← edit these to reassign residents.
 //   blurb  : one line the curator uses when describing the room.
+//   pending: optional. The floor is spoken for, but the room isn't built yet —
+//            there is no `id` in main.js's ROOM_FACTORIES to ride to. The lift
+//            leaves it off the panel rather than offering a button that arrives
+//            nowhere. Delete the flag when the room lands.
 
 export const RESIDENCIES = [
   {
@@ -36,13 +40,26 @@ export const RESIDENCIES = [
     blurb: 'gilt boiserie under a painted ceiling, with a gallery running on three sides — she has hung the whole of the Fall Series across it, ten pieces',
   },
   {
+    id: 'chadrea',
+    name: 'Chadrea Hall',
+    floor: 4,
+    artist: 'Chad Rea',
+    blurb: 'board-formed concrete under an eight-metre soffit, lit by a slot of skylight and a cove recessed the whole length of the art wall, with a cantilevered stair up to a mezzanine and a rounded plaster arch through the pier into a daylit wing; ten works hung flat on the concrete',
+  },
+  {
     id: 'brutalist',
     name: 'Brutalism Hall',
-    floor: 4,
+    floor: 5,
     artist: 'Chad Rea',
     blurb: 'four storeys of board-formed concrete round one void — galleries ringing it at two levels, three cantilevered flights each against a different wall, and a foot of water lying on the glass at the top that you look down through, thirteen metres, to the floor; ten works hung flat on the concrete, unframed, and the pool runs out through the east wall to an edge with the city under it',
   },
 ];
+
+// The ones you can actually ride to. A `pending` entry holds its floor number in
+// the plan without putting a button on the panel that goes nowhere: the lift and
+// the curator both offer this list, while `findResidency` still searches them all
+// so a room that is coming can still be described.
+export const OPEN_RESIDENCIES = RESIDENCIES.filter((r) => !r.pending);
 
 // Metres per floor, so `floor` reads as a storey rather than a raw height.
 export const FLOOR_HEIGHT = 4.4;

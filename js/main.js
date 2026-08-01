@@ -19,7 +19,10 @@ import {
   buildBrutalistRoom, setupBrutalistLighting,
   brutalistGround, brutalistSegments, SPAWN as BX_SPAWN, BX, SUN_POS as BX_SUN,
 } from './world/brutalism/brutalist.js';
-import { RESIDENCIES } from '../data/residencies.js';
+import {
+  buildChadreaRoom, setupChadreaLighting,
+  chadreaGround, chadreaSegments, SPAWN as CH_SPAWN, HALL as CH_HALL,
+} from './world/chadrea/chadrea.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
 import { BRUTALIST_HANG } from '../data/brutalist-artworks.js';
 import { PLINTH } from './world/rococo-plinth.js';
@@ -395,6 +398,26 @@ const ROOM_FACTORIES = {
       },
     };
   },
+
+  chadrea: () => {
+    const room = buildChadreaRoom(scene, { tier });
+    const lights = setupChadreaLighting(scene, renderer, tier);
+    // No city: the hall is lit from the ceiling slot and the wing's own
+    // daylight, and nothing in it looks out at anything.
+    // South wall behind the spawn, facing back up the hall.
+    const door = returnDoor(CH_SPAWN.x, 1.35, CH_HALL.z1 - 0.14, Math.PI);
+    return {
+      room: { ...room, lights },
+      def: {
+        targets: [door, ...room.interactables],
+        spawn: CH_SPAWN,
+        segments: chadreaSegments(),
+        ground: chadreaGround,
+        background: new THREE.Color(0x1a1714),
+        bake: () => { lights.bake(); },
+      },
+    };
+  },
 };
 
 async function ensureRoom(id) {
@@ -471,7 +494,9 @@ lift.panel.userData.lift = {
   label: 'call the lift',
   open: () => ui.openLift(
     lift.labels, -1,
-    (i) => lift.ride(RESIDENCIES[i]),
+    // indexed against lift.labels, so read the destinations back off the lift —
+    // it offers only the rooms that exist (data/residencies.js, `pending`)
+    (i) => lift.ride(lift.residencies[i]),
     { speaker: 'Reception lift', title: 'Which residency?' }
   ),
 };
@@ -592,6 +617,8 @@ renderer.setAnimationLoop(() => {
     residencyRooms.brutalist?.city.update(t);
     residencyRooms.brutalist?.update(dt);
   }
+  // the haze turning through Chadrea Hall's light shaft
+  if (rooms.current === 'chadrea') residencyRooms.chadrea?.update(dt);
   // Candle / lamp flicker, for the rooms that have any. The call is optional as
   // well as the rig: a room lit by daylight alone (the brutalist hall) returns a
   // rig with no `update`, and setAnimationLoop re-arms its rAF *after* the

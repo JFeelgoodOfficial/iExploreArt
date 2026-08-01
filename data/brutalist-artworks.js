@@ -1,5 +1,5 @@
 // ============================================================================
-// BRUTALISM HALL HANG — ten works, floor 4.
+// BRUTALISM HALL HANG — ten works, floor 5.
 //
 // Placeholders. Every entry has `image: null`, so js/art/placeholder.js
 // generates an abstract canvas in the house palette and the hall reads as
