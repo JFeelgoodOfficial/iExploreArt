@@ -7,12 +7,15 @@ floor, and speak with Mira, the curator at the reception desk — who can tell t
 story behind every piece and route purchases through
 [minicuration.com](https://minicuration.com).
 
-Beside the reception desk a lift rides up to the **artist residencies**, listed
-in `data/residencies.js`: an arcaded courtyard palazzo on floor 1, an Art
-Nouveau domed hall on 2, a Rococo gallery on 3, and a board-formed concrete hall
-built round a four-storey void on 5. Floor 4 is spoken for by Chadrea Hall,
-which isn't built yet — its entry carries `pending: true`, so the lift leaves it
-off the panel rather than offering a button that arrives nowhere.
+Beside the reception desk a lift rides up to the **artist residencies** — five
+further rooms, listed in `data/residencies.js`: an arcaded courtyard palazzo on
+floor 1, an Art Nouveau domed hall on 2, a Rococo gallery on 3, a concrete house
+of one long top-lit hall and a daylit wing on 4, and a board-formed concrete
+hall built round a four-storey void on 5.
+
+An entry may carry `pending: true`, which means the floor is spoken for but the
+room is not built: the lift leaves it off the panel rather than offering a
+button that arrives nowhere. Nothing is pending right now.
 
 Everything is static files — no build step, no server. Open `index.html` from any
 static host (GitHub Pages, Netlify, etc.).
@@ -55,9 +58,17 @@ drops its collect button; the asset folders keep their original `fall26` /
 `spring1` names. Chad Rea holds Brutalism Hall on floor 5, from
 **`data/brutalist-artworks.js`** — ten works, all still `image: null`, so
 `js/art/placeholder.js` generates a canvas for each and the hall reads as
-complete until the real files arrive. He is down for a second room, Chadrea
-Hall, on floor 4; the geometry exists as a standalone sketch
-(`js/world/chadrea/chadrea.js`) but has not been made into a room yet.
+complete until the real files arrive.
+
+He holds a second room below it, **Chadrea Hall** on floor 4
+(`js/world/chadrea/chadrea.js`) — a concrete house rather than a gallery: one
+long board-formed hall under an 8.6 m soffit, a mezzanine reached by a single
+cantilevered flight, and a rounded plaster arch through the pier wall into a
+white, daylit wing. Its ten works are **decoration** — generated canvases hung
+flat on the concrete, with no manifest and no `userData.artwork`, so nothing
+there answers an **E** press. To hang real pieces it needs a
+`data/chadrea-artworks.js` and an exported `SLOTS[]`, the way Brutalism Hall
+does it; the hang loop in `brutalism/brutalist.js` is the pattern to copy.
 
 It works differently from `data/artworks.js`, because these frames are carved
 geometry rather than four flat bars. Array position is the slot index in that
@@ -116,8 +127,8 @@ js/
   world/brutalism/brutalist.js  residency: board-formed concrete round a
                           four-storey void, glass floor at the top, infinity
                           pool over the city (ditto)
-  world/chadrea/chadrea.js  standalone sketch of Chadrea Hall — mounts its own
-                          canvas and loop, NOT yet wired in as a room
+  world/chadrea/chadrea.js  residency: top-lit concrete hall, mezzanine on a
+                          cantilevered flight, arch through to a daylit wing (ditto)
 
   world/Lighting.js   sun, spots, baked shadows
   art/                frames, placards, placeholder painting generator,

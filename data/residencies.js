@@ -44,7 +44,6 @@ export const RESIDENCIES = [
     name: 'Chadrea Hall',
     floor: 4,
     artist: 'Chad Rea',
-    pending: true,
     blurb: 'board-formed concrete under an eight-metre soffit, lit by a slot of skylight and a cove recessed the whole length of the art wall, with a cantilevered stair up to a mezzanine and a rounded plaster arch through the pier into a daylit wing; ten works hung flat on the concrete',
   },
   {
