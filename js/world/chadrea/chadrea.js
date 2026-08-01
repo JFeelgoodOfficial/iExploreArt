@@ -62,12 +62,16 @@ export const CURTAIL = (() => {
   //          biggest in every direction, so the bottom one leads on all three —
   //          the westward reach is what carries the stone under the volute's
   //          curl, instead of leaving its balusters standing on the floor.
-  const proj = [1.70, 1.15, 0.60];
-  const ext = [0.55, 0.30, 0.05];
-  const rad = [0.50, 0.38, 0.26];
+  const proj = [2.60, 1.85, 1.10];
+  const rad = [0.70, 0.52, 0.34];
+  // All three share a west edge rather than stepping back with the treads, so
+  // the cascade reads as one broad throw into the room instead of a staircase
+  // narrowing away. It stops at 2.33 — the plinth by the flight stands at
+  // x 1.84…2.26, and the stone must not swallow it.
+  const WEST = 2.33;
   return proj.map((p, i) => ({
     top: (i + 1) * rise,
-    x0: STAIR.xb - (i + 1) * run - ext[i],
+    x0: Math.min(STAIR.xb - (i + 1) * run, WEST),
     x1: PIER.x - 0.06,
     z0: STAIR.z0,
     z1: STAIR.z1 + p,
@@ -647,9 +651,12 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     const vb = new THREE.InstancedMesh(new THREE.BoxGeometry(0.02, 1, 0.02), steel, 40);
     vb.castShadow = true;
     let vn = 0;
-    const SAMPLES = 22;
+    // spaced along the curve's ARC length, not its parameter — the curl is far
+    // tighter than the run above it, and even parameter spacing bunches them
+    // into a cage there
+    const SAMPLES = Math.max(3, Math.round(curve.getLength() / 0.23));
     for (let i = 1; i <= SAMPLES; i++) {
-      const p = curve.getPoint(i / SAMPLES);
+      const p = curve.getPointAt(i / SAMPLES);
       const foot = curtailTop(p.x, p.z) ?? 0;
       const h = p.y - foot;
       if (h < 0.25) continue;
