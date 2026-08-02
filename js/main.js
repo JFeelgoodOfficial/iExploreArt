@@ -21,7 +21,7 @@ import {
 } from './world/brutalism/brutalist.js';
 import {
   buildChadreaRoom, setupChadreaLighting,
-  chadreaGround, chadreaSegments, SPAWN as CH_SPAWN, HALL as CH_HALL,
+  chadreaGround, chadreaSegments, SPAWN as CH_SPAWN, HALL as CH_HALL, LIFT as CH_LIFT,
 } from './world/chadrea/chadrea.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
 import { BRUTALIST_HANG } from '../data/brutalist-artworks.js';
@@ -406,10 +406,21 @@ const ROOM_FACTORIES = {
     // daylight, and nothing in it looks out at anything.
     // South wall behind the spawn, facing back up the hall.
     const door = returnDoor(CH_SPAWN.x, 1.35, CH_HALL.z1 - 0.14, Math.PI);
+    // …and the lift in the wing's south wall, through the arch. It rides the
+    // veil rather than switching outright, the way the nouveau stair hall's
+    // does — entering 'gallery' puts you inside the reception cabin with its
+    // doors open, so the trip reads as a lift rather than a cut.
+    const liftDoor = doorHitbox(CH_LIFT.w + 0.2, CH_LIFT.h, CH_LIFT.x, CH_LIFT.h / 2,
+      CH_LIFT.z - 0.16, Math.PI, 'chadrea-lift-to-reception');
+    liftDoor.userData.door = {
+      label: 'ride the lift to reception',
+      onEnter: () => travelTo('gallery'),
+    };
+    scene.add(liftDoor);
     return {
       room: { ...room, lights },
       def: {
-        targets: [door, ...room.interactables],
+        targets: [door, liftDoor, ...room.interactables],
         spawn: CH_SPAWN,
         segments: chadreaSegments(),
         ground: chadreaGround,

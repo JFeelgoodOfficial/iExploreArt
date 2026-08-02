@@ -84,6 +84,13 @@ export const CURTAIL = (() => {
 // being written out in three places that could drift apart.
 export const PLINTH = { x: 2.05, z: -8.0, w: 0.42, h: 1.32, r: 0.56 };
 
+// The lift back to reception, set into the wing's south wall — the one large
+// surface in the room that carries nothing. The car itself is never built: you
+// press the plate, the veil comes down and you step out of the reception cabin
+// downstairs, so this is a portal, two leaves and a call plate, and no shaft.
+// main.js hangs the interaction hitbox off these numbers.
+export const LIFT = { x: 9.0, z: WING.z1, w: 1.72, h: 2.35, jamb: 0.17 };
+
 // The volute's path, [x, z, y] — GENERATED from the stone rather than authored
 // by hand, so the rail follows the steps instead of merely resembling them. It
 // leaves the rake, turns down the cascade's west edge, swings the long way
@@ -335,6 +342,28 @@ function woodMat(dark = false) {
   });
 }
 
+// Brushed metal for the lift leaves. They face north, away from the wing's sun,
+// so a dark near-mirror like steelMat has nothing to reflect there and reads as
+// a black hole in the wall — this is paler and rougher, and carries its own
+// vertical grain so it catches the downlight over the door.
+let _brushCv;
+function brushedMat() {
+  if (!_brushCv) {
+    const c = cv(256, 512), x = c.getContext('2d');
+    x.fillStyle = '#7b756c'; x.fillRect(0, 0, 256, 512);
+    for (let i = 0; i < 900; i++) {
+      x.fillStyle = `rgba(${Math.random() < 0.5 ? '150,145,136' : '64,60,55'},${rnd(0.05, 0.22)})`;
+      x.fillRect(Math.random() * 256, 0, rnd(0.6, 2.2), 512);
+    }
+    grain(x, 256, 512, 8);
+    _brushCv = c;
+  }
+  return new THREE.MeshStandardMaterial({
+    color: 0xffffff, roughness: 0.38, metalness: 0.55,
+    map: tex(_brushCv, 1, 1, true), envMapIntensity: 1.0,
+  });
+}
+
 const steelMat = () => new THREE.MeshPhysicalMaterial({
   color: 0x171615, roughness: 0.44, metalness: 0.85, envMapIntensity: 0.7,
 });
@@ -492,6 +521,42 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
       WING.x1 - 0.05, 2.5, 3.1);
     box(0.5, 0.08, 2.6, woodMat(), WING.x1 - 0.42, 0.44, 9.1);
     for (const bz of [8.1, 10.1]) box(0.06, 0.44, 0.06, steel, WING.x1 - 0.42, 0.22, bz);
+
+    // --- the lift back to reception ---------------------------------------
+    // A blackened architrave standing proud of the plaster, with the leaves set
+    // back inside it. Built as four members round the opening rather than one
+    // slab, so the reveal has real depth and the doors sit in shadow.
+    {
+      const brass = new THREE.MeshStandardMaterial({
+        color: 0xc9b48a, roughness: 0.34, metalness: 0.6, envMapIntensity: 0.9,
+      });
+      const dark = blackenedMat();
+      const J = LIFT.jamb;
+      const face = LIFT.z - 0.05;         // architrave centre: it stands 0.1 proud
+      const hx = LIFT.w / 2 + J / 2;      // jamb centreline off the opening
+      for (const s of [-1, 1]) box(J, LIFT.h + J, 0.10, dark, LIFT.x + s * hx, (LIFT.h + J) / 2, face);
+      box(LIFT.w + 2 * J, J, 0.10, dark, LIFT.x, LIFT.h + J / 2, face);
+      // the leaves, meeting on a 20 mm shadow gap and set back behind the frame
+      const leaf = brushedMat();
+      for (const s of [-1, 1]) {
+        box(LIFT.w / 2 - 0.01, LIFT.h, 0.05, leaf,
+          LIFT.x + s * (LIFT.w / 4 + 0.005), LIFT.h / 2, LIFT.z - 0.025);
+      }
+      // brass sill, and the indicator over the head — 0.07, so it sits inside
+      // the 0.17 architrave rather than spilling over both its edges
+      box(LIFT.w, 0.015, 0.07, brass, LIFT.x, 0.008, LIFT.z - 0.035);
+      const dial = new THREE.Mesh(new THREE.CircleGeometry(0.07, 32), brass);
+      dial.position.set(LIFT.x, LIFT.h + J / 2, face - 0.056);
+      dial.rotation.y = Math.PI;          // faces −z, back into the wing
+      g.add(dial);
+      // the call plate, at the hand height the rest of the building uses
+      const px = LIFT.x + LIFT.w / 2 + J + 0.20;
+      box(0.18, 0.30, 0.04, dark, px, 1.15, LIFT.z - 0.02);
+      const btn = new THREE.Mesh(new THREE.CircleGeometry(0.045, 24), brass);
+      btn.position.set(px, 1.15, LIFT.z - 0.045);
+      btn.rotation.y = Math.PI;
+      g.add(btn);
+    }
   }
 
   // --- ceiling: flat soffit, downstand beams, skylight slot ----------------
@@ -1006,6 +1071,14 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
   sun.shadow.normalBias = 0.03;
   scene.add(sun, sun.target);
 
+  // A downlight over the lift. Its leaves face north, away from wingSun, so
+  // without this the one thing in the wing you are meant to walk to is the
+  // darkest surface in it.
+  const liftLamp = new THREE.SpotLight(0xfff0dc, 16, 8, 0.75, 0.9, 1.7);
+  liftLamp.position.set(LIFT.x, LIFT.h + 1.55, LIFT.z - 1.15);
+  liftLamp.target.position.set(LIFT.x, LIFT.h * 0.45, LIFT.z - 0.1);
+  scene.add(liftLamp, liftLamp.target);
+
   // daylight in the wing, from past its east wall
   const wingSun = new THREE.DirectionalLight(0xfff1dc, 2.2);
   wingSun.position.set(19, 14, 16);
@@ -1060,7 +1133,7 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
   }
 
   return {
-    hemi, sun, wingSun, rim, fill, cove, pierWash,
+    hemi, sun, wingSun, rim, fill, cove, pierWash, liftLamp,
     bake: () => { renderer.shadowMap.needsUpdate = true; },
   };
 }
