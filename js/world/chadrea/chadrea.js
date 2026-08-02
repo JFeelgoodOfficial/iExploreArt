@@ -32,7 +32,13 @@ import * as THREE from 'three';
 
 export const HALL = { x0: -8, x1: 4, z0: -11, z1: 11, h: 8.6 };
 export const MEZZ = { x0: -8, x1: -3.2, z0: -11, z1: -1, top: 4.2, t: 0.42 };
-export const STAIR = { xb: 3.5, xt: -3.2, z0: -10.9, z1: -9.3, top: 4.2 };
+// `open` is where the flight's upstand begins. East of it the bottom treads are
+// open to the hall, which is the only way onto the stair: the sketch ran the
+// upstand the whole length at every height, and the sole way round its east end
+// was a 0.15 m slot against the pier — narrower than the player, so the flight
+// could not be reached at all. Everything east of `open` is under 0.35 m up, so
+// stepping on is a stride rather than a hop.
+export const STAIR = { xb: 3.5, xt: -3.2, z0: -10.9, z1: -9.3, top: 4.2, open: 2.6 };
 // h 6.0, not the sketch's 5.2: the arch crowns at 5.6, so a 5.2 ceiling let the
 // top of the opening look straight over the wing's roof into open sky.
 export const WING = { x0: 4.9, x1: 13, z0: 0, z1: 11, h: 6.0 };
@@ -43,6 +49,99 @@ export const SKY = { x0: -1.4, x1: -0.6, z0: HALL.z0, z1: -5.4 };
 // at z −0.1, which was fine for a camera that spawned facing south, but the
 // whole southern half of the pier then arrives as an unlit black wall.
 export const COVE = { z0: -7.1, z1: 9.0, y: 7.3 };
+
+// The curtail steps — the flight's bottom three, cast much broader than the
+// treads above and with their outer corners rounded, cascading south into the
+// hall. Each one is a landing at the height the flight has reached at its west
+// edge (so top(i) is exactly the ramp at x0(i)) and runs the full way back to
+// the north wall, east to the pier. Derived from STAIR so the two cannot drift.
+export const CURTAIL = (() => {
+  const run = (STAIR.xb - STAIR.xt) / 22, rise = STAIR.top / 22;
+  //          how far south of the flight it throws, how far past the tread line
+  //          it reaches west, and its corner radius. A curtail step is the
+  //          biggest in every direction, so the bottom one leads on all three —
+  //          the westward reach is what carries the stone under the volute's
+  //          curl, instead of leaving its balusters standing on the floor.
+  const proj = [2.60, 1.85, 1.10];
+  const rad = [0.70, 0.52, 0.34];
+  // All three share a west edge rather than stepping back with the treads, so
+  // the cascade reads as one broad throw into the room instead of a staircase
+  // narrowing away. It stops at 2.33 — the plinth by the flight stands at
+  // x 1.84…2.26, and the stone must not swallow it.
+  const WEST = 2.33;
+  return proj.map((p, i) => ({
+    top: (i + 1) * rise,
+    x0: Math.min(STAIR.xb - (i + 1) * run, WEST),
+    x1: PIER.x - 0.06,
+    z0: STAIR.z0,
+    z1: STAIR.z1 + p,
+    r: rad[i],
+  }));
+})();
+
+// The walnut plinth and its vessel, standing off the cascade's west edge. The
+// volute wraps it and chadreaSegments fences it, so it lives here rather than
+// being written out in three places that could drift apart.
+export const PLINTH = { x: 2.05, z: -8.0, w: 0.42, h: 1.32, r: 0.56 };
+
+// The volute's path, [x, z, y] — GENERATED from the stone rather than authored
+// by hand, so the rail follows the steps instead of merely resembling them. It
+// leaves the rake, turns down the cascade's west edge, swings the long way
+// round the plinth so the statue sits inside the curve, comes back to the edge
+// and finishes on the bottom step's own rounded corner, tracing its radius.
+// One array drives the tube, the balusters and the colliders, so the rail you
+// see and the rail you bump into are the same curve.
+export const VOLUTE = (() => {
+  const OFF = 0.07;                          // stands this far clear of the stone
+  const c0 = CURTAIL[0], c2 = CURTAIL[2];
+  const X = c0.x0 - OFF;                     // the west line it runs down
+  // One smooth rake over the whole cascade. A handrail ramps; it does not step
+  // once per tread, and sampling the step tops directly puts a 0.19 m jolt in it.
+  const zTop = STAIR.z1 + 0.05, zBot = c0.z1 - 0.20;
+  const yTop = c2.top + 1.02, yBot = c0.top + 1.02;
+  const yAt = (z) => {
+    const t = Math.min(1, Math.max(0, (z - zTop) / (zBot - zTop)));
+    return yTop + (yBot - yTop) * t;
+  };
+  const pts = [];
+
+  // off the rake, turning south onto the west line
+  const yRake = STAIR.top * (STAIR.xb - STAIR.open) / (STAIR.xb - STAIR.xt) + 1.02;
+  pts.push([STAIR.open, STAIR.z1 - 0.05, yRake]);
+  pts.push([STAIR.open - 0.20, STAIR.z1 + 0.02, yAt(STAIR.z1 + 0.02)]);
+  pts.push([X + 0.03, STAIR.z1 + 0.20, yAt(STAIR.z1 + 0.20)]);
+
+  // where the plinth's circle cuts the west line, in and out
+  const dz = Math.sqrt(Math.max(0.01, PLINTH.r ** 2 - (X - PLINTH.x) ** 2));
+  const zIn = PLINTH.z - dz, zOut = PLINTH.z + dz;
+  pts.push([X, zIn - 0.34, yAt(zIn - 0.34)]);
+
+  // …round the statue, the long way west, so it stands inside the curve
+  const aIn = Math.atan2(zIn - PLINTH.z, X - PLINTH.x);
+  const aOut = Math.atan2(zOut - PLINTH.z, X - PLINTH.x);
+  const LOOP = 20;
+  for (let i = 0; i <= LOOP; i++) {
+    const t = i / LOOP;
+    const a = aIn + t * ((aOut - Math.PI * 2) - aIn);
+    pts.push([
+      PLINTH.x + Math.cos(a) * PLINTH.r,
+      PLINTH.z + Math.sin(a) * PLINTH.r,
+      yAt(zIn) + (yAt(zOut) - yAt(zIn)) * t,
+    ]);
+  }
+
+  // …back onto the west line, then round the bottom step's own corner radius,
+  // stopping a third of the way so its south face stays open to walk up
+  const cx = c0.x0 + c0.r, cz = c0.z1 - c0.r, R = c0.r + OFF;
+  pts.push([X, zOut + 0.05, yAt(zOut + 0.05)]);
+  const ARC = 10;
+  for (let i = 0; i <= ARC; i++) {
+    const a = Math.PI - (i / ARC) * (Math.PI / 3);
+    const z = cz + Math.sin(a) * R;
+    pts.push([cx + Math.cos(a) * R, z, yAt(z)]);
+  }
+  return pts;
+})();
 
 // Ground floor at the south end, facing north up the hall: the arch is on your
 // right, the flight and the skylight ahead. Yaw 0 looks along −z.
@@ -233,21 +332,6 @@ function woodMat(dark = false) {
     color: 0xffffff, roughness: 0.46, metalness: 0,
     map: tex(c, 1, 1, true), bumpMap: tex(c, 1, 1), bumpScale: 0.008,
     clearcoat: 0.35, clearcoatRoughness: 0.5,
-  });
-}
-
-function linenMat() {
-  const c = cv(512), x = c.getContext('2d');
-  x.fillStyle = '#ded7c9'; x.fillRect(0, 0, 512, 512);
-  for (let i = 0; i < 512; i += 2) {
-    x.fillStyle = `rgba(255,255,255,${rnd(0.02, 0.09)})`;
-    x.fillRect(i, 0, 1, 512); x.fillRect(0, i, 512, 1);
-  }
-  blotch(x, 512, 512, 50, 30, 140, ['198,190,176', '246,242,234'], 0.25);
-  grain(x, 512, 512, 10);
-  return new THREE.MeshStandardMaterial({
-    color: 0xf0ece2, roughness: 0.9, metalness: 0,
-    map: tex(c, 4, 4, true), bumpMap: tex(c, 4, 4), bumpScale: 0.006,
   });
 }
 
@@ -535,10 +619,15 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     const treads = new THREE.InstancedMesh(tg, sm, risers);
     treads.castShadow = true; treads.receiveShadow = true;
     const M = new THREE.Matrix4();
-    for (let i = 0; i < risers; i++) {
+    // The bottom CURTAIL.length treads are cast as the broad steps below, so
+    // the instanced run starts above them — an instance there would z-fight the
+    // curtail step's own top face, which sits at exactly the same height.
+    let t = 0;
+    for (let i = CURTAIL.length; i < risers; i++) {
       M.makeTranslation(STAIR.xb - (i + 0.5) * run, (i + 1) * rise - rise * 0.21, (STAIR.z0 + STAIR.z1) / 2);
-      treads.setMatrixAt(i, M);
+      treads.setMatrixAt(t++, M);
     }
+    treads.count = t;
     g.add(treads);
     // raking soffit beam under the flight
     const soff = new THREE.Mesh(
@@ -551,27 +640,79 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     soff.rotation.z = -ANG;
     soff.castShadow = true; soff.receiveShadow = true;
     g.add(soff);
-    // Three broad steps spilling out of the foot. In the sketch these were
-    // 1.5 m wide and ran straight through the pier wall; they stop at its face
-    // now, and chadreaGround() hands back their 0.17 lip.
-    for (let i = 0; i < 3; i++) {
-      box(PIER.x - STAIR.xb, 0.17, (STAIR.z1 - STAIR.z0) + 0.5 + i * 0.5, sm,
-        (STAIR.xb + PIER.x) / 2, 0.085 + i * 0.001, (STAIR.z0 + STAIR.z1) / 2 + 0.4 + i * 0.22);
+    // The curtail steps. Each is an extruded plan with its two outer corners
+    // rounded, so the cascade finishes on a curve rather than a corner — the
+    // bottom one throws 1.7 m into the hall and is the widest radius. Solid
+    // from the floor up, so they read as cast masonry rather than plates.
+    for (const c of CURTAIL) {
+      const s = new THREE.Shape();
+      s.moveTo(c.x0, c.z0);
+      s.lineTo(c.x1, c.z0);
+      s.lineTo(c.x1, c.z1 - c.r);
+      s.quadraticCurveTo(c.x1, c.z1, c.x1 - c.r, c.z1);
+      s.lineTo(c.x0 + c.r, c.z1);
+      s.quadraticCurveTo(c.x0, c.z1, c.x0, c.z1 - c.r);
+      s.lineTo(c.x0, c.z0);
+      const geo = new THREE.ExtrudeGeometry(s, { depth: c.top, bevelEnabled: false, curveSegments: 20 });
+      const m = new THREE.Mesh(geo, sm);
+      // the shape is drawn in plan; stand it up so its depth becomes height
+      m.rotation.x = Math.PI / 2;
+      m.position.y = c.top;
+      m.castShadow = true; m.receiveShadow = true;
+      g.add(m);
     }
-    // slim steel balustrade on the open (south) side of the flight
+    // Slim steel balustrade on the open (south) side — starting at STAIR.open,
+    // so the bottom of the flight is walked onto rather than fenced off.
     const bal = new THREE.InstancedMesh(new THREE.BoxGeometry(0.02, 1.0, 0.02), steel, 70);
     bal.castShadow = true;
     let n = 0;
     for (let i = 0; i <= Math.floor(stairLen / 0.115); i++) {
-      const x = STAIR.xb - i * 0.115, y = STAIR.top * (STAIR.xb - x) / stairLen;
+      const x = STAIR.xb - i * 0.115;
+      if (x > STAIR.open) continue;
+      const y = STAIR.top * (STAIR.xb - x) / stairLen;
       M.makeTranslation(x, y + 0.52, STAIR.z1 - 0.05);
       bal.setMatrixAt(n++, M);
     }
     bal.count = n;
     g.add(bal);
-    const rail = box(Math.hypot(stairLen, STAIR.top), 0.032, 0.05, steel,
-      (STAIR.xb + STAIR.xt) / 2, STAIR.top / 2 + 1.02, STAIR.z1 - 0.05);
+    // the handrail spans only the guarded run, and its centre is read off the
+    // flight so it stays on top of the balusters wherever `open` is moved to
+    const railRun = STAIR.open - STAIR.xt;
+    const railCx = (STAIR.xt + STAIR.open) / 2;
+    const rail = box(Math.hypot(railRun, STAIR.top * railRun / stairLen), 0.032, 0.05, steel,
+      railCx, STAIR.top * (STAIR.xb - railCx) / stairLen + 1.02, STAIR.z1 - 0.05);
     rail.rotation.z = -ANG;   // rakes with the treads, same reason as the soffit
+
+    // The volute. Where the rake ends the rail keeps going, turning off the
+    // flight and down across the curtail steps, following their rounded west
+    // ends and curling back on itself at the bottom. VOLUTE is the same path
+    // chadreaSegments() fences, so you cannot walk through what you can see —
+    // and it curls WEST, away from the mouth, leaving the bottom step's south
+    // face clear to walk up.
+    const vp = VOLUTE.map(([x, z, y]) => new THREE.Vector3(x, y, z));
+    const curve = new THREE.CatmullRomCurve3(vp, false, 'catmullrom', 0.4);
+    const volute = new THREE.Mesh(new THREE.TubeGeometry(curve, 72, 0.024, 8, false), steel);
+    volute.castShadow = true;
+    g.add(volute);
+    // balusters fanning down the curl, each stopping on whatever step it lands on
+    const vb = new THREE.InstancedMesh(new THREE.BoxGeometry(0.02, 1, 0.02), steel, 40);
+    vb.castShadow = true;
+    let vn = 0;
+    // spaced along the curve's ARC length, not its parameter — the curl is far
+    // tighter than the run above it, and even parameter spacing bunches them
+    // into a cage there
+    const SAMPLES = Math.max(3, Math.round(curve.getLength() / 0.34));
+    for (let i = 1; i <= SAMPLES; i++) {
+      const p = curve.getPointAt(i / SAMPLES);
+      const foot = curtailTop(p.x, p.z) ?? 0;
+      const h = p.y - foot;
+      if (h < 0.25) continue;
+      M.makeScale(1, h, 1);
+      M.setPosition(p.x, foot + h / 2, p.z);
+      vb.setMatrixAt(vn++, M);
+    }
+    vb.count = vn;
+    g.add(vb);
   }
 
   // --- ten works, hung flat on the concrete --------------------------------
@@ -670,42 +811,26 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     box(0.3, 0.05, 0.42, new THREE.MeshStandardMaterial({ color: 0x24201d, roughness: 0.7 }), cx, 0.93, cz + 0.1);
   }
 
-  // dark plinth + vessel by the foot of the flight
+  // dark plinth + vessel by the foot of the flight — the volute's newel
   {
-    box(0.42, 1.32, 0.42, woodMat(true), 2.05, 0.66, -8.0);
+    box(PLINTH.w, PLINTH.h, PLINTH.w, woodMat(true), PLINTH.x, PLINTH.h / 2, PLINTH.z);
     const pts = [];
     for (let i = 0; i <= 16; i++) {
       const u = i / 16;
       pts.push(new THREE.Vector2(0.30 * Math.sin(Math.PI * (0.18 + u * 0.74)), u * 0.52));
     }
     const v = new THREE.Mesh(new THREE.LatheGeometry(pts, 40), ceramicMat(0x4a3c30));
-    v.position.set(2.05, 1.32, -8.0);
+    v.position.set(PLINTH.x, PLINTH.h, PLINTH.z);
     v.castShadow = true;
     g.add(v);
   }
 
-  // --- furniture: rug, L sofa, coffee table, travertine pedestal -----------
+  // --- furniture: the rug and the one table standing on it -----------------
+  // Nothing else. The sketch's L sofa became an ottoman and the ottoman is now
+  // gone too — the room reads better with the concrete uninterrupted.
   {
-    const linen = linenMat();
-    const cushion = (w, h, d, x, y, z, soft = 0.06) => {
-      const geo = new THREE.BoxGeometry(w, h, d, 3, 3, 3);
-      const p = geo.attributes.position;
-      // round the edges a touch so linen doesn't read as a crate
-      for (let i = 0; i < p.count; i++) {
-        p.setXYZ(i,
-          p.getX(i) * (1 - soft * 0.3),
-          p.getY(i) * (1 - soft * 0.2) + Math.sin(p.getX(i) * 2) * 0.006,
-          p.getZ(i) * (1 - soft * 0.3));
-      }
-      geo.computeVertexNormals();
-      const m = new THREE.Mesh(geo, linen);
-      m.position.set(x, y, z);
-      m.castShadow = true; m.receiveShadow = true;
-      g.add(m);
-      return m;
-    };
-
-    const rug = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 5.2), (() => {
+    const RUG = { x: -1.4, z: 2.0, w: 6.6, d: 5.2 };
+    const rug = new THREE.Mesh(new THREE.PlaneGeometry(RUG.w, RUG.d), (() => {
       const c = cv(512), x = c.getContext('2d');
       x.fillStyle = '#8e877c'; x.fillRect(0, 0, 512, 512);
       blotch(x, 512, 512, 120, 20, 180, ['122,116,106', '168,162,150'], 0.35);
@@ -713,56 +838,49 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
       return new THREE.MeshStandardMaterial({ color: 0xa9a297, roughness: 0.95, map: tex(c, 1, 1, true) });
     })());
     rug.rotation.x = -Math.PI / 2;
-    rug.position.set(-1.4, 0.012, 2.0);
+    rug.position.set(RUG.x, 0.012, RUG.z);
     rug.receiveShadow = true;
     g.add(rug);
 
-    // One ottoman. The sketch had an L sofa here, but it was built as bare
-    // stacked cushion slabs — no back, no arms, nothing under it — so at eye
-    // height it read as a bed with a mattress parked beside it. A single
-    // upholstered block is what this room wants anyway: the seating is not the
-    // subject, the concrete is.
-    const OT = { x: -2.0, z: 2.0, w: 1.60, d: 1.15 };
-    // recessed dark base, so the linen floats on a shadow gap
-    box(OT.w - 0.14, 0.08, OT.d - 0.14, blackenedMat(), OT.x, 0.04, OT.z);
-    cushion(OT.w, 0.30, OT.d, OT.x, 0.23, OT.z);              // body
-    cushion(OT.w - 0.06, 0.09, OT.d - 0.06, OT.x, 0.425, OT.z, 0.12);   // top pad, seamed
-
-    // walnut coffee table
-    box(1.7, 0.09, 1.15, woodMat(), 0.35, 0.40, 2.35);
-    box(1.2, 0.36, 0.75, woodMat(true), 0.35, 0.19, 2.35);
-    box(0.42, 0.055, 0.3, new THREE.MeshStandardMaterial({ color: 0x1e1a18, roughness: 0.55 }), 0.05, 0.47, 2.15);
-    const bowlPts = [];
-    for (let i = 0; i <= 12; i++) { const u = i / 12; bowlPts.push(new THREE.Vector2(0.05 + 0.20 * u, u * u * 0.16)); }
-    const bowl = new THREE.Mesh(new THREE.LatheGeometry(bowlPts, 36), ceramicMat(0x1d1917));
-    bowl.position.set(0.85, 0.44, 2.5);
-    bowl.castShadow = true;
-    g.add(bowl);
-
-    // round travertine pedestal table
+    // The round travertine pedestal, standing a little off the rug's centre —
+    // dead centre would read as a showroom set-piece, and the offset is toward
+    // the arch so the table sits in the light coming through it. Everything
+    // that was ever set out on a table in this room is on this one now. TOP is
+    // the stone's upper face; every object is placed off that rather than off
+    // a literal, so the whole setting moves with the table.
     const tv = travertineMat();
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(1.32, 1.32, 0.11, 64), tv);
-    top.position.set(2.5, 0.74, 5.6);
+    const TB = { x: RUG.x + 0.55, z: RUG.z + 0.35, r: 1.32 };
+    const TOP = 0.795;
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(TB.r, TB.r, 0.11, 64), tv);
+    top.position.set(TB.x, TOP - 0.055, TB.z);
     top.castShadow = true; top.receiveShadow = true;
     g.add(top);
     const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.52, 0.69, 48), tv);
-    base.position.set(2.5, 0.345, 5.6);
+    base.position.set(TB.x, 0.345, TB.z);
     base.castShadow = true; base.receiveShadow = true;
     g.add(base);
+    const bowlPts = [];
+    for (let i = 0; i <= 12; i++) { const u = i / 12; bowlPts.push(new THREE.Vector2(0.05 + 0.20 * u, u * u * 0.16)); }
+    const bowl = new THREE.Mesh(new THREE.LatheGeometry(bowlPts, 36), ceramicMat(0x1d1917));
+    bowl.position.set(TB.x + 0.50, TOP, TB.z + 0.15);
+    bowl.castShadow = true;
+    g.add(bowl);
+    box(0.42, 0.055, 0.3, new THREE.MeshStandardMaterial({ color: 0x1e1a18, roughness: 0.55 }),
+      TB.x - 0.20, TOP + 0.03, TB.z + 0.52);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.29, 28, 20), ceramicMat(0x2a2320));
     bulb.scale.set(1, 0.86, 1);
-    bulb.position.set(2.0, 1.05, 5.2);
+    bulb.position.set(TB.x - 0.50, TOP + 0.25, TB.z - 0.40);
     bulb.castShadow = true;
     g.add(bulb);
     const platPts = [];
     for (let i = 0; i <= 10; i++) { const u = i / 10; platPts.push(new THREE.Vector2(0.08 + 0.32 * u, u * u * 0.10)); }
     const platter = new THREE.Mesh(new THREE.LatheGeometry(platPts, 40), ceramicMat(0x7a6349));
-    platter.position.set(3.05, 0.8, 5.95);
+    platter.position.set(TB.x + 0.55, TOP, TB.z + 0.35);
     platter.castShadow = true;
     g.add(platter);
-    // dried stems beside the arch
+    // dried stems out of the vessel
     const g2 = new THREE.Group();
-    g2.position.set(2.0, 1.2, 5.2);
+    g2.position.set(TB.x - 0.50, TOP + 0.40, TB.z - 0.40);
     g.add(g2);
     const twig = new THREE.MeshStandardMaterial({ color: 0x40342a, roughness: 0.9 });
     for (let i = 0; i < 20; i++) {
@@ -956,19 +1074,40 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
 // while walking underneath.
 
 export function chadreaGround(x, z, prevY = 0) {
+  // The curtail steps and the ramp overlap where the broad steps have replaced
+  // the flight's bottom treads, so take whichever is higher — the steps are
+  // solid masonry and the ramp underneath them is notional.
+  let y = 0;
+  const c = curtailTop(x, z);
+  if (c !== null) y = c;
+  const s = stairY(x, z);
+  if (s !== null && s > y) y = s;
   // The flight is cantilevered over open floor, so its height is only offered
   // to someone already near it; otherwise you walk beneath it.
-  const s = stairY(x, z);
-  if (s !== null && s <= prevY + 0.75) return s;
+  if (y > 0 && y <= prevY + 0.75) return y;
   if (prevY > MEZZ.top - 1.6 && onMezz(x, z)) return MEZZ.top;
-  // the broad steps at the foot of the flight
-  if (x >= STAIR.xb && x <= PIER.x && z >= STAIR.z0 - 0.2 && z <= -8.3 && prevY < 1.0) return 0.17;
   return 0;
 }
 
 function stairY(x, z) {
   if (x < STAIR.xt || x > STAIR.xb || z < STAIR.z0 || z > STAIR.z1) return null;
   return STAIR.top * (STAIR.xb - x) / (STAIR.xb - STAIR.xt);
+}
+
+// The curtail steps, highest first — they overlap, and the one on top is the
+// one you stand on. Their rounded outer corners are honoured, so you don't walk
+// out onto air where the plan curves away.
+function curtailTop(x, z) {
+  for (let i = CURTAIL.length - 1; i >= 0; i--) {
+    const c = CURTAIL[i];
+    if (x < c.x0 || x > c.x1 || z < c.z0 || z > c.z1) continue;
+    if (z > c.z1 - c.r) {
+      if (x < c.x0 + c.r && Math.hypot(x - (c.x0 + c.r), z - (c.z1 - c.r)) > c.r) continue;
+      if (x > c.x1 - c.r && Math.hypot(x - (c.x1 - c.r), z - (c.z1 - c.r)) > c.r) continue;
+    }
+    return c.top;
+  }
+  return null;
 }
 
 function onMezz(x, z) {
@@ -988,6 +1127,17 @@ const rect = (x0, z0, x1, z1, level = 'all') => [
   seg(x0, z0, x1, z0, level), seg(x1, z0, x1, z1, level),
   seg(x1, z1, x0, z1, level), seg(x0, z1, x0, z0, level),
 ];
+// A closed fence of chords round a round object. Same idea as main.js's
+// ringSegments; kept local so the room's colliders are all in one file.
+function ringSegments(cx, cz, r, sides = 12, level = 'all') {
+  const out = [];
+  for (let i = 0; i < sides; i++) {
+    const a = (i / sides) * Math.PI * 2, b = ((i + 1) / sides) * Math.PI * 2;
+    out.push(seg(cx + Math.cos(a) * r, cz + Math.sin(a) * r,
+      cx + Math.cos(b) * r, cz + Math.sin(b) * r, level));
+  }
+  return out;
+}
 
 export function chadreaSegments() {
   const c = [];
@@ -1005,9 +1155,15 @@ export function chadreaSegments() {
 
   // --- the flight's open side ---------------------------------------------
   // 'all' on purpose: it is a cast upstand off the floor, not a rail, so it
-  // also closes the pocket north of the flight at ground level. It stops at the
-  // foot so the broad steps below stay reachable from the hall.
-  c.push(seg(STAIR.xt, STAIR.z1, STAIR.xb, STAIR.z1));
+  // also closes the pocket north of the flight at ground level. It stops at
+  // STAIR.open — that gap is the way onto the stair.
+  c.push(seg(STAIR.xt, STAIR.z1, STAIR.open, STAIR.z1));
+  // …then the volute picks it up and carries it down across the curtail steps,
+  // fenced on the same path the tube is drawn on. It curls west, away from the
+  // bottom step's south face, which is the way up.
+  for (let i = 0; i < VOLUTE.length - 1; i++) {
+    c.push(seg(VOLUTE[i][0], VOLUTE[i][1], VOLUTE[i + 1][0], VOLUTE[i + 1][1]));
+  }
 
   // --- the mezzanine's rails, only while you're on the deck ---------------
   // The east run starts where the flight lands, so the mouth stays open.
@@ -1017,10 +1173,13 @@ export function chadreaSegments() {
   // --- what stands on the ground floor ------------------------------------
   const F = 0;
   c.push(...rect(-7.95, 0.40, -7.17, 5.00, F));    // console, its vessels inside it
-  c.push(...rect(1.84, -8.21, 2.26, -7.79, F));    // plinth by the flight
-  c.push(...rect(-2.80, 1.42, -1.20, 2.58, F));    // the ottoman
-  c.push(...rect(-0.50, 1.77, 1.20, 2.93, F));     // the walnut coffee table
-  c.push(...rect(1.20, 4.30, 3.80, 6.90, F));      // travertine pedestal
+  c.push(...rect(PLINTH.x - PLINTH.w / 2, PLINTH.z - PLINTH.w / 2,
+                 PLINTH.x + PLINTH.w / 2, PLINTH.z + PLINTH.w / 2, F));   // the plinth
+  // The travertine table, the only thing standing on the rug. A ring, not the
+  // square the other pieces get: it is 2.6 m across and stands in the walking
+  // route, so square corners would push you off it a stride early on the
+  // diagonal. Centre must track TB in buildChadreaRoom.
+  c.push(...ringSegments(-0.85, 2.35, 1.40, 14, F));
   c.push(...rect(12.33, 7.80, 12.83, 10.40, F));   // the wing's bench
   return c;
 }
