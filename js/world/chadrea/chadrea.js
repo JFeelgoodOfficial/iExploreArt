@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mulberry32 } from '../../utils/proctex.js';
 
 // ---------------------------------------------------------------------------
 // CHADREA HALL — residency four (room id `chadrea`).
@@ -83,6 +84,27 @@ export const CURTAIL = (() => {
 // volute wraps it and chadreaSegments fences it, so it lives here rather than
 // being written out in three places that could drift apart.
 export const PLINTH = { x: 2.05, z: -8.0, w: 0.42, h: 1.32, r: 0.56 };
+
+// The lift back to reception, set into the wing's south wall — the one large
+// surface in the room that carries nothing. The car itself is never built: you
+// press the plate, the veil comes down and you step out of the reception cabin
+// downstairs, so this is a portal, two leaves and a call plate, and no shaft.
+// main.js hangs the interaction hitbox off these numbers.
+export const LIFT = { x: 9.0, z: WING.z1, w: 1.72, h: 2.35, jamb: 0.17 };
+
+// The courtyard. The wing's south wall used to be the room's one blank
+// surface; it is two openings now, either side of the lift, onto a walled
+// terrace with a reflecting pool. Open to the sky, and the city stands over
+// its far wall — the only place in this residency you see out.
+export const COURT = { x0: WING.x0, x1: WING.x1, z0: WING.z1, z1: 21.5, wall: 4.6, t: 0.35 };
+export const POOL = { x0: 6.50, x1: 11.40, z0: 13.90, z1: 19.30, depth: 0.85, coping: 0.22 };
+// The head of the wing's openings; everything above it is spandrel and parapet.
+export const OPENING = { head: 2.85, parapet: 6.70 };
+// The lift shaft, expressed on the courtyard side and running straight up past
+// the parapet. Its north face is the wall the lift doors sit in.
+// w 2.60, not 2.10: the architrave alone is 2.06 across, and at 2.10 the
+// call plate had nowhere to sit once the wall either side became opening.
+export const SHAFT = { w: 2.60, d: 1.30, top: 9.20 };
 
 // The volute's path, [x, z, y] — GENERATED from the stone rather than authored
 // by hand, so the rail follows the steps instead of merely resembling them. It
@@ -335,6 +357,65 @@ function woodMat(dark = false) {
   });
 }
 
+// Brushed metal for the lift leaves. They face north, away from the wing's sun,
+// so a dark near-mirror like steelMat has nothing to reflect there and reads as
+// a black hole in the wall — this is paler and rougher, and carries its own
+// vertical grain so it catches the downlight over the door.
+let _brushCv;
+function brushedMat() {
+  if (!_brushCv) {
+    const c = cv(256, 512), x = c.getContext('2d');
+    x.fillStyle = '#7b756c'; x.fillRect(0, 0, 256, 512);
+    for (let i = 0; i < 900; i++) {
+      x.fillStyle = `rgba(${Math.random() < 0.5 ? '150,145,136' : '64,60,55'},${rnd(0.05, 0.22)})`;
+      x.fillRect(Math.random() * 256, 0, rnd(0.6, 2.2), 512);
+    }
+    grain(x, 256, 512, 8);
+    _brushCv = c;
+  }
+  return new THREE.MeshStandardMaterial({
+    color: 0xffffff, roughness: 0.38, metalness: 0.55,
+    map: tex(_brushCv, 1, 1, true), envMapIntensity: 1.0,
+  });
+}
+
+// A tileable ripple normal map: a few crossed swells summed into a height
+// field, differentiated into normals. Two copies scroll across each other in
+// update(), which is what stops still water reading as a sheet of plastic.
+function rippleNormal(size = 256, seed = 11) {
+  const rand = mulberry32(seed);
+  const waves = [];
+  for (let i = 0; i < 5; i++) {
+    const a = rand() * Math.PI * 2;
+    const k = (1 + Math.floor(rand() * 4)) * Math.PI * 2 / size;
+    waves.push({
+      kx: Math.cos(a) * k * (1 + Math.floor(rand() * 3)),
+      kz: Math.sin(a) * k * (1 + Math.floor(rand() * 3)),
+      amp: 0.6 / (i + 1), ph: rand() * 6.28,
+    });
+  }
+  const h = (x, y) => waves.reduce((s, w) => s + w.amp * Math.sin(w.kx * x + w.kz * y + w.ph), 0);
+  const c = cv(size);
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const nx = -(h(x + 1, y) - h(x - 1, y)) * 0.9;
+      const ny = -(h(x, y + 1) - h(x, y - 1)) * 0.9;
+      const len = Math.hypot(nx, ny, 1);
+      const i = (y * size + x) * 4;
+      img.data[i] = ((nx / len) * 0.5 + 0.5) * 255;
+      img.data[i + 1] = ((ny / len) * 0.5 + 0.5) * 255;
+      img.data[i + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+      img.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
 const steelMat = () => new THREE.MeshPhysicalMaterial({
   color: 0x171615, roughness: 0.44, metalness: 0.85, envMapIntensity: 0.7,
 });
@@ -482,7 +563,17 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     const pl = plasterMat(0xf1ece2, 0.94);
     wallPanel(pl, WING.z1 - WING.z0, WING.h, WING.x1, WING.h / 2, (WING.z0 + WING.z1) / 2, -Math.PI / 2);
     wallPanel(pl, WING.x1 - WING.x0 + 1, WING.h, (WING.x0 + WING.x1) / 2, WING.h / 2, WING.z0, 0);
-    wallPanel(pl, WING.x1 - WING.x0 + 1, WING.h, (WING.x0 + WING.x1) / 2, WING.h / 2, WING.z1, Math.PI);
+    // South: no longer a wall. Two openings onto the courtyard, either side of
+    // the lift shaft, with a spandrel over them carried up to a parapet — from
+    // the terrace the wing has to read as a building, not an open edge.
+    const sx0 = LIFT.x - SHAFT.w / 2, sx1 = LIFT.x + SHAFT.w / 2;
+    box(WING.x1 - WING.x0, OPENING.parapet - OPENING.head, COURT.t, pl,
+      (WING.x0 + WING.x1) / 2, (OPENING.parapet + OPENING.head) / 2, WING.z1);
+    // the reveals down each side of the two openings
+    for (const [ox, w] of [[WING.x0, 0.3], [sx0, 0.3], [sx1, 0.3], [WING.x1, 0.3]]) {
+      box(w, OPENING.head, COURT.t, pl, ox + (ox === WING.x0 || ox === sx1 ? w / 2 : -w / 2),
+        OPENING.head / 2, WING.z1);
+    }
     const cl = new THREE.Mesh(new THREE.PlaneGeometry(WING.x1 - WING.x0 + 1, WING.z1 - WING.z0), pl);
     cl.rotation.x = Math.PI / 2;
     cl.position.set((WING.x0 + WING.x1) / 2 - 0.5, WING.h, (WING.z0 + WING.z1) / 2);
@@ -492,6 +583,144 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
       WING.x1 - 0.05, 2.5, 3.1);
     box(0.5, 0.08, 2.6, woodMat(), WING.x1 - 0.42, 0.44, 9.1);
     for (const bz of [8.1, 10.1]) box(0.06, 0.44, 0.06, steel, WING.x1 - 0.42, 0.22, bz);
+
+    // --- the lift back to reception ---------------------------------------
+    // A blackened architrave standing proud of the plaster, with the leaves set
+    // back inside it. Built as four members round the opening rather than one
+    // slab, so the reveal has real depth and the doors sit in shadow.
+    {
+      const brass = new THREE.MeshStandardMaterial({
+        color: 0xc9b48a, roughness: 0.34, metalness: 0.6, envMapIntensity: 0.9,
+      });
+      const dark = blackenedMat();
+      const J = LIFT.jamb;
+      const face = LIFT.z - 0.05;         // architrave centre: it stands 0.1 proud
+      const hx = LIFT.w / 2 + J / 2;      // jamb centreline off the opening
+      for (const s of [-1, 1]) box(J, LIFT.h + J, 0.10, dark, LIFT.x + s * hx, (LIFT.h + J) / 2, face);
+      box(LIFT.w + 2 * J, J, 0.10, dark, LIFT.x, LIFT.h + J / 2, face);
+      // the leaves, meeting on a 20 mm shadow gap and set back behind the frame
+      const leaf = brushedMat();
+      for (const s of [-1, 1]) {
+        box(LIFT.w / 2 - 0.01, LIFT.h, 0.05, leaf,
+          LIFT.x + s * (LIFT.w / 4 + 0.005), LIFT.h / 2, LIFT.z - 0.025);
+      }
+      // brass sill, and the indicator over the head — 0.07, so it sits inside
+      // the 0.17 architrave rather than spilling over both its edges
+      box(LIFT.w, 0.015, 0.07, brass, LIFT.x, 0.008, LIFT.z - 0.035);
+      const dial = new THREE.Mesh(new THREE.CircleGeometry(0.07, 32), brass);
+      dial.position.set(LIFT.x, LIFT.h + J / 2, face - 0.056);
+      dial.rotation.y = Math.PI;          // faces −z, back into the wing
+      g.add(dial);
+      // the call plate, at the hand height the rest of the building uses
+      const px = LIFT.x + LIFT.w / 2 + J + 0.135;   // on the shaft's own face
+      box(0.18, 0.30, 0.04, dark, px, 1.15, LIFT.z - 0.02);
+      const btn = new THREE.Mesh(new THREE.CircleGeometry(0.045, 24), brass);
+      btn.position.set(px, 1.15, LIFT.z - 0.045);
+      btn.rotation.y = Math.PI;
+      g.add(btn);
+    }
+  }
+
+  // --- the courtyard -------------------------------------------------------
+  // Walled on three sides, open to the sky, with a reflecting pool set into
+  // the paving. The shaft runs up the wing's face beside the openings, past the
+  // parapet, and stops — no headhouse, nothing on top. The walls are low enough
+  // that the city stands over them from anywhere on the terrace.
+  const ripples = [];
+  {
+    const cw = COURT.x1 - COURT.x0, cd = COURT.z1 - COURT.z0;
+    // Everything out here is tinted a good deal darker than the same concrete
+    // indoors. The room's sun is 4.6 — tuned for a hall lit through a 0.8 m
+    // slot — and at these tints in FULL sun the courtyard's surfaces clipped
+    // flat white. Same material, same building, different exposure.
+    // Paving comes as four strips round the pool rather than one plane: a
+    // single sheet paved straight over the water.
+    const cop = new THREE.MeshStandardMaterial({ color: 0x968d80, roughness: 0.7 });
+    const K = POOL.coping;
+    const pave = (x0, z0, x1, z1) => {
+      if (x1 - x0 < 0.01 || z1 - z0 < 0.01) return;
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0),
+        concrete(x1 - x0, z1 - z0, { tint: 0x7d776e, rough: 0.86 }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.set((x0 + x1) / 2, 0.002, (z0 + z1) / 2);
+      m.receiveShadow = true;
+      g.add(m);
+    };
+    pave(COURT.x0, COURT.z0, COURT.x1, POOL.z0 - K);              // terrace, by the wing
+    pave(COURT.x0, POOL.z1 + K, COURT.x1, COURT.z1);              // far end
+    pave(COURT.x0, POOL.z0 - K, POOL.x0 - K, POOL.z1 + K);        // west margin
+    pave(POOL.x1 + K, POOL.z0 - K, COURT.x1, POOL.z1 + K);        // east margin
+
+    // three walls. Board-formed like the hall, so the courtyard reads as the
+    // same building turned inside out rather than a garden bolted on.
+    const wm = () => concrete(12, COURT.wall, { tint: 0x6e6862, bump: 0.06 });
+    box(COURT.t, COURT.wall, cd + COURT.t, wm(), COURT.x0 - COURT.t / 2, COURT.wall / 2, (COURT.z0 + COURT.z1) / 2);
+    box(COURT.t, COURT.wall, cd + COURT.t, wm(), COURT.x1 + COURT.t / 2, COURT.wall / 2, (COURT.z0 + COURT.z1) / 2);
+    box(cw + COURT.t * 2, COURT.wall, COURT.t, wm(), (COURT.x0 + COURT.x1) / 2, COURT.wall / 2, COURT.z1 + COURT.t / 2);
+    // a paler coping so the wall heads read against the skyline
+    box(COURT.t + 0.08, 0.09, cd + COURT.t, cop, COURT.x0 - COURT.t / 2, COURT.wall + 0.045, (COURT.z0 + COURT.z1) / 2);
+    box(COURT.t + 0.08, 0.09, cd + COURT.t, cop, COURT.x1 + COURT.t / 2, COURT.wall + 0.045, (COURT.z0 + COURT.z1) / 2);
+    box(cw + COURT.t * 2 + 0.08, 0.09, COURT.t + 0.08, cop, (COURT.x0 + COURT.x1) / 2, COURT.wall + 0.045, COURT.z1 + COURT.t / 2);
+
+    // --- the pool ---------------------------------------------------------
+    const pw = POOL.x1 - POOL.x0, pd = POOL.z1 - POOL.z0;
+    const tank = new THREE.MeshStandardMaterial({ color: 0x2c4a55, roughness: 0.32, metalness: 0 });
+    // bed, then the four tank walls, so you read a real depth over the coping
+    box(pw, 0.08, pd, tank, (POOL.x0 + POOL.x1) / 2, -POOL.depth, (POOL.z0 + POOL.z1) / 2);
+    box(0.10, POOL.depth, pd, tank, POOL.x0 + 0.05, -POOL.depth / 2, (POOL.z0 + POOL.z1) / 2);
+    box(0.10, POOL.depth, pd, tank, POOL.x1 - 0.05, -POOL.depth / 2, (POOL.z0 + POOL.z1) / 2);
+    box(pw, POOL.depth, 0.10, tank, (POOL.x0 + POOL.x1) / 2, -POOL.depth / 2, POOL.z0 + 0.05);
+    box(pw, POOL.depth, 0.10, tank, (POOL.x0 + POOL.x1) / 2, -POOL.depth / 2, POOL.z1 - 0.05);
+    // coping band round the lip
+    const cbw = K;
+    box(pw + cbw * 2, 0.06, cbw, cop, (POOL.x0 + POOL.x1) / 2, 0.03, POOL.z0 - cbw / 2);
+    box(pw + cbw * 2, 0.06, cbw, cop, (POOL.x0 + POOL.x1) / 2, 0.03, POOL.z1 + cbw / 2);
+    box(cbw, 0.06, pd, cop, POOL.x0 - cbw / 2, 0.03, (POOL.z0 + POOL.z1) / 2);
+    box(cbw, 0.06, pd, cop, POOL.x1 + cbw / 2, 0.03, (POOL.z0 + POOL.z1) / 2);
+
+    // The water. Two ripple normals crossing each other, scrolled by update() —
+    // the same trick the sky pool upstairs uses; still water reads as plastic.
+    const rA = rippleNormal(256, 11), rB = rippleNormal(256, 29);
+    rA.repeat.set(pw / 2.2, pd / 2.2);
+    rB.repeat.set(pw / 3.7, pd / 3.7);
+    ripples.push(rA, rB);
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(pw - 0.1, pd - 0.1, 40, 40),
+      new THREE.MeshPhysicalMaterial({
+        color: 0x3f7f96, roughness: 0.04, metalness: 0,
+        transmission: tier.glassTransmission === false ? 0 : 0.86,
+        thickness: POOL.depth, ior: 1.333,
+        attenuationColor: new THREE.Color(0x27718d), attenuationDistance: 6,
+        clearcoat: 1, clearcoatRoughness: 0.04,
+        clearcoatNormalMap: rB, clearcoatNormalScale: new THREE.Vector2(0.32, 0.32),
+        normalMap: rA, normalScale: new THREE.Vector2(0.2, 0.2),
+        transparent: true, opacity: tier.glassTransmission === false ? 0.72 : 1,
+        envMapIntensity: 1.5, side: THREE.DoubleSide,
+      }));
+    water.rotation.x = -Math.PI / 2;
+    water.position.set((POOL.x0 + POOL.x1) / 2, -0.06, (POOL.z0 + POOL.z1) / 2);
+    water.name = 'ch-pool';
+    g.add(water);
+
+    // --- the lift shaft, straight up the wing's face ----------------------
+    const sm = concrete(SHAFT.w, SHAFT.top, { tint: 0x8f8880, bump: 0.06 });
+    const scx = LIFT.x, scz = COURT.z0 + SHAFT.d / 2;
+    box(SHAFT.w, SHAFT.top, SHAFT.d, sm, scx, SHAFT.top / 2, scz);
+    box(SHAFT.w + 0.14, 0.10, SHAFT.d + 0.14, cop, scx, SHAFT.top + 0.05, scz);
+
+    // a bench along the west wall, and two planted vessels on the terrace
+    box(0.5, 0.08, 2.4, woodMat(), COURT.x0 + 0.42, 0.44, 15.4);
+    for (const bz of [14.4, 16.4]) box(0.06, 0.44, 0.06, steel, COURT.x0 + 0.42, 0.22, bz);
+    for (const [vx, vz, vr] of [[12.15, 12.6, 0.34], [12.15, 20.3, 0.28]]) {
+      const pts = [];
+      for (let i = 0; i <= 14; i++) {
+        const u = i / 14;
+        pts.push(new THREE.Vector2(vr * (0.5 + 0.62 * Math.sin(Math.PI * (0.16 + u * 0.76))), u * vr * 2.1));
+      }
+      const v = new THREE.Mesh(new THREE.LatheGeometry(pts, 36), ceramicMat(0x6b5340));
+      v.position.set(vx, 0, vz);
+      v.castShadow = true;
+      g.add(v);
+    }
   }
 
   // --- ceiling: flat soffit, downstand beams, skylight slot ----------------
@@ -975,6 +1204,11 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     update(dt) {
       t += dt;
       motes.rotation.y = t * 0.004;
+      // the pool's two normal maps drift against each other
+      ripples[0].offset.x += dt * 0.013;
+      ripples[0].offset.y += dt * 0.009;
+      ripples[1].offset.x -= dt * 0.008;
+      ripples[1].offset.y += dt * 0.011;
     },
   };
 }
@@ -1005,6 +1239,14 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
   sun.shadow.bias = -0.0006;
   sun.shadow.normalBias = 0.03;
   scene.add(sun, sun.target);
+
+  // A downlight over the lift. Its leaves face north, away from wingSun, so
+  // without this the one thing in the wing you are meant to walk to is the
+  // darkest surface in it.
+  const liftLamp = new THREE.SpotLight(0xfff0dc, 16, 8, 0.75, 0.9, 1.7);
+  liftLamp.position.set(LIFT.x, LIFT.h + 1.55, LIFT.z - 1.15);
+  liftLamp.target.position.set(LIFT.x, LIFT.h * 0.45, LIFT.z - 0.1);
+  scene.add(liftLamp, liftLamp.target);
 
   // daylight in the wing, from past its east wall
   const wingSun = new THREE.DirectionalLight(0xfff1dc, 2.2);
@@ -1060,7 +1302,7 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
   }
 
   return {
-    hemi, sun, wingSun, rim, fill, cove, pierWash,
+    hemi, sun, wingSun, rim, fill, cove, pierWash, liftLamp,
     bake: () => { renderer.shadowMap.needsUpdate = true; },
   };
 }
@@ -1141,17 +1383,31 @@ function ringSegments(cx, cz, r, sides = 12, level = 'all') {
 
 export function chadreaSegments() {
   const c = [];
+  const F = 0;                 // ground level, for anything standing on the floor
 
   // --- the shell, at every height -----------------------------------------
   c.push(seg(HALL.x0, HALL.z0, HALL.x0, HALL.z1));        // west art wall
   c.push(seg(HALL.x0, HALL.z0, PIER.x, HALL.z0));         // north wall
-  c.push(seg(HALL.x0, HALL.z1, WING.x1, HALL.z1));        // south wall, hall through wing
+  // South wall — the HALL's only. The wing's share of this line is two
+  // openings onto the courtyard now, with only the lift shaft solid between
+  // them, so it stops at the wing rather than running the full width.
+  c.push(seg(HALL.x0, HALL.z1, WING.x0, HALL.z1));
   // the pier: two solid blocks either side of the arch opening
   c.push(...rect(PIER.x, HALL.z0, PIER.x + PIER.t, PIER.az0));
   c.push(...rect(PIER.x, PIER.az1, PIER.x + PIER.t, HALL.z1));
   // the wing
   c.push(seg(PIER.x, WING.z0, WING.x1, WING.z0));         // north wall
-  c.push(seg(WING.x1, WING.z0, WING.x1, WING.z1));        // east wall
+  c.push(seg(WING.x1, WING.z0, WING.x1, COURT.z1));       // east wall, on into the court
+
+  // the courtyard: west and south walls, and the lift shaft standing in the
+  // middle of the wing's face between its two openings
+  c.push(seg(COURT.x0, COURT.z0, COURT.x0, COURT.z1));
+  c.push(seg(COURT.x0, COURT.z1, COURT.x1, COURT.z1));
+  c.push(...rect(LIFT.x - SHAFT.w / 2, COURT.z0, LIFT.x + SHAFT.w / 2, COURT.z0 + SHAFT.d));
+  // …and the pool, fenced on its coping. Nothing here is standable water.
+  c.push(...rect(POOL.x0 - POOL.coping, POOL.z0 - POOL.coping,
+                 POOL.x1 + POOL.coping, POOL.z1 + POOL.coping, F));
+  c.push(...rect(COURT.x0 + 0.17, 14.2, COURT.x0 + 0.67, 16.6, F));   // the terrace bench
 
   // --- the flight's open side ---------------------------------------------
   // 'all' on purpose: it is a cast upstand off the floor, not a rail, so it
@@ -1171,7 +1427,6 @@ export function chadreaSegments() {
   c.push(seg(MEZZ.x0, MEZZ.z1, MEZZ.x1, MEZZ.z1, MEZZ.top));
 
   // --- what stands on the ground floor ------------------------------------
-  const F = 0;
   c.push(...rect(-7.95, 0.40, -7.17, 5.00, F));    // console, its vessels inside it
   c.push(...rect(PLINTH.x - PLINTH.w / 2, PLINTH.z - PLINTH.w / 2,
                  PLINTH.x + PLINTH.w / 2, PLINTH.z + PLINTH.w / 2, F));   // the plinth

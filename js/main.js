@@ -21,7 +21,8 @@ import {
 } from './world/brutalism/brutalist.js';
 import {
   buildChadreaRoom, setupChadreaLighting,
-  chadreaGround, chadreaSegments, SPAWN as CH_SPAWN, HALL as CH_HALL,
+  chadreaGround, chadreaSegments, SPAWN as CH_SPAWN, HALL as CH_HALL, LIFT as CH_LIFT,
+  SUN_POS as CH_SUN,
 } from './world/chadrea/chadrea.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
 import { BRUTALIST_HANG } from '../data/brutalist-artworks.js';
@@ -402,14 +403,34 @@ const ROOM_FACTORIES = {
   chadrea: () => {
     const room = buildChadreaRoom(scene, { tier });
     const lights = setupChadreaLighting(scene, renderer, tier);
-    // No city: the hall is lit from the ceiling slot and the wing's own
-    // daylight, and nothing in it looks out at anything.
+    // The city over the courtyard's far wall — the only place in this
+    // residency you see out. Yawed a half turn so the skyline lies along +Z,
+    // past the terrace. `fog` is global and the gallery already set it; the sun
+    // matches setupChadreaLighting's, or the daylight arrives from two quarters.
+    const city = buildCityView(scene, renderer, {
+      name: 'city-chadrea', seed: 7311, yaw: Math.PI, fog: false,
+      sunPosition: CH_SUN, nearProps: tier.name !== 'low',
+    });
+    // Read from a 1.65 m eye over a 4.6 m wall, so the near rooftops want to
+    // sit above it rather than below the coping.
+    city.group.position.y = 3.4;
     // South wall behind the spawn, facing back up the hall.
     const door = returnDoor(CH_SPAWN.x, 1.35, CH_HALL.z1 - 0.14, Math.PI);
+    // …and the lift in the wing's south wall, through the arch. It rides the
+    // veil rather than switching outright, the way the nouveau stair hall's
+    // does — entering 'gallery' puts you inside the reception cabin with its
+    // doors open, so the trip reads as a lift rather than a cut.
+    const liftDoor = doorHitbox(CH_LIFT.w + 0.2, CH_LIFT.h, CH_LIFT.x, CH_LIFT.h / 2,
+      CH_LIFT.z - 0.16, Math.PI, 'chadrea-lift-to-reception');
+    liftDoor.userData.door = {
+      label: 'ride the lift to reception',
+      onEnter: () => travelTo('gallery'),
+    };
+    scene.add(liftDoor);
     return {
-      room: { ...room, lights },
+      room: { ...room, lights, city },
       def: {
-        targets: [door, ...room.interactables],
+        targets: [door, liftDoor, ...room.interactables],
         spawn: CH_SPAWN,
         segments: chadreaSegments(),
         ground: chadreaGround,
@@ -617,8 +638,12 @@ renderer.setAnimationLoop(() => {
     residencyRooms.brutalist?.city.update(t);
     residencyRooms.brutalist?.update(dt);
   }
-  // the haze turning through Chadrea Hall's light shaft
-  if (rooms.current === 'chadrea') residencyRooms.chadrea?.update(dt);
+  // the haze in Chadrea Hall's light shaft, its pool, and the city over the
+  // courtyard wall
+  if (rooms.current === 'chadrea') {
+    residencyRooms.chadrea?.city.update(t);
+    residencyRooms.chadrea?.update(dt);
+  }
   // Candle / lamp flicker, for the rooms that have any. The call is optional as
   // well as the rig: a room lit by daylight alone (the brutalist hall) returns a
   // rig with no `update`, and setAnimationLoop re-arms its rAF *after* the
