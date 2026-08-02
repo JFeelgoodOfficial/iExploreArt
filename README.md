@@ -10,8 +10,8 @@ story behind every piece and route purchases through
 Beside the reception desk a lift rides up to the **artist residencies** — five
 further rooms, listed in `data/residencies.js`: an arcaded courtyard palazzo on
 floor 1, an Art Nouveau domed hall on 2, a Rococo gallery on 3, a concrete house
-of one long top-lit hall and a daylit wing on 4, and a board-formed concrete
-hall built round a four-storey void on 5.
+of one long top-lit hall, a daylit wing and a walled pool courtyard on 4, and a
+board-formed concrete hall built round a four-storey void on 5.
 
 An entry may carry `pending: true`, which means the floor is spoken for but the
 room is not built: the lift leaves it off the panel rather than offering a
@@ -64,7 +64,9 @@ He holds a second room below it, **Chadrea Hall** on floor 4
 (`js/world/chadrea/chadrea.js`) — a concrete house rather than a gallery: one
 long board-formed hall under an 8.6 m soffit, a mezzanine reached by a single
 cantilevered flight, and a rounded plaster arch through the pier wall into a
-white, daylit wing. Its ten works are **decoration** — generated canvases hung
+white, daylit wing that opens again onto a walled courtyard with a reflecting
+pool, the city standing over its far wall and the lift shaft running straight
+up the wing's face between the two openings. Its ten works are **decoration** — generated canvases hung
 flat on the concrete, with no manifest and no `userData.artwork`, so nothing
 there answers an **E** press. To hang real pieces it needs a
 `data/chadrea-artworks.js` and an exported `SLOTS[]`, the way Brutalism Hall
@@ -128,7 +130,8 @@ js/
                           four-storey void, glass floor at the top, infinity
                           pool over the city (ditto)
   world/chadrea/chadrea.js  residency: top-lit concrete hall, mezzanine on a
-                          cantilevered flight, arch through to a daylit wing (ditto)
+                          cantilevered flight, arch through to a daylit wing,
+                          walled pool courtyard beyond it (ditto)
 
   world/Lighting.js   sun, spots, baked shadows
   art/                frames, placards, placeholder painting generator,
