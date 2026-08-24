@@ -18,10 +18,6 @@ export class UI {
       info: document.getElementById('info-panel'),
       infoTitle: document.getElementById('info-title'),
       infoMeta: document.getElementById('info-meta'),
-      infoDesc: document.getElementById('info-desc'),
-      infoPrice: document.getElementById('info-price'),
-      infoBuy: document.getElementById('info-buy'),
-      infoFineprint: document.getElementById('info-fineprint'),
       dialogue: document.getElementById('dialogue'),
       dialogueText: document.getElementById('dialogue-text'),
       dialogueChoices: document.getElementById('dialogue-choices'),
@@ -75,26 +71,12 @@ export class UI {
     this.activePanel = 'info';
     this.controls.unlock();
     this.prompt(null);
+    // The panel is a wall label, nothing more: the work's title and who made it.
+    // The house artist unless the piece names its own — the residency halls hang
+    // visiting artists, whose works carry `artist`. An empty string is a
+    // deliberate blank (an uncredited hang), so it isn't filled in from the house.
     this.el.infoTitle.textContent = art.title;
-    // the house artist unless the piece names its own — the residency halls hang
-    // visiting artists, whose works carry `artist` and `series`
-    this.el.infoMeta.textContent = [art.year, art.medium, art.series, art.artist || GALLERY_INFO.artist]
-      .filter(Boolean).join(' · ');
-    this.el.infoDesc.textContent = art.description;
-    // price / buy link are optional — hide them when a piece has none. The
-    // fineprint only describes the buy link, so it goes with it; the residency
-    // works carry no buyUrl and would otherwise be left naming a checkout that
-    // isn't on screen.
-    this.el.infoPrice.textContent = art.price || '';
-    this.el.infoPrice.hidden = !art.price;
-    if (art.buyUrl) {
-      this.el.infoBuy.href = art.buyUrl;
-      this.el.infoBuy.hidden = false;
-    } else {
-      this.el.infoBuy.removeAttribute('href');
-      this.el.infoBuy.hidden = true;
-    }
-    this.el.infoFineprint.hidden = !art.buyUrl;
+    this.el.infoMeta.textContent = art.artist ?? GALLERY_INFO.artist;
     this.el.info.hidden = false;
   }
 

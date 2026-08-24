@@ -10,19 +10,22 @@
 //   name   : shown on the lift button and by the curator.
 //   floor  : which floor the lift climbs to. Drives the ride length, so the
 //            further up the residency, the longer the ride.
-//   artist : resident's name. ← edit these to reassign residents.
+//   artist : resident's name, when the room is credited to one. Omit it and the
+//            curator and lift name the room alone. ← edit these to reassign.
 //   blurb  : one line the curator uses when describing the room.
 //   pending: optional. The floor is spoken for, but the room isn't built yet —
 //            there is no `id` in main.js's ROOM_FACTORIES to ride to. The lift
 //            leaves it off the panel rather than offering a button that arrives
 //            nowhere. Delete the flag when the room lands.
+//   closed : optional. The room is built but shut to visitors. The lift won't
+//            stop there; the curator still lists it, marked closed, so a
+//            visitor asking after it gets an answer. Delete the flag to reopen.
 
 export const RESIDENCIES = [
   {
     id: 'courtyard',
     name: 'The Courtyard',
     floor: 1,
-    artist: 'Aurelia Vance',
     blurb: 'three storeys of arcaded hallway around an open garden, hung the whole way round',
   },
   {
@@ -50,16 +53,19 @@ export const RESIDENCIES = [
     id: 'brutalist',
     name: 'Brutalism Hall',
     floor: 5,
-    artist: 'Chad Rea',
+    closed: true,
     blurb: 'four storeys of board-formed concrete round one void — galleries ringing it at two levels, three cantilevered flights each against a different wall, and a foot of water lying on the glass at the top that you look down through, thirteen metres, to the floor; ten works hung flat on the concrete, unframed, and the pool runs out through the east wall to an edge with the city under it',
   },
 ];
 
-// The ones you can actually ride to. A `pending` entry holds its floor number in
-// the plan without putting a button on the panel that goes nowhere: the lift and
-// the curator both offer this list, while `findResidency` still searches them all
-// so a room that is coming can still be described.
-export const OPEN_RESIDENCIES = RESIDENCIES.filter((r) => !r.pending);
+// The ones the curator will talk about: everything that exists, whether or not
+// the lift is stopping there today. A `pending` entry holds its floor number in
+// the plan without putting a button on the panel that goes nowhere.
+export const LISTED_RESIDENCIES = RESIDENCIES.filter((r) => !r.pending);
+
+// The ones you can actually ride to — built and open. `findResidency` still
+// searches them all, so a closed or coming room can still be described.
+export const OPEN_RESIDENCIES = LISTED_RESIDENCIES.filter((r) => !r.closed);
 
 // Metres per floor, so `floor` reads as a storey rather than a raw height.
 export const FLOOR_HEIGHT = 4.4;

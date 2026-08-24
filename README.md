@@ -3,9 +3,10 @@
 iexploreart.com is a first-person 3D art gallery built with [Three.js](https://threejs.org).
 Visitors walk through a double-height gallery space, explore original works by
 JFeelgood, step out into a walled courtyard with a giant tree, climb to the upper
-floor, and speak with Mira, the curator at the reception desk — who can tell the
-story behind every piece and route purchases through
-[minicuration.com](https://minicuration.com).
+floor, and speak with Mira, the curator at the reception desk — who can describe
+the gallery and point you to the artists in residence upstairs. Nothing is for
+sale here: pressing **E** on a painting opens a wall label with its title and
+artist, and nothing else.
 
 Beside the reception desk a lift rides up to the **artist residencies** — five
 further rooms, listed in `data/residencies.js`: an arcaded courtyard palazzo on
@@ -16,6 +17,11 @@ board-formed concrete hall built round a four-storey void on 5.
 An entry may carry `pending: true`, which means the floor is spoken for but the
 room is not built: the lift leaves it off the panel rather than offering a
 button that arrives nowhere. Nothing is pending right now.
+
+An entry may also carry `closed: true` — built, but shut to visitors. The lift
+won't stop there, while the curator still lists it, marked closed, so a visitor
+asking after it gets an answer. **Brutalism Hall (floor 5) is closed.** Delete
+the flag in `data/residencies.js` to reopen it.
 
 Everything is static files — no build step, no server. Open `index.html` from any
 static host (GitHub Pages, Netlify, etc.).
@@ -33,16 +39,16 @@ static host (GitHub Pages, Netlify, etc.).
 
 The walls hold JFeelgood's real work — 17 pieces, stored as `.webp` in
 **`assets/art/`** and hung via **`data/artworks.js`**. Each `size` is set to the
-photo's true aspect ratio so nothing is stretched. `year`, `medium`, `price`,
-and `description` are editable placeholders — fill them in per piece and point
-each `buyUrl` at the work's page on minicuration.com.
+photo's true aspect ratio so nothing is stretched. `year`, `medium`, and
+`description` are editable placeholders you can fill in per piece, though the
+info panel shows only `title` and the artist (`js/ui/UI.js`).
 
 To add or swap a piece:
 
 1. Drop your `.webp` (or `.jpg`/`.png`) file into **`assets/art/`**.
 2. Open **`data/artworks.js`** and set `image: "assets/art/your-file.webp"` on
    the matching entry. While `image` is `null` a placeholder is generated.
-3. Update `title`, `description`, `price`, and `buyUrl`.
+3. Update `title` and `description`.
 
 The artwork keeps its manifest width; height adapts to the photo's aspect ratio
 automatically. Slot positions (`G-…` ground floor, `M-…` mezzanine, `C-…`
@@ -53,14 +59,17 @@ courtyard wall) are defined in `js/world/layout.js`.
 The upper residencies hang visiting artists from their own manifests. Erin Carle
 holds two of them, from **`data/residency-artworks.js`** — the ten works of her
 *Fall Series* across the Rococo Hall, seven of the *Spring Series* in the
-Nouveau Hall. Neither carries a `buyUrl`, so the info panel shows "Inquire" and
-drops its collect button; the asset folders keep their original `fall26` /
-`spring1` names. Chad Rea holds Brutalism Hall on floor 5, from
+Nouveau Hall; the asset folders keep their original `fall26` / `spring1` names.
+Her name is what the info panel prints under each title — a work's own `artist`
+wins over the house artist, and an empty `artist` prints nothing at all.
+
+Brutalism Hall on floor 5 hangs uncredited from
 **`data/brutalist-artworks.js`** — ten works, all still `image: null`, so
 `js/art/placeholder.js` generates a canvas for each and the hall reads as
-complete until the real files arrive.
+complete until the real files arrive. The hall is closed to visitors, so the
+lift does not stop there.
 
-He holds a second room below it, **Chadrea Hall** on floor 4
+Chad Rea holds **Chadrea Hall** on floor 4
 (`js/world/chadrea/chadrea.js`) — a concrete house rather than a gallery: one
 long board-formed hall under an 8.6 m soffit, a mezzanine reached by a single
 cantilevered flight, and a rounded plaster arch through the pier wall into a

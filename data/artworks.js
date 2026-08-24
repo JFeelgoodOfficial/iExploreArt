@@ -4,9 +4,9 @@
 // The 17 works below are JFeelgood's real pieces, hung from the .webp files in
 // assets/art/ (converted from the uploads in assets/image/artist/jfeelgood/).
 //
-// title comes from each uploaded file name. year / medium / price / description
-// are editable placeholders — fill them in per piece, and point buyUrl at the
-// work's page on minicuration.com.
+// title comes from each uploaded file name. year / medium / description are
+// editable placeholders — fill them in per piece. Nothing is for sale from the
+// panel: it shows the title and the artist, and nothing else (js/ui/UI.js).
 //
 // size is [width, height] in meters and is set to each photo's TRUE aspect
 // ratio (height = width / (imgW / imgH)), so the frame matches the canvas and
@@ -22,8 +22,7 @@ export const ARTWORKS = [
   {
     id: 'affordable-housing',
     title: 'Affordable Housing',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/affordable-housing.webp',
     slot: 'G-N1', size: [2.4, 1.90],
     description: DESC,
@@ -31,8 +30,7 @@ export const ARTWORKS = [
   {
     id: 'sentiments',
     title: 'Sentiments',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/sentiments.webp',
     slot: 'G-N2', size: [2.4, 1.89],
     description: DESC,
@@ -48,8 +46,7 @@ export const ARTWORKS = [
   {
     id: 'supernova',
     title: 'Supernova',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/supernova.webp',
     slot: 'G-W2', size: [1.3, 1.87],
     description: DESC,
@@ -89,8 +86,7 @@ export const ARTWORKS = [
   {
     id: 'colossal-waste-of-time',
     title: 'Colossal Waste of Time',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/colossal-waste-of-time.webp',
     slot: 'G-F4', size: [1.5, 0.81],
     description: DESC,
@@ -115,8 +111,7 @@ export const ARTWORKS = [
   {
     id: 'dream-mountain',
     title: 'Dream Mountain',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/dream-mountain.webp',
     slot: 'M-W1', size: [1.4, 2.15],
     description: DESC,
@@ -124,8 +119,7 @@ export const ARTWORKS = [
   {
     id: 'sweet-dreams',
     title: 'Sweet Dreams',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/sweet-dreams.webp',
     slot: 'M-W2', size: [1.45, 1.98],
     description: DESC,
@@ -133,8 +127,7 @@ export const ARTWORKS = [
   {
     id: 'liberty',
     title: 'Liberty',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/liberty.webp',
     slot: 'M-S1', size: [1.6, 1.62],
     description: DESC,
@@ -142,8 +135,7 @@ export const ARTWORKS = [
   {
     id: 'errands',
     title: 'Errands',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/errands.webp',
     slot: 'M-E1', size: [1.8, 1.69],
     // Errands is a shaped, two-panel diptych: the source image is transparent
@@ -162,8 +154,7 @@ export const ARTWORKS = [
   {
     id: 'zen-kernel',
     title: 'Zen Kernel',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/zen-kernel.webp',
     slot: 'M-S2', size: [2.2, 1.78],
     description: DESC,
@@ -172,8 +163,7 @@ export const ARTWORKS = [
   {
     id: 'dreamfall-big',
     title: 'Dreamfall',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/dreamfall-big.webp',
     slot: 'C-S1', size: [1.8, 2.25],
     description: DESC,
@@ -181,8 +171,7 @@ export const ARTWORKS = [
   {
     id: 'gentrification',
     title: 'Gentrification',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/gentrification.webp',
     slot: 'C-E1', size: [2.4, 1.87],
     description: DESC,
@@ -190,8 +179,7 @@ export const ARTWORKS = [
   {
     id: 'cornerstones',
     title: 'Cornerstones',
-    year: '', medium: '', price: 'Inquire',
-    buyUrl: 'https://minicuration.com/',
+    year: '', medium: '',
     image: 'assets/art/cornerstones.webp',
     slot: 'C-S3', size: [2.4, 1.92],
     description: DESC,
@@ -201,5 +189,4 @@ export const ARTWORKS = [
 export const GALLERY_INFO = {
   artist: 'JFeelgood',
   galleryName: 'iExploreArt',
-  partner: { name: 'minicuration.com', url: 'https://minicuration.com/' },
 };
