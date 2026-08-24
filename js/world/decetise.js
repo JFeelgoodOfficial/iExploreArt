@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-// Decetise Hall — residency, floor 12. Maria Decetise.
+// Decetise Hall — residency five (room id `decetise`). Maria Decetise.
 //
 // One whole floor plate of a high rise. North (−Z) and east (+X) are floor-to-
 // ceiling glazing over the city; the west side slides open onto an infinity-pool
@@ -10,52 +10,22 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 // which is where a visitor arrives, and the core sits in a courtyard — gravel
 // parterre, balustraded stone kerb, clipped hedges and topiary, a stone basin
 // with green park chairs, lamp posts — with five plane trees running up through
-// oculi cut in the ceiling. Four freestanding partitions carry the rest of the
-// hang. A French park met a top-floor suite.
+// oculi cut in the ceiling. Two freestanding partitions and the core's own three
+// solid faces carry the rest of the hang. A French park met a top-floor suite.
 //
 // Same shape as the other residencies (js/world/brutalism/brutalist.js,
 // js/world/chadrea/chadrea.js): this file owns the room and its lighting rig,
-// main.js owns the skyline, the return door and the room registration. Wire it
-// up like this —
+// main.js owns the skyline, the way back down and the room registration.
 //
-//   import {
-//     buildDecetiseRoom, setupDecetiseLighting,
-//     decetiseGround, decetiseSegments, SPAWN as DX_SPAWN, SUN_POS as DX_SUN,
-//   } from './world/decetise/decetise.js';
+//   const room = buildDecetiseRoom(scene, { tier, art: DECETISE_HANG, ...artOpts });
+//   const lights = setupDecetiseLighting(scene, renderer, tier);
+//   room.update(t);   // the pool's swell, the canopies' sway, the jet
 //
-//   // in ROOM_FACTORIES:
-//   decetise: () => {
-//     const room = buildDecetiseRoom(scene, { tier, ...artOpts, art: DECETISE_HANG });
-//     const lights = setupDecetiseLighting(scene, renderer, tier);
-//     const city = buildCityView(scene, renderer, {
-//       name: 'city-decetise', seed: 1207, yaw: Math.PI / 2, fog: false,
-//       sunPosition: DX_SUN, nearProps: tier.name !== 'low',
-//     });
-//     city.group.position.y = 5.0;     // read from a 1.65 m eye, twelve storeys up
-//     const door = returnDoor(0, 1.25, DX.core + 0.1, 0);   // the cabin's own back wall
-//     return {
-//       room: { ...room, lights, city },
-//       def: {
-//         targets: [door, ...room.interactables],
-//         spawn: DX_SPAWN,
-//         segments: decetiseSegments(),
-//         ground: decetiseGround,
-//         background: new THREE.Color(0xdCC6a6),
-//         bake: () => { lights.bake(); },
-//       },
-//     };
-//   },
+// Nothing adds itself outside `scene` — main.js builds the room inside
+// rooms.captureLayer() so every mesh and every light hides with it. The lift
+// that serves it is the reception cabin (data/residencies.js, floor 5); the
+// core's own back wall is how you ride back down (see ROOM_FACTORIES).
 //
-// …plus an entry in data/residencies.js:
-//
-//   { id: 'decetise', name: 'Decetise Hall', floor: 12, artist: 'Maria Decetise',
-//     blurb: 'a whole floor twelve storeys up — two walls of glass over the city, '
-//          + 'an infinity pool running off the edge of the plate, and the lift '
-//          + 'standing in a French parterre with five plane trees growing up '
-//          + 'through the ceiling; ten works on the art wall and four partitions' },
-//
-// and, in the frame loop, `residencyRooms.decetise?.update(t)` while you're in it.
-
 // --- the plan (metres) ------------------------------------------------------
 export const DX = {
   x0: -17, x1: 17, z0: -13, z1: 13,        // interior
@@ -910,7 +880,14 @@ export function decetiseSegments() {
     seg(-DX.core - 0.2, DX.core + 0.2, DX.core + 0.2, DX.core + 0.2),
     seg(-DX.core - 0.2, -DX.core - 0.2, -DX.core - 0.2, DX.core + 0.2),
     seg(DX.core + 0.2, -DX.core - 0.2, DX.core + 0.2, DX.core + 0.2),
-    // the basin and the four partitions
+    // …plus the cabin's own back wall, a panel's thickness inside the core's
+    // south line. That line stands off the OUTSIDE face of the core, far enough
+    // out that nobody walking round it can push into the picture hung there
+    // (DX-C1) — which from inside the cabin left the visitor half a body
+    // through the brass. This one is only ever met from within: nothing outside
+    // the core gets past the south line to reach it.
+    seg(-DX.core, DX.core - 0.205, DX.core, DX.core - 0.205),
+    // the basin and the partitions
     ...rect(-2.1, 4.5, 2.1, 8.7),
     ...PARTITIONS.flatMap((p) => rect(p.x - p.w / 2 - 0.1, p.z - 0.3, p.x + p.w / 2 + 0.1, p.z + 0.3)),
     // the hedges, quadrant by quadrant

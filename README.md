@@ -8,11 +8,13 @@ the gallery and point you to the artists in residence upstairs. Nothing is for
 sale here: pressing **E** on a painting opens a wall label with its title and
 artist, and nothing else.
 
-Beside the reception desk a lift rides up to the **artist residencies** — five
+Beside the reception desk a lift rides up to the **artist residencies** — six
 further rooms, listed in `data/residencies.js`: an arcaded courtyard palazzo on
 floor 1, an Art Nouveau domed hall on 2, a Rococo gallery on 3, a concrete house
-of one long top-lit hall, a daylit wing and a walled pool courtyard on 4, and a
-board-formed concrete hall built round a four-storey void on 5.
+of one long top-lit hall, a daylit wing and a walled pool courtyard on 4, a whole
+glazed floor plate over the city with a French parterre round the lift core and
+an infinity pool off its west edge on 5, and a board-formed concrete hall built
+round a four-storey void on 6.
 
 An entry may carry `pending: true`, which means the floor is spoken for but the
 room is not built: the lift leaves it off the panel rather than offering a
@@ -20,7 +22,7 @@ button that arrives nowhere. Nothing is pending right now.
 
 An entry may also carry `closed: true` — built, but shut to visitors. The lift
 won't stop there, while the curator still lists it, marked closed, so a visitor
-asking after it gets an answer. **Brutalism Hall (floor 5) is closed.** Delete
+asking after it gets an answer. **Brutalism Hall (floor 6) is closed.** Delete
 the flag in `data/residencies.js` to reopen it.
 
 Everything is static files — no build step, no server. Open `index.html` from any
@@ -63,7 +65,7 @@ Nouveau Hall; the asset folders keep their original `fall26` / `spring1` names.
 Her name is what the info panel prints under each title — a work's own `artist`
 wins over the house artist, and an empty `artist` prints nothing at all.
 
-Brutalism Hall on floor 5 hangs uncredited from
+Brutalism Hall on floor 6 hangs uncredited from
 **`data/brutalist-artworks.js`** — ten works, all still `image: null`, so
 `js/art/placeholder.js` generates a canvas for each and the hall reads as
 complete until the real files arrive. The hall is closed to visitors, so the
@@ -80,6 +82,21 @@ flat on the concrete, with no manifest and no `userData.artwork`, so nothing
 there answers an **E** press. To hang real pieces it needs a
 `data/chadrea-artworks.js` and an exported `SLOTS[]`, the way Brutalism Hall
 does it; the hang loop in `brutalism/brutalist.js` is the pattern to copy.
+
+Maria Decetise holds **Decetise Hall** on floor 5 (`js/world/decetise.js`) —
+one whole floor plate of a high rise, glazed the length of its north and east
+sides, sliding open on the west onto a terrace where an infinity pool runs off
+the edge of the building. The lift core stands in the middle of the plate rather
+than against a wall, and it stands in a French parterre: gravel, a balustraded
+stone kerb, clipped hedges, a basin, park chairs, and five plane trees growing
+up through oculi cut in the ceiling. Its eleven works hang from `DECETISE_HANG`,
+a manifest exported by the room's own file alongside `SLOTS[]` — six on the
+south art wall, one on each of the two freestanding partitions, and three on the
+faces of the core itself, which are what you see as the doors open. Every entry
+is still `image: null`, so each slot carries a generated placeholder; unlike
+Chadrea Hall's, these do answer an **E** press, with the title and the resident's
+name. There is no return door on a wall: the way out is the cabin you arrived in
+— look back at its brass wall and press **E**.
 
 It works differently from `data/artworks.js`, because these frames are carved
 geometry rather than four flat bars. Array position is the slot index in that
@@ -141,6 +158,9 @@ js/
   world/chadrea/chadrea.js  residency: top-lit concrete hall, mezzanine on a
                           cantilevered flight, arch through to a daylit wing,
                           walled pool courtyard beyond it (ditto)
+  world/decetise.js       residency: one glazed floor plate over the city, the
+                          lift core standing in a gravel parterre with plane
+                          trees through the ceiling, infinity pool west (ditto)
 
   world/Lighting.js   sun, spots, baked shadows
   art/                frames, placards, placeholder painting generator,
