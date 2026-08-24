@@ -84,9 +84,22 @@ export const RESIDENCIES = [
     bio: CHAD_REA_BIO,
   },
   {
+    id: 'decetise',
+    name: 'Decetise Hall',
+    floor: 5,
+    artist: 'Maria Decetise',
+    blurb: 'one whole floor plate five storeys up — two walls of glass over the city, '
+      + 'a terrace to the west where an infinity pool runs off the edge of the plate, '
+      + 'and the lift standing in the middle of a French parterre, gravel and clipped '
+      + 'hedges and green park chairs, with five plane trees growing up through oculi '
+      + 'cut in the ceiling; eleven works hang there — six on the art wall, one on each '
+      + 'of the two freestanding partitions, and three on the faces of the lift core '
+      + 'itself, which are the first pictures you see as the doors open',
+  },
+  {
     id: 'brutalist',
     name: 'Brutalism Hall',
-    floor: 5,
+    floor: 6,
     closed: true,
     blurb: 'four storeys of board-formed concrete round one void — galleries ringing it at two levels, three cantilevered flights each against a different wall, and a foot of water lying on the glass at the top that you look down through, thirteen metres, to the floor; ten works hung flat on the concrete, unframed, and the pool runs out through the east wall to an edge with the city under it',
   },

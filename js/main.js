@@ -24,6 +24,11 @@ import {
   chadreaGround, chadreaSegments, SPAWN as CH_SPAWN, LIFT as CH_LIFT,
   SUN_POS as CH_SUN,
 } from './world/chadrea/chadrea.js';
+import {
+  buildDecetiseRoom, setupDecetiseLighting,
+  decetiseGround, decetiseSegments, DECETISE_HANG,
+  DX, SPAWN as DX_SPAWN, SUN_POS as DX_SUN,
+} from './world/decetise.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
 import { BRUTALIST_HANG } from '../data/brutalist-artworks.js';
 import { CHADREA_HANG } from '../data/chadrea-artworks.js';
@@ -444,6 +449,55 @@ const ROOM_FACTORIES = {
       },
     };
   },
+
+  decetise: () => {
+    const room = buildDecetiseRoom(scene, { tier, ...artOpts, art: DECETISE_HANG });
+    const lights = setupDecetiseLighting(scene, renderer, tier);
+    // A whole floor plate five storeys up, glazed on two sides and open to a
+    // terrace on a third — so there is no single window to aim the skyline at.
+    // Yawed an eighth turn: the city's spread runs from −Z round to −X, which
+    // puts it behind the north wall of glass (the benches face it) AND out past
+    // the pool's weir on the terrace, the two places anyone stands to look out.
+    // `fog` is global and the gallery already set it; the sun matches
+    // setupDecetiseLighting's, or the daylight arrives from two quarters at once.
+    const city = buildCityView(scene, renderer, {
+      name: 'city-decetise', seed: 1207, yaw: Math.PI / 4, fog: false,
+      sunPosition: DX_SUN, nearProps: tier.name !== 'low',
+    });
+    // The skyline is authored to be read from near its own rooftops. Lifted, so
+    // that from a 1.65 m eye up here the near roofs sit around the horizon
+    // instead of spread out underfoot.
+    city.group.position.y = 5.0;
+    // No return door on a wall: the way down is the cabin you arrived in, whose
+    // brass back wall closes the lift core behind you. The whole of that wall
+    // answers — the steel call plate on it is 0.34 m across, which is no way to
+    // ask for reception. It rides the veil like the chadrea and nouveau lifts
+    // do: entering 'gallery' puts you inside the reception cabin, doors open.
+    //
+    // Stood off the brass by a hand's width, because the plate projects and
+    // because the hitbox has to stay in FRONT of the visitor: walking into that
+    // wall stops you a player-radius short of it (decetiseSegments), and a
+    // plane flush with the brass would sit behind the eye at exactly the moment
+    // someone is nose to the wall looking for the way out.
+    const liftDoor = doorHitbox(DX.core * 2 - 0.2, 2.4, 0, 1.25, DX.core - 0.28,
+      Math.PI, 'decetise-lift-to-reception');
+    liftDoor.userData.door = {
+      label: 'ride the lift to reception',
+      onEnter: () => travelTo('gallery'),
+    };
+    scene.add(liftDoor);
+    return {
+      room: { ...room, lights, city },
+      def: {
+        targets: [liftDoor, ...room.interactables],
+        spawn: DX_SPAWN,
+        segments: decetiseSegments(),
+        ground: decetiseGround,
+        background: new THREE.Color(0xdcc6a6),
+        bake: () => { lights.bake(); },
+      },
+    };
+  },
 };
 
 async function ensureRoom(id) {
@@ -648,6 +702,13 @@ renderer.setAnimationLoop(() => {
   if (rooms.current === 'chadrea') {
     residencyRooms.chadrea?.city.update(t);
     residencyRooms.chadrea?.update(dt);
+  }
+  // Decetise Hall's own skyline, the pool's swell, the plane trees and the jet.
+  // Its update() reads elapsed time, not a delta — the sway and the swell are
+  // sampled off `t` rather than integrated.
+  if (rooms.current === 'decetise') {
+    residencyRooms.decetise?.city.update(t);
+    residencyRooms.decetise?.update(t);
   }
   // Candle / lamp flicker, for the rooms that have any. The call is optional as
   // well as the rig: a room lit by daylight alone (the brutalist hall) returns a
