@@ -168,53 +168,86 @@ export const VOLUTE = (() => {
   return pts;
 })();
 
-// Hanging slots. `pos` is the picture's CENTRE and `n` the face it comes out
-// of, the same shape Brutalism Hall uses; (maxW, maxH) is a guard rather than a
-// target — this hall hangs at the works' true size (data/chadrea-artworks.js)
-// and only shrinks a piece if its wall genuinely cannot take it. Nothing is
-// framed: the canvases stand off the concrete on their own edges.
+// Hanging slots — twenty-one of them, every wall in the residency that will
+// take a picture. `pos` is the picture's CENTRE and `n` the face it comes out
+// of, the same shape Brutalism Hall uses. (maxW, maxH) is a guard rather than a
+// target: it is what the WALL can take, and a work larger than that is scaled
+// down to fit, never up (see sizeFor). Nothing is framed — the canvases stand
+// off the concrete on their own edges.
 //
-// Every `pos[1]` is a centre line, and they are set per surface rather than
-// globally: 1.55 m for anything met on foot (the museum's own 57-inch line),
-// MEZZ.top + 1.55 for the two on the mezzanine, and higher only where the
-// viewer is higher — over the console, and over the stair.
+// `pos[1]` is a centre line, set per surface rather than globally: 1.75 m for
+// most of what is met on foot, and higher only where the viewer is higher or
+// the wall is — over the console, over the stair, on the mezzanine deck.
 //
-// Three obstructions decide the west wall's z positions and are worth knowing
-// before moving one: the walnut doorway reveals at z −1.9 and z +6.6 (1.42 m
-// of wall each), the console at z 0.4…5.0, and the mezzanine deck, which puts
-// everything from z −11 to −1 under a 3.78 m soffit.
+// Order matters. Position here is position in CHADREA_HANG
+// (data/chadrea-artworks.js); the two are read together and index for index.
 export const SLOTS = [
-  // The long west wall — the lit one, grazed by the cove its whole length.
-  /* 0 */ { id: 'CH-W1', pos: [HALL.x0 + 0.09, 2.00, 3.0], n: [1, 0, 0], maxW: 2.6, maxH: 2.4 },
-  /* 1 */ { id: 'CH-W2', pos: [HALL.x0 + 0.09, 1.55, 8.6], n: [1, 0, 0], maxW: 2.2, maxH: 2.6 },
-  // …and its two bays under the mezzanine, where the room drops to 3.78. These
-  // two sit 1.5 m apart, closer than any other pair in the hall, because the
-  // works that hang here are the smallest in the series — at the spacing the
-  // rest of the wall uses they read as two stamps on 22 m of concrete instead
-  // of as a pair.
-  /* 2 */ { id: 'CH-W3', pos: [HALL.x0 + 0.09, 1.50, -5.40], n: [1, 0, 0], maxW: 1.8, maxH: 2.2 },
-  /* 3 */ { id: 'CH-W4', pos: [HALL.x0 + 0.09, 1.50, -6.90], n: [1, 0, 0], maxW: 1.8, maxH: 2.2 },
-  // North wall, over the flight. Read the length of the hall on arrival, and
-  // again at arm's length from the treads, so it hangs to the climb rather than
-  // to the floor: at x 1.8 the stair is already 1.07 m up.
-  /* 4 */ { id: 'CH-N1', pos: [1.80, 3.10, HALL.z0 + 0.09], n: [0, 0, 1], maxW: 2.4, maxH: 2.4 },
-  // The pier's east face — the wing's west side, south of the arch. Not the
-  // hall's south wall, which is the obvious eleventh surface and the wrong one:
-  // nothing in setupChadreaLighting points at it, so a picture hung there is a
-  // dark rectangle on a dark wall. This face takes wingSun square on, and it is
-  // the wall at your shoulder walking down the wing to the lift.
-  //
+  // --- the hall's long west wall, the lit one, grazed by the cove ----------
+  // Three obstructions decide the z positions here and are worth knowing
+  // before moving one: the walnut doorway reveals at z −1.9 and z +6.6 (1.42 m
+  // of wall each), the console at z 0.4…5.0, and the mezzanine deck, which puts
+  // everything from z −11 to −1 under a 3.78 m soffit. What is left in the open
+  // stretch is two positions, not four.
+  /*  0 */ { id: 'CH-W1', pos: [HALL.x0 + 0.09, 2.55, 3.0], n: [1, 0, 0], maxW: 3.2, maxH: 4.0 },
+  /*  1 */ { id: 'CH-W2', pos: [HALL.x0 + 0.09, 1.75, 9.4], n: [1, 0, 0], maxW: 3.2, maxH: 4.0 },
+  // …and the bay under the mezzanine. A lower room, so the run steps down: two
+  // full-height works either side of the two smallest in the series, which hang
+  // 1.5 m apart as a pair rather than at the spacing the open wall uses.
+  /*  2 */ { id: 'CH-W3', pos: [HALL.x0 + 0.09, 1.75, -3.6], n: [1, 0, 0], maxW: 2.2, maxH: 2.8 },
+  /*  3 */ { id: 'CH-W4', pos: [HALL.x0 + 0.09, 1.55, -6.0], n: [1, 0, 0], maxW: 2.2, maxH: 2.8 },
+  /*  4 */ { id: 'CH-W5', pos: [HALL.x0 + 0.09, 1.55, -7.5], n: [1, 0, 0], maxW: 2.2, maxH: 2.8 },
+  // --- north wall ----------------------------------------------------------
+  // Over the flight, read the length of the hall on arrival and again at arm's
+  // length from the treads. It hangs to the climb rather than to the floor: at
+  // x 1.8 the stair is already 1.07 m up and its handrail 2.09.
+  /*  5 */ { id: 'CH-N1', pos: [1.80, 3.50, HALL.z0 + 0.09], n: [0, 0, 1], maxW: 3.0, maxH: 3.2 },
+  // …and the same wall west of the flight, which is under the mezzanine deck.
+  /*  6 */ { id: 'CH-N2', pos: [-5.80, 1.75, HALL.z0 + 0.09], n: [0, 0, 1], maxW: 2.2, maxH: 2.8 },
+  // --- south wall ----------------------------------------------------------
+  // The wall you arrive with your back to. It carried the door out to reception
+  // until that came off (there is a lift in the wing), and it is a bare 12 m of
+  // concrete with nothing else on it. It takes two — and it took a pair of wash
+  // lamps in setupChadreaLighting to be worth hanging on at all.
+  /*  7 */ { id: 'CH-S1', pos: [-4.00, 1.75, HALL.z1 - 0.09], n: [0, 0, -1], maxW: 3.2, maxH: 3.6 },
+  /*  8 */ { id: 'CH-S2', pos: [0.60, 1.75, HALL.z1 - 0.09], n: [0, 0, -1], maxW: 3.2, maxH: 3.6 },
+  // --- the mezzanine deck's own two walls, at its corner -------------------
+  // MEZZ.top + 1.40 rather than the 1.55 used on foot: the west wall's cove
+  // recess is cut at y 6.475, and at eye height a work up here would run into
+  // the bottom of it.
+  /*  9 */ { id: 'CH-M1', pos: [MEZZ.x0 + 0.09, MEZZ.top + 1.40, -6.4], n: [1, 0, 0], maxW: 2.4, maxH: 2.8 },
+  /* 10 */ { id: 'CH-M2', pos: [-5.60, MEZZ.top + 1.40, HALL.z0 + 0.09], n: [0, 0, 1], maxW: 2.4, maxH: 2.8 },
+  // --- the pier's west face, z −11…2.4 and z 8…11 (the arch is between) ----
+  // The dark mass the lit west wall is measured against. It stays darker than
+  // the west wall — that contrast is the room — but the two washes that used to
+  // graze it have become four, enough that a picture on it is a picture.
+  /* 11 */ { id: 'CH-P1', pos: [PIER.x - 0.09, 1.75, 1.0], n: [-1, 0, 0], maxW: 2.6, maxH: 3.6 },
+  /* 12 */ { id: 'CH-P2', pos: [PIER.x - 0.09, 1.85, -3.0], n: [-1, 0, 0], maxW: 2.6, maxH: 3.6 },
+  // --- the pier's east face: the wing's west side, either side of the arch --
   // PIER.x + PIER.t, not PIER.x + PIER.t / 2: the slab is extruded off PIER.x
   // rather than centred on it, so it occupies x 4.0…4.9 and its east face is
   // the far one. Half the thickness leaves the picture inside the concrete —
   // still raycastable, so the E prompt appears on a wall with nothing on it.
-  /* 5 */ { id: 'CH-P1', pos: [PIER.x + PIER.t + 0.09, 1.55, 9.50], n: [1, 0, 0], maxW: 2.4, maxH: 2.6 },
-  // The mezzanine deck's own two walls, at its corner.
-  /* 6 */ { id: 'CH-M1', pos: [MEZZ.x0 + 0.09, MEZZ.top + 1.55, -6.4], n: [1, 0, 0], maxW: 2.2, maxH: 2.2 },
-  /* 7 */ { id: 'CH-M2', pos: [-5.60, MEZZ.top + 1.55, HALL.z0 + 0.09], n: [0, 0, 1], maxW: 2.0, maxH: 2.0 },
-  // Through the arch, in the daylit wing: its long east wall and its north end.
-  /* 8 */ { id: 'CH-A1', pos: [WING.x1 - 0.09, 1.60, 6.2], n: [-1, 0, 0], maxW: 3.0, maxH: 2.6 },
-  /* 9 */ { id: 'CH-A2', pos: [9.50, 1.55, WING.z0 + 0.09], n: [0, 0, 1], maxW: 2.2, maxH: 2.4 },
+  /* 13 */ { id: 'CH-A1', pos: [PIER.x + PIER.t + 0.09, 1.75, 1.30], n: [1, 0, 0], maxW: 2.4, maxH: 3.0 },
+  /* 14 */ { id: 'CH-A2', pos: [PIER.x + PIER.t + 0.09, 1.75, 9.50], n: [1, 0, 0], maxW: 2.4, maxH: 3.0 },
+  // --- the wing: its long east wall and its north end ----------------------
+  // The brightest light in the residency. z 6.2 sits between the wing's light
+  // panel at z 3.1 and its bench at z 8.1…10.1.
+  /* 15 */ { id: 'CH-A3', pos: [WING.x1 - 0.09, 1.85, 6.2], n: [-1, 0, 0], maxW: 3.2, maxH: 3.4 },
+  /* 16 */ { id: 'CH-A4', pos: [9.50, 1.85, WING.z0 + 0.09], n: [0, 0, 1], maxW: 3.2, maxH: 3.4 },
+  // --- the courtyard, out by the pool, under open sky ----------------------
+  // Board-formed concrete like the hall and only 4.6 m to the coping, so the
+  // envelope here is the wall's real height rather than a picture's ambition.
+  // The two side walls are hung off the pool's margins; the far one is read
+  // across the water, which is the only long view in the residency.
+  /* 17 */ { id: 'CH-C1', pos: [COURT.x0 + 0.09, 1.75, 12.5], n: [1, 0, 0], maxW: 2.6, maxH: 3.2 },
+  /* 18 */ { id: 'CH-C2', pos: [COURT.x1 - 0.09, 1.75, 17.4], n: [-1, 0, 0], maxW: 2.6, maxH: 3.2 },
+  /* 19 */ { id: 'CH-C3', pos: [9.00, 1.90, COURT.z1 - 0.09], n: [0, 0, -1], maxW: 2.6, maxH: 3.2 },
+  // --- the artist ----------------------------------------------------------
+  // On the pier by the arch, the first wall on your right as you arrive. A
+  // deliberately small envelope: the portrait carries no `size`, so it fits
+  // itself to this, and at the paintings' envelope it would hang as the largest
+  // thing in the room.
+  /* 20 */ { id: 'CH-PORTRAIT', pos: [PIER.x - 0.09, 1.65, 9.4], n: [-1, 0, 0], maxW: 1.10, maxH: 1.40 },
 ];
 
 // Ground floor at the south end, facing north up the hall: the arch is on your
@@ -1330,17 +1363,48 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
   scene.add(fill);
 
   // The pier's west face takes no sun — it looks away from it — and the cove
-  // only grazes its head, so below about 6 m it renders as flat black. Two wide,
+  // only grazes its head, so below about 6 m it renders as flat black. Wide,
   // weak washes off the hall give the boards and tie holes something to catch
   // without lifting the wall out of shadow; it should still read as the dark
   // mass the lit west wall is measured against.
+  //
+  // Four of them, not the original two, and aimed at 1.9 rather than 2.4: the
+  // face hangs four pictures now (SLOTS CH-P1, CH-P2, CH-PORTRAIT and the works
+  // read through the arch), and two lamps at z −7 and −1 left everything south
+  // of the opening — the portrait included — in the dark. The z run skips
+  // 2.4…8, which is the archway and not a wall at all.
   const pierWash = [];
-  for (const z of [-7.0, -1.0]) {
+  for (const z of [-7.0, -3.0, 0.6, 9.2]) {
     const s = new THREE.SpotLight(0xffe0b8, 13, 22, 0.95, 1.0, 1.7);
     s.position.set(-1.6, 6.2, z + 1.6);
-    s.target.position.set(PIER.x - 0.05, 2.4, z);
+    s.target.position.set(PIER.x - 0.05, 1.9, z);
     scene.add(s, s.target);
     pierWash.push(s);
+  }
+
+  // A picture light for the portrait (SLOTS CH-PORTRAIT), close in and narrow.
+  // The pier washes are 22 m throws from across the hall, tuned to graze a
+  // whole wall; the portrait is a black-and-white photograph, the one thing in
+  // the residency with no colour to carry it, and on a grazed dark wall it read
+  // as a grey smudge. This is the lamp a portrait gets.
+  const portraitLamp = new THREE.SpotLight(0xfff2e0, 9, 4.2, 0.55, 0.7, 1.8);
+  portraitLamp.position.set(PIER.x - 1.05, 3.55, 9.4);
+  portraitLamp.target.position.set(PIER.x - 0.09, 1.65, 9.4);
+  scene.add(portraitLamp, portraitLamp.target);
+
+  // The south wall. Nothing in the room pointed at it: the sun comes through
+  // the skylight and down the west wall, the cove faces the other way, and the
+  // wall itself used to be the one surface carrying no art — just the door out.
+  // The door is gone and it hangs two works now, so it gets its own pair of
+  // washes, weaker than the west wall's rim so the hall still reads as lit from
+  // one end.
+  const southWash = [];
+  for (const x of [-4.0, 0.6]) {
+    const s = new THREE.SpotLight(0xffdcb0, 15, 14, 0.85, 0.95, 1.7);
+    s.position.set(x, 5.4, HALL.z1 - 3.2);
+    s.target.position.set(x, 1.75, HALL.z1);
+    scene.add(s, s.target);
+    southWash.push(s);
   }
 
   // The cove's lamps. Count follows the tier — ten point lights in one room is
@@ -1367,7 +1431,7 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
   }
 
   return {
-    hemi, sun, wingSun, rim, fill, cove, pierWash, liftLamp,
+    hemi, sun, wingSun, rim, fill, cove, pierWash, southWash, portraitLamp, liftLamp,
     bake: () => { renderer.shadowMap.needsUpdate = true; },
   };
 }
