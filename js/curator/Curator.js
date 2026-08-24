@@ -1,24 +1,20 @@
 import * as THREE from 'three';
 import { CURATOR_POS } from '../world/layout.js';
 import { DIALOGUE } from '../../data/dialogue.js';
-import { ARTWORKS } from '../../data/artworks.js';
-import { OPEN_RESIDENCIES, findResidency } from '../../data/residencies.js';
+import { LISTED_RESIDENCIES, findResidency } from '../../data/residencies.js';
 import { queueUpload } from '../utils/texqueue.js';
 
 // Mira, the curator: a photographic billboard behind the reception desk that
 // always turns to face the visitor, with a breathing idle, plus the
-// dialogue-tree runner that the UI renders. Purchases route to
-// minicuration.com from here. If the portrait fails to load, the original
-// stylized primitive figure (with head-tracking) stays in as a fallback.
+// dialogue-tree runner that the UI renders. If the portrait fails to load, the
+// original stylized primitive figure (with head-tracking) stays in as a
+// fallback.
 
 // receptionist.png: 341x1052 alpha cutout — a full-body standing portrait,
 // feet at floor level. She stands in the nook behind the reception desk, so
 // the desk naturally occludes her lower legs from the visitor's viewpoint.
 const ORDINALS = ['ground', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth'];
 function ordinal(n) { return ORDINALS[n] || `${n}th`; }
-// she speaks; she doesn't read out digits
-const CARDINALS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
-function count(n) { return CARDINALS[n] || `${n}`; }
 
 const PORTRAIT_URL = 'assets/image/receptionist.png';
 const PORTRAIT_ASPECT = 341 / 1052;
@@ -183,46 +179,17 @@ export class Curator {
   _choose(choice) {
     if (choice.action) {
       const a = choice.action;
-      if (a.type === 'link') {
-        window.open(a.url, '_blank', 'noopener');
-        this._showNode('start');
-        return;
-      }
-      if (a.type === 'artworkList') {
-        const works = ARTWORKS.filter(w => w.slot.startsWith(a.floor));
-        const label = a.floor === 'G' ? 'the ground floor' : a.floor === 'M' ? 'the upper gallery' : 'the courtyard';
-        const choices = works.map(w => ({
-          label: `${w.title} — ${w.price}`,
-          action: { type: 'artwork', id: w.id },
-        }));
-        choices.push({ label: 'Back.', next: 'collection' });
-        this.ui.showDialogueNode(
-          `On ${label} you’ll find ${works.length} works. Ask me about any of them:`,
-          choices,
-          (c) => this._choose(c)
-        );
-        return;
-      }
-      if (a.type === 'artwork') {
-        const art = ARTWORKS.find(w => w.id === a.id);
-        if (art) { this.ui.closePanel(); this.ui.openArtwork(art); }
-        return;
-      }
       if (a.type === 'residencyList') {
-        // Only the rooms the lift will actually take you to — she shouldn't send
-        // anyone to a floor that isn't open yet (data/residencies.js, `pending`).
-        const choices = OPEN_RESIDENCIES.map(r => ({
-          label: `${r.artist} — ${r.name}`,
+        // Every room that exists, closed ones marked as such — she shouldn't
+        // pretend a hall isn't there, and she shouldn't send anyone up to one
+        // the lift won't stop at (data/residencies.js, `closed` / `pending`).
+        const choices = LISTED_RESIDENCIES.map(r => ({
+          label: r.closed ? `${r.name} — closed` : r.artist ? `${r.artist} — ${r.name}` : r.name,
           action: { type: 'residency', id: r.id },
         }));
         choices.push({ label: 'Back.', next: 'start' });
-        // one artist can hold more than one room, so count people, not rooms
-        const names = new Set(OPEN_RESIDENCIES.map(r => r.artist));
-        const who = names.size === OPEN_RESIDENCIES.length
-          ? `${count(names.size)} artists are in residence`
-          : `${count(names.size)} artists are in residence across ${count(OPEN_RESIDENCIES.length)} rooms`;
         this.ui.showDialogueNode(
-          `${who[0].toUpperCase()}${who.slice(1)}. Ask me about any of them:`,
+          'Here is what the lift serves. Ask me about any of them:',
           choices,
           (c) => this._choose(c)
         );
@@ -231,9 +198,15 @@ export class Curator {
       if (a.type === 'residency') {
         const r = findResidency(a.id);
         if (r) {
+          const where = `the ${ordinal(r.floor)} floor`;
+          const text = r.closed
+            ? `${r.name} is closed to visitors just now — the lift won't stop on ${where} while it is. When it reopens: ${r.blurb}.`
+            : r.artist
+              ? `${r.artist} works in ${r.name}, up on ${where} — ${r.blurb}. Take the lift just there, behind me, and press ${r.floor}.`
+              : `${r.name} is up on ${where} — ${r.blurb}. Take the lift just there, behind me, and press ${r.floor}.`;
           this.ui.showDialogueNode(
-            `${r.artist} works in ${r.name}, up on the ${ordinal(r.floor)} floor — ${r.blurb}. Take the lift just there, behind me, and press ${r.floor}.`,
-            [{ label: 'Who else is in residence?', action: { type: 'residencyList' } },
+            text,
+            [{ label: 'What else is in residence?', action: { type: 'residencyList' } },
              { label: 'Thank you.', next: 'start' }],
             (c) => this._choose(c)
           );

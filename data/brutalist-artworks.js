@@ -18,12 +18,15 @@
 // and is ignored once `image` is set.
 // ============================================================================
 
-const ARTIST = 'Chad Rea';
+// The hall hangs uncredited while it is closed (data/residencies.js, `closed`).
+// An empty artist is a deliberate blank, not a missing value: the info panel
+// leaves the line empty rather than falling back to the house artist.
+const ARTIST = '';
 const SERIES = 'Brutalism Hall';
 
 const work = (id, title, px, palette, extra) => ({
   id, title, artist: ARTIST, series: SERIES,
-  year: '', medium: '', price: 'Inquire',
+  year: '', medium: '',
   image: null,
   px,
   palette,

@@ -154,14 +154,7 @@ body.touch .desktop-hint { display: none; }
 .side-panel .close:hover { color: var(--ink); }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.72rem; color: var(--accent-2); margin: 0 0 0.5rem; }
 .side-panel h2 { font-family: "Cormorant Garamond", serif; font-size: 1.9rem; margin: 0 0 0.3rem; line-height: 1.15; }
-#info-meta { font-size: 0.85rem; margin: 0 0 1.2rem; }
-#info-desc { font-size: 0.95rem; line-height: 1.65; color: #3d3630; }
-.price-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  margin-top: 1.6rem; padding-top: 1.4rem; border-top: 1px solid var(--line);
-}
-#info-price { font-family: "Cormorant Garamond", serif; font-size: 1.5rem; font-weight: 600; }
-.fineprint { font-size: 0.72rem; color: var(--muted); margin-top: 1.1rem; }
+#info-meta { font-size: 0.85rem; margin: 0; }
 
 /* ---------- dialogue ---------- */
 .dialogue {

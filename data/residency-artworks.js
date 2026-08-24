@@ -22,9 +22,8 @@
 //
 // `title` follows each uploaded file name verbatim, spelling and all.
 // `year` / `medium` / `description` are editable placeholders — fill them in
-// per piece. The residency works carry no `buyUrl`: the info panel hides its
-// collect button and fineprint for any piece without one (js/ui/UI.js), so
-// these read as `Inquire` and nothing else.
+// per piece. Nothing here is for sale: the info panel shows the title and the
+// artist, and nothing else (js/ui/UI.js).
 // ============================================================================
 
 const ARTIST = 'Erin Carle';
@@ -33,7 +32,7 @@ const SPRING = 'Spring Series';
 
 const fall = (id, title, file, px) => ({
   id, title, artist: ARTIST, series: FALL,
-  year: '', medium: '', price: 'Inquire',
+  year: '', medium: '',
   image: `assets/art/erin-carle/fall26/${file}`,
   px,
   description: `From Erin Carle's ${FALL}, in residence in the Rococo Hall.`,
@@ -42,7 +41,7 @@ const fall = (id, title, file, px) => ({
 // `extra` carries per-piece exceptions — currently `wide` and `outline`, below.
 const spring = (id, title, file, px, extra) => ({
   id, title, artist: ARTIST, series: SPRING,
-  year: '', medium: '', price: 'Inquire',
+  year: '', medium: '',
   image: `assets/art/erin-carle/spring1/${file}`,
   px,
   description: `From Erin Carle's ${SPRING}, in residence in the Nouveau Hall.`,
