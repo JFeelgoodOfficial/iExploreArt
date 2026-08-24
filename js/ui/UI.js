@@ -18,6 +18,9 @@ export class UI {
       info: document.getElementById('info-panel'),
       infoTitle: document.getElementById('info-title'),
       infoMeta: document.getElementById('info-meta'),
+      infoSpec: document.getElementById('info-spec'),
+      infoSeries: document.getElementById('info-series'),
+      infoDesc: document.getElementById('info-desc'),
       dialogue: document.getElementById('dialogue'),
       dialogueText: document.getElementById('dialogue-text'),
       dialogueChoices: document.getElementById('dialogue-choices'),
@@ -71,12 +74,21 @@ export class UI {
     this.activePanel = 'info';
     this.controls.unlock();
     this.prompt(null);
-    // The panel is a wall label, nothing more: the work's title and who made it.
+    // The panel is a wall label: the work's title, who made it, and whatever
+    // else the manifest actually knows. Every line below the artist is
+    // optional and hides itself when the piece has nothing to put there, so a
+    // manifest that only carries a title still reads as a clean label.
+    //
     // The house artist unless the piece names its own — the residency halls hang
     // visiting artists, whose works carry `artist`. An empty string is a
     // deliberate blank (an uncredited hang), so it isn't filled in from the house.
     this.el.infoTitle.textContent = art.title;
     this.el.infoMeta.textContent = art.artist ?? GALLERY_INFO.artist;
+    // Year, medium and size on one line, in that order, separated the way a
+    // printed label does it. Any of the three may be missing.
+    setLine(this.el.infoSpec, [art.year, art.medium, art.dims].filter(Boolean).join(' · '));
+    setLine(this.el.infoSeries, art.series);
+    setLine(this.el.infoDesc, art.description);
     this.el.info.hidden = false;
   }
 
@@ -128,4 +140,13 @@ export class UI {
     this.activePanel = null;
     if (!IS_TOUCH) this.controls.lock();
   }
+}
+
+// One optional label line: fill it and show it, or empty it and take it out of
+// the flow. `hidden` rather than display:none in JS so the panel's own CSS
+// keeps control of how each line looks.
+function setLine(el, text) {
+  const t = (text || '').trim();
+  el.textContent = t;
+  el.hidden = !t;
 }

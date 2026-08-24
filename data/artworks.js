@@ -6,7 +6,9 @@
 //
 // title comes from each uploaded file name. year / medium / description are
 // editable placeholders — fill them in per piece. Nothing is for sale from the
-// panel: it shows the title and the artist, and nothing else (js/ui/UI.js).
+// panel: it is a wall label, showing whatever of title / artist / year / medium
+// / dims / series / description the entry actually carries, and hiding the
+// lines it doesn't (js/ui/UI.js).
 //
 // size is [width, height] in meters and is set to each photo's TRUE aspect
 // ratio (height = width / (imgW / imgH)), so the frame matches the canvas and

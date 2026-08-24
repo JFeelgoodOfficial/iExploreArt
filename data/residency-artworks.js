@@ -22,8 +22,9 @@
 //
 // `title` follows each uploaded file name verbatim, spelling and all.
 // `year` / `medium` / `description` are editable placeholders — fill them in
-// per piece. Nothing here is for sale: the info panel shows the title and the
-// artist, and nothing else (js/ui/UI.js).
+// per piece. Nothing here is for sale: the info panel is a wall label, showing
+// whatever of title / artist / year / medium / dims / series / description the
+// entry carries and hiding the lines it doesn't (js/ui/UI.js).
 // ============================================================================
 
 const ARTIST = 'Erin Carle';

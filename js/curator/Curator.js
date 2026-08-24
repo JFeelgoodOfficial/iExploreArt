@@ -176,6 +176,18 @@ export class Curator {
     this.ui.showDialogueNode(node.text, node.choices, (choice) => this._choose(choice));
   }
 
+  // What she offers once she has described a room: the resident first, when
+  // there is a bio to give, then back out to the list.
+  _afterResidency(r) {
+    const choices = [];
+    if (r.artist && r.bio) {
+      choices.push({ label: `Tell me about ${r.artist}.`, action: { type: 'artist', id: r.id } });
+    }
+    choices.push({ label: 'What else is in residence?', action: { type: 'residencyList' } });
+    choices.push({ label: 'Thank you.', next: 'start' });
+    return choices;
+  }
+
   _choose(choice) {
     if (choice.action) {
       const a = choice.action;
@@ -204,9 +216,20 @@ export class Curator {
             : r.artist
               ? `${r.artist} works in ${r.name}, up on ${where} — ${r.blurb}. Take the lift just there, behind me, and press ${r.floor}.`
               : `${r.name} is up on ${where} — ${r.blurb}. Take the lift just there, behind me, and press ${r.floor}.`;
+          this.ui.showDialogueNode(text, this._afterResidency(r), (c) => this._choose(c));
+        }
+        return;
+      }
+      // The resident, rather than the room. Only offered where the residency
+      // carries a `bio` (data/residencies.js), so she never opens a door onto
+      // an artist she has nothing to say about.
+      if (a.type === 'artist') {
+        const r = findResidency(a.id);
+        if (r?.bio) {
           this.ui.showDialogueNode(
-            text,
-            [{ label: 'What else is in residence?', action: { type: 'residencyList' } },
+            r.bio,
+            [{ label: `And ${r.name}?`, action: { type: 'residency', id: r.id } },
+             { label: 'What else is in residence?', action: { type: 'residencyList' } },
              { label: 'Thank you.', next: 'start' }],
             (c) => this._choose(c)
           );

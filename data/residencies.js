@@ -13,6 +13,10 @@
 //   artist : resident's name, when the room is credited to one. Omit it and the
 //            curator and lift name the room alone. ← edit these to reassign.
 //   blurb  : one line the curator uses when describing the room.
+//   bio    : optional, and only meaningful alongside `artist` — the resident's
+//            own words about their work. Give a room one and the curator offers
+//            to talk about the artist as well as the room; leave it off and she
+//            simply doesn't make the offer (js/curator/Curator.js).
 //   pending: optional. The floor is spoken for, but the room isn't built yet —
 //            there is no `id` in main.js's ROOM_FACTORIES to ride to. The lift
 //            leaves it off the panel rather than offering a button that arrives
@@ -47,7 +51,8 @@ export const RESIDENCIES = [
     name: 'Chadrea Hall',
     floor: 4,
     artist: 'Chad Rea',
-    blurb: 'board-formed concrete under an eight-metre soffit, lit by a slot of skylight and a cove recessed the whole length of the art wall, with a cantilevered stair up to a mezzanine and a rounded plaster arch through the pier into a daylit wing; ten works hung flat on the concrete',
+    blurb: 'board-formed concrete under an eight-metre soffit, lit by a slot of skylight and a cove recessed the whole length of the art wall, with a cantilevered stair up to a mezzanine and a rounded plaster arch through the pier into a daylit wing; ten paintings from his Beautiful Decay series are hanging there now, flat on the concrete and unframed',
+    bio: 'Drawing on pop, street, folk, and punk aesthetics, Chad Rea’s work transmutes the trauma and pain of the world into expressions of joy, hope, and belonging. Using tools mastered as an advertising Creative Director, he hopes to move people toward embracing their own humanity, finding everything advertising has always promised but never delivered already present within themselves. He is based in Lockhart, Texas.',
   },
   {
     id: 'brutalist',

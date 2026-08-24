@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { fitToSlot } from '../../art/fit.js';
+import { loadArtTexture } from '../../art/load.js';
+import { generatePainting } from '../../art/placeholder.js';
 import { mulberry32 } from '../../utils/proctex.js';
 
 // ---------------------------------------------------------------------------
@@ -17,7 +20,7 @@ import { mulberry32 } from '../../utils/proctex.js';
 //
 // Local coordinates: x −8…13, z −11…11, y up. Metres.
 //
-//   const room = buildChadreaRoom(scene, { tier });
+//   const room = buildChadreaRoom(scene, { tier, art: CHADREA_HANG, ...artOpts });
 //   const lights = setupChadreaLighting(scene, renderer, tier);
 //   room.update(dt);   // the haze motes; everything else is static
 //
@@ -164,6 +167,55 @@ export const VOLUTE = (() => {
   }
   return pts;
 })();
+
+// Hanging slots. `pos` is the picture's CENTRE and `n` the face it comes out
+// of, the same shape Brutalism Hall uses; (maxW, maxH) is a guard rather than a
+// target — this hall hangs at the works' true size (data/chadrea-artworks.js)
+// and only shrinks a piece if its wall genuinely cannot take it. Nothing is
+// framed: the canvases stand off the concrete on their own edges.
+//
+// Every `pos[1]` is a centre line, and they are set per surface rather than
+// globally: 1.55 m for anything met on foot (the museum's own 57-inch line),
+// MEZZ.top + 1.55 for the two on the mezzanine, and higher only where the
+// viewer is higher — over the console, and over the stair.
+//
+// Three obstructions decide the west wall's z positions and are worth knowing
+// before moving one: the walnut doorway reveals at z −1.9 and z +6.6 (1.42 m
+// of wall each), the console at z 0.4…5.0, and the mezzanine deck, which puts
+// everything from z −11 to −1 under a 3.78 m soffit.
+export const SLOTS = [
+  // The long west wall — the lit one, grazed by the cove its whole length.
+  /* 0 */ { id: 'CH-W1', pos: [HALL.x0 + 0.09, 2.00, 3.0], n: [1, 0, 0], maxW: 2.6, maxH: 2.4 },
+  /* 1 */ { id: 'CH-W2', pos: [HALL.x0 + 0.09, 1.55, 8.6], n: [1, 0, 0], maxW: 2.2, maxH: 2.6 },
+  // …and its two bays under the mezzanine, where the room drops to 3.78. These
+  // two sit 1.5 m apart, closer than any other pair in the hall, because the
+  // works that hang here are the smallest in the series — at the spacing the
+  // rest of the wall uses they read as two stamps on 22 m of concrete instead
+  // of as a pair.
+  /* 2 */ { id: 'CH-W3', pos: [HALL.x0 + 0.09, 1.50, -5.40], n: [1, 0, 0], maxW: 1.8, maxH: 2.2 },
+  /* 3 */ { id: 'CH-W4', pos: [HALL.x0 + 0.09, 1.50, -6.90], n: [1, 0, 0], maxW: 1.8, maxH: 2.2 },
+  // North wall, over the flight. Read the length of the hall on arrival, and
+  // again at arm's length from the treads, so it hangs to the climb rather than
+  // to the floor: at x 1.8 the stair is already 1.07 m up.
+  /* 4 */ { id: 'CH-N1', pos: [1.80, 3.10, HALL.z0 + 0.09], n: [0, 0, 1], maxW: 2.4, maxH: 2.4 },
+  // The pier's east face — the wing's west side, south of the arch. Not the
+  // hall's south wall, which is the obvious eleventh surface and the wrong one:
+  // nothing in setupChadreaLighting points at it, so a picture hung there is a
+  // dark rectangle on a dark wall. This face takes wingSun square on, and it is
+  // the wall at your shoulder walking down the wing to the lift.
+  //
+  // PIER.x + PIER.t, not PIER.x + PIER.t / 2: the slab is extruded off PIER.x
+  // rather than centred on it, so it occupies x 4.0…4.9 and its east face is
+  // the far one. Half the thickness leaves the picture inside the concrete —
+  // still raycastable, so the E prompt appears on a wall with nothing on it.
+  /* 5 */ { id: 'CH-P1', pos: [PIER.x + PIER.t + 0.09, 1.55, 9.50], n: [1, 0, 0], maxW: 2.4, maxH: 2.6 },
+  // The mezzanine deck's own two walls, at its corner.
+  /* 6 */ { id: 'CH-M1', pos: [MEZZ.x0 + 0.09, MEZZ.top + 1.55, -6.4], n: [1, 0, 0], maxW: 2.2, maxH: 2.2 },
+  /* 7 */ { id: 'CH-M2', pos: [-5.60, MEZZ.top + 1.55, HALL.z0 + 0.09], n: [0, 0, 1], maxW: 2.0, maxH: 2.0 },
+  // Through the arch, in the daylit wing: its long east wall and its north end.
+  /* 8 */ { id: 'CH-A1', pos: [WING.x1 - 0.09, 1.60, 6.2], n: [-1, 0, 0], maxW: 3.0, maxH: 2.6 },
+  /* 9 */ { id: 'CH-A2', pos: [9.50, 1.55, WING.z0 + 0.09], n: [0, 0, 1], maxW: 2.2, maxH: 2.4 },
+];
 
 // Ground floor at the south end, facing north up the hall: the arch is on your
 // right, the flight and the skylight ahead. Yaw 0 looks along −z.
@@ -443,7 +495,26 @@ const ceramicMat = (t = 0x6d5442) => new THREE.MeshPhysicalMaterial({
 // ---------------------------------------------------------------------------
 // THE ROOM
 
-export function buildChadreaRoom(scene, { tier = {} } = {}) {
+// How big a picture hangs. Every other residency hall contain-fits the file's
+// aspect into the slot's envelope; here the manifest knows the work's real
+// size in metres, so that is what goes on the wall — a 48-inch canvas is
+// 1.22 m of concrete. The envelope survives as a guard: a work bigger than its
+// wall is scaled DOWN uniformly, never up, and a piece with no `size` (a later
+// hang, a placeholder) falls back to the house behaviour.
+function sizeFor(piece, slot) {
+  const px = piece?.px || [1600, 2048];
+  if (!piece?.size) return fitToSlot(px[0] / px[1], slot.maxW, slot.maxH);
+  const [w, h] = piece.size;
+  const k = Math.min(1, slot.maxW / w, slot.maxH / h);
+  return [w * k, h * k];
+}
+
+export function buildChadreaRoom(scene, opts = {}) {
+  const tier = opts.tier || {};
+  const art = opts.art || [];
+  const aniso = opts.anisotropy ?? 8;
+  const maxEdge = opts.artMaxEdge ?? 0;
+
   const g = new THREE.Group();
   g.name = 'chadrea-hall';
 
@@ -944,56 +1015,49 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
     g.add(vb);
   }
 
-  // --- ten works, hung flat on the concrete --------------------------------
-  // Decoration, deliberately: these carry no manifest and no `userData.artwork`,
-  // so nothing here answers an E press. Hanging real pieces means a
-  // data/chadrea-artworks.js and a SLOTS[] the way Brutalism Hall does it.
+  // --- the hang: ten works, flat on the concrete ---------------------------
+  // Unframed, standing off the wall on their own painted edges, the way
+  // Brutalism Hall does it. Each canvas carries its manifest entry on
+  // `userData.artwork` and goes into `interactables`, so E in front of one
+  // opens its wall label; a slot with no entry keeps a generated canvas and
+  // answers nothing.
+  const interactables = [];
   {
-    const TONES = [
-      { bg: '#6b5a44', cols: ['150,124,88', '58,46,34', '106,88,62'], ink: '#efe4cf' },
-      { bg: '#2a2523', cols: ['82,68,56', '16,14,13', '128,104,78'], ink: '#e6dccb' },
-      { bg: '#8d8578', cols: ['186,178,164', '96,90,80', '62,58,52'], ink: '#2a2523' },
-      { bg: '#4a4441', cols: ['110,100,90', '28,25,23', '154,138,116'], ink: '#e8dfd0' },
-    ];
-    const placeholder = (w, h, idx, tone) => {
-      const px = Math.round(360 * Math.max(1, w / h)), py = Math.round(360 * Math.max(1, h / w));
-      const c = cv(px, py), x = c.getContext('2d');
-      x.fillStyle = tone.bg; x.fillRect(0, 0, px, py);
-      blotch(x, px, py, 140, px * 0.03, px * 0.32, tone.cols, 0.42);
-      for (let i = 0; i < 420; i++) {
-        x.fillStyle = `rgba(${Math.random() < 0.5 ? tone.cols[0] : tone.cols[1]},${rnd(0.04, 0.22)})`;
-        x.fillRect(Math.random() * px, Math.random() * py, rnd(2, 16), rnd(2, 11));
-      }
-      grain(x, px, py, 20);
-      x.globalAlpha = 0.30; x.fillStyle = tone.ink; x.textAlign = 'center';
-      x.font = `300 ${Math.round(py * 0.16)}px ui-monospace, Menlo, monospace`;
-      x.fillText(String(idx).padStart(2, '0'), px / 2, py * 0.53);
-      x.font = `300 ${Math.round(py * 0.045)}px ui-monospace, Menlo, monospace`;
-      x.fillText(`${w.toFixed(2)} × ${h.toFixed(2)} m`, px / 2, py * 0.62);
-      x.globalAlpha = 0.18; x.strokeStyle = tone.ink; x.lineWidth = 2;
-      x.strokeRect(px * 0.06, py * 0.06, px * 0.88, py * 0.88);
-      x.globalAlpha = 1;
-      return new THREE.MeshStandardMaterial({
-        color: 0xffffff, roughness: 0.84, metalness: 0,
-        map: tex(c, 1, 1, true), bumpMap: tex(c, 1, 1), bumpScale: 0.03,
+    // The picture's edge, seen side-on. Board-marked concrete is a busy ground
+    // and a bright white edge cuts the work off it — this is the concrete's own
+    // shadow tone, so the canvas reads as sitting ON the wall.
+    const edgeMat = () => new THREE.MeshStandardMaterial({ color: 0x6f685f, roughness: 0.92 });
+    SLOTS.forEach((slot, i) => {
+      const piece = art[i] || null;
+      const [w, h] = sizeFor(piece, slot);
+      const face = new THREE.MeshStandardMaterial({
+        // dark until the photograph lands, so an unloaded slot reads as a
+        // shadow on the concrete rather than a lightbox
+        color: piece?.image ? 0x2e2823 : 0xffffff, roughness: 0.66, metalness: 0,
       });
-    };
-    // [w, h, x, y, z, rotY]
-    const WORKS = [
-      [2.35, 2.00, HALL.x0 + 0.09, 3.45, 3.0, Math.PI / 2],
-      [1.45, 1.85, HALL.x0 + 0.09, 2.55, 8.6, Math.PI / 2],
-      [1.30, 1.00, HALL.x0 + 0.09, 2.05, -4.5, Math.PI / 2],
-      [1.05, 1.35, HALL.x0 + 0.09, 2.00, -7.6, Math.PI / 2],
-      [1.70, 1.25, 1.80, 3.70, HALL.z0 + 0.09, 0],
-      [2.00, 1.50, -2.00, 2.65, HALL.z1 - 0.09, Math.PI],
-      [1.90, 1.40, MEZZ.x0 + 0.09, MEZZ.top + 1.60, -6.4, Math.PI / 2],
-      [1.35, 1.10, -5.60, MEZZ.top + 1.55, HALL.z0 + 0.09, 0],
-      [3.10, 2.30, WING.x1 - 0.09, 2.50, 6.2, -Math.PI / 2],
-      [1.55, 1.95, 9.50, 2.40, WING.z0 + 0.09, 0],
-    ];
-    WORKS.forEach(([w, h, x, y, z, ry], i) => {
-      const m = box(w, h, 0.055, placeholder(w, h, i + 1, TONES[i % TONES.length]), x, y, z, { rotY: ry });
-      m.name = `chadrea-work-${String(i + 1).padStart(2, '0')}`;
+      const canvas = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.045), [
+        edgeMat(), edgeMat(), edgeMat(), edgeMat(), face, edgeMat(),
+      ]);
+      const [nx, , nz] = slot.n;
+      canvas.position.set(slot.pos[0] + nx * 0.024, slot.pos[1], slot.pos[2] + nz * 0.024);
+      canvas.rotation.y = Math.atan2(nx, nz);
+      canvas.castShadow = true; canvas.receiveShadow = true;
+      canvas.name = `art-${slot.id}`;
+      g.add(canvas);
+      if (!piece) return;
+
+      canvas.userData.artwork = piece;
+      interactables.push(canvas);
+      if (piece.image) {
+        loadArtTexture(piece.image, { anisotropy: aniso, px: piece.px, maxEdge }, (tx) => {
+          face.map = tx;
+          face.color.setHex(0xffffff);
+          face.needsUpdate = true;
+        });
+      } else {
+        face.map = generatePainting(4100 + i * 53, piece.palette || 'mixed', w / h);
+        face.needsUpdate = true;
+      }
     });
   }
 
@@ -1198,8 +1262,9 @@ export function buildChadreaRoom(scene, { tier = {} } = {}) {
   let t = 0;
   return {
     group: g,
-    interactables: [],          // the works are decoration; nothing answers an E press
+    interactables,
     spawn: SPAWN,
+    slots: SLOTS,
     motes,
     update(dt) {
       t += dt;
