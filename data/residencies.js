@@ -25,10 +25,20 @@
 //            stop there; the curator still lists it, marked closed, so a
 //            visitor asking after it gets an answer. Delete the flag to reopen.
 
-// Erin Carle holds two floors, and the curator answers for the artist rather
-// than for the room — so the bio is written once here and referenced by both,
-// instead of being copied into each entry where the two could drift apart.
-const ERIN_CARLE_BIO = 'Erin Carle is a surrealist painter and curator whose work '
+// The residents' own words about their work. Exported, because they are read in
+// two places that must not drift apart: the curator speaks them when asked
+// about an artist, and each hall hangs a portrait whose wall label carries the
+// same text (data/residency-artworks.js, data/chadrea-artworks.js). Erin Carle
+// holds two floors, which is the other reason hers cannot live inside a single
+// residency entry.
+export const CHAD_REA_BIO = 'Drawing on pop, street, folk, and punk aesthetics, '
+  + 'Chad Rea’s work transmutes the trauma and pain of the world into expressions of '
+  + 'joy, hope, and belonging. Using tools mastered as an advertising Creative '
+  + 'Director, he hopes to move people toward embracing their own humanity, finding '
+  + 'everything advertising has always promised but never delivered already present '
+  + 'within themselves. He is based in Lockhart, Texas.';
+
+export const ERIN_CARLE_BIO = 'Erin Carle is a surrealist painter and curator whose work '
   + 'explores transformation, the natural world, and the complexities of the female '
   + 'experience. Through dreamlike imagery and symbolic narratives, she investigates '
   + 'cycles of growth, decay, metamorphosis, and resilience. Drawing from surrealist '
@@ -70,8 +80,8 @@ export const RESIDENCIES = [
     name: 'Chadrea Hall',
     floor: 4,
     artist: 'Chad Rea',
-    blurb: 'board-formed concrete under an eight-metre soffit, lit by a slot of skylight and a cove recessed the whole length of the art wall, with a cantilevered stair up to a mezzanine and a rounded plaster arch through the pier into a daylit wing; ten paintings from his Beautiful Decay series are hanging there now, flat on the concrete and unframed',
-    bio: 'Drawing on pop, street, folk, and punk aesthetics, Chad Rea’s work transmutes the trauma and pain of the world into expressions of joy, hope, and belonging. Using tools mastered as an advertising Creative Director, he hopes to move people toward embracing their own humanity, finding everything advertising has always promised but never delivered already present within themselves. He is based in Lockhart, Texas.',
+    blurb: 'board-formed concrete under an eight-metre soffit, lit by a slot of skylight and a cove recessed the whole length of the art wall, with a cantilevered stair up to a mezzanine and a rounded plaster arch through the pier into a daylit wing; the whole of his Beautiful Decay series is hanging there now — twenty paintings, flat on the concrete and unframed, on every wall the building has, out to the pool in the courtyard',
+    bio: CHAD_REA_BIO,
   },
   {
     id: 'brutalist',

@@ -21,7 +21,7 @@ import {
 } from './world/brutalism/brutalist.js';
 import {
   buildChadreaRoom, setupChadreaLighting,
-  chadreaGround, chadreaSegments, SPAWN as CH_SPAWN, HALL as CH_HALL, LIFT as CH_LIFT,
+  chadreaGround, chadreaSegments, SPAWN as CH_SPAWN, LIFT as CH_LIFT,
   SUN_POS as CH_SUN,
 } from './world/chadrea/chadrea.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
@@ -415,9 +415,13 @@ const ROOM_FACTORIES = {
     // Read from a 1.65 m eye over a 4.6 m wall, so the near rooftops want to
     // sit above it rather than below the coping.
     city.group.position.y = 3.4;
-    // South wall behind the spawn, facing back up the hall.
-    const door = returnDoor(CH_SPAWN.x, 1.35, CH_HALL.z1 - 0.14, Math.PI);
-    // …and the lift in the wing's south wall, through the arch. It rides the
+    // No return door on the south wall. Every other residency has one there,
+    // behind the spawn, but this hall also has a lift of its own through the
+    // arch — two ways out of one room, and the door was standing on the only
+    // large wall in the hall with nothing on it. The wall hangs work now
+    // (SLOTS CH-S1/CH-S2); the lift below is how you leave.
+    //
+    // The lift is in the wing's south wall. It rides the
     // veil rather than switching outright, the way the nouveau stair hall's
     // does — entering 'gallery' puts you inside the reception cabin with its
     // doors open, so the trip reads as a lift rather than a cut.
@@ -431,7 +435,7 @@ const ROOM_FACTORIES = {
     return {
       room: { ...room, lights, city },
       def: {
-        targets: [door, liftDoor, ...room.interactables],
+        targets: [liftDoor, ...room.interactables],
         spawn: CH_SPAWN,
         segments: chadreaSegments(),
         ground: chadreaGround,

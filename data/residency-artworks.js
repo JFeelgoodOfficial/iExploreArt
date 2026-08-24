@@ -27,6 +27,8 @@
 // entry carries and hiding the lines it doesn't (js/ui/UI.js).
 // ============================================================================
 
+import { ERIN_CARLE_BIO } from './residencies.js';
+
 const ARTIST = 'Erin Carle';
 const FALL = 'Fall Series';
 const SPRING = 'Spring Series';
@@ -61,6 +63,31 @@ const spring = (id, title, file, px, extra) => ({
   ...extra,
 });
 
+// --- The artist herself -----------------------------------------------------
+// Bay 1 of the Nouveau Hall used to be the one frame left empty, carrying its
+// generated placeholder canvas. It carries her portrait now: it is the bay
+// immediately right of the portal, so she is who you meet on the way in, and
+// the label under it is her bio — the same text the curator speaks downstairs
+// (data/residencies.js), read from there rather than copied.
+//
+// No `size`: a portrait is not one of the works and has no catalogued
+// dimensions, so it contain-fits into the bay's own envelope like everything
+// else in that hall.
+export const ERIN_PORTRAIT = {
+  id: 'ec-portrait',
+  title: ARTIST,
+  // The name is the title here, so the artist line would print it twice. An
+  // empty string is a deliberate blank in js/ui/UI.js — it leaves the line out
+  // rather than falling back to the house artist — and `medium` says what the
+  // thing on the wall is instead.
+  artist: '',
+  year: '', medium: 'Portrait of the artist',
+  image: 'assets/art/erin-carle/erincarle.webp',
+  px: [1365, 2048],
+  description: ERIN_CARLE_BIO,
+  contact: CONTACT,
+};
+
 // --- Rococo Hall: all ten of the Fall Series --------------------------------
 // Slot order is the order rococo.js hangs them: west wall lower (z −1.775 then
 // +1.775), west upper, east lower, east upper, then the two end-wall slots.
@@ -87,10 +114,10 @@ export const ROCOCO_HANG = [
   /* 9 end wall */ fall('ec-american-layers', 'American Layers', 'American Layers.webp', [2048, 1755]),
 ];
 
-// --- Nouveau Hall: seven of the Spring Series -------------------------------
-// Eight bays, seven works, so exactly one keeps its generated canvas: bay 1,
-// immediately right of the portal, where a gap reads least. The works then run
-// unbroken from bay 2 all the way round to bay 8.
+// --- Nouveau Hall: seven of the Spring Series, and the artist ---------------
+// Eight bays. Bay 1, immediately right of the portal, holds her portrait rather
+// than a work — it used to be the one frame left with its generated canvas. The
+// Spring Series then runs unbroken from bay 2 all the way round to bay 8.
 //
 // Bays 4 and 5 straddle the entry axis, so they carry the two pieces you meet
 // head-on. Heights run 2.10 → 1.68 → 1.70 → 1.24 → 1.90 → 2.10 → 2.10 across
@@ -107,7 +134,7 @@ export const ROCOCO_HANG = [
 // turning table in the middle of the Rococo Hall. See INTO_BLOOM below. Leave
 // it out of this list.
 export const NOUVEAU_HANG = [
-  /* 0 bay 1 */ null,
+  /* 0 bay 1 */ ERIN_PORTRAIT,
   /* 1 bay 2 */ spring('ec-i-saw-this', 'I Saw This', 'I Saw This.webp', [1557, 1975]),
   /* 2 bay 3 */ spring('ec-in-a-dream', 'In a Dream', 'In a Dream.webp', [1476, 1493]),
   /* 3 bay 4 */ spring('ec-autonomy-1', 'Autonomy 1', 'Autonomy 1.webp', [1146, 1174]),
