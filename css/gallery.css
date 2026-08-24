@@ -155,6 +155,42 @@ body.touch .desktop-hint { display: none; }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.72rem; color: var(--accent-2); margin: 0 0 0.5rem; }
 .side-panel h2 { font-family: "Cormorant Garamond", serif; font-size: 1.9rem; margin: 0 0 0.3rem; line-height: 1.15; }
 #info-meta { font-size: 0.85rem; margin: 0; }
+/* The rest of the wall label. Everything below the artist's name is optional —
+   a piece that carries no medium, series or statement hides those lines and the
+   panel reads exactly as it did before. */
+#info-spec { font-size: 0.85rem; margin: 0.35rem 0 0; }
+#info-series {
+  text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.7rem;
+  color: var(--accent); font-weight: 600;
+  margin: 1.4rem 0 0; padding-top: 1.1rem; border-top: 1px solid var(--line);
+}
+#info-desc {
+  font-family: "Cormorant Garamond", serif; font-size: 1.12rem; line-height: 1.5;
+  margin: 0.55rem 0 0;
+}
+/* …and when the series line is hidden, the statement takes over its rule, so
+   the label never opens with a paragraph butted against the artist's name. */
+#info-series[hidden] + #info-desc { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
+/* The artist's own details, under the statement. A quiet directory — it must
+   not compete with the work's own title, so everything here is small and the
+   handles sit back in the muted tone. */
+#info-contact {
+  margin: 1.4rem 0 0; padding-top: 1.1rem; border-top: 1px solid var(--line);
+  font-size: 0.82rem; line-height: 1.5;
+}
+#info-contact p { margin: 0; }
+#info-contact .contact-name { font-weight: 600; }
+#info-contact .contact-role { color: var(--muted); }
+#info-contact .contact-phone { margin-bottom: 0.7rem; }
+/* handle left, site right, and they drop onto separate lines rather than
+   colliding when the panel is at its 92vw phone width */
+#info-contact .contact-row {
+  display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem;
+  justify-content: space-between; padding: 0.14rem 0;
+}
+#info-contact .contact-handle { color: var(--muted); }
+#info-contact a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+#info-contact a:hover { border-bottom-color: var(--accent); }
 
 /* ---------- dialogue ---------- */
 .dialogue {
@@ -165,10 +201,23 @@ body.touch .desktop-hint { display: none; }
   background: rgba(251, 248, 243, 0.96); border-radius: var(--radius);
   box-shadow: var(--shadow); padding: 1.5rem 1.8rem 1.3rem;
   border: 1px solid var(--line);
+  /* A long speech — an artist's bio in data/residencies.js runs to a full
+     paragraph — can outrun a short window. The card is anchored to the bottom,
+     so it grows UPWARD, and its opening lines walk off the top of the screen
+     where nothing can scroll them back. Cap it and let the speech scroll
+     inside instead, with the speaker and the choices staying put. */
+  max-height: 92vh;
+  display: flex; flex-direction: column;
 }
-.speaker { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.7rem; color: var(--accent); margin: 0 0 0.55rem; font-weight: 600; }
-#dialogue-text { font-family: "Cormorant Garamond", serif; font-size: 1.25rem; line-height: 1.45; margin: 0 0 1.1rem; }
-#dialogue-choices { display: flex; flex-direction: column; gap: 0.45rem; }
+.speaker { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.7rem; color: var(--accent); margin: 0 0 0.55rem; font-weight: 600; flex-shrink: 0; }
+#dialogue-text {
+  font-family: "Cormorant Garamond", serif; font-size: 1.25rem; line-height: 1.45;
+  margin: 0 0 1.1rem;
+  /* the one part of the card that gives way; min-height:0 is what lets a
+     flex item shrink below its content and actually scroll */
+  overflow-y: auto; min-height: 0;
+}
+#dialogue-choices { display: flex; flex-direction: column; gap: 0.45rem; flex-shrink: 0; }
 #dialogue-choices button {
   font: 500 0.9rem "Inter", sans-serif; text-align: left;
   background: none; border: 1px solid var(--line); border-radius: 10px;

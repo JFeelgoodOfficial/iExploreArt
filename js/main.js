@@ -26,6 +26,7 @@ import {
 } from './world/chadrea/chadrea.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
 import { BRUTALIST_HANG } from '../data/brutalist-artworks.js';
+import { CHADREA_HANG } from '../data/chadrea-artworks.js';
 import { PLINTH } from './world/rococo-plinth.js';
 import { createRoomManager } from './RoomManager.js';
 import { groundHeight as galleryGround, buildColliders as buildGalleryColliders } from './world/layout.js';
@@ -401,7 +402,7 @@ const ROOM_FACTORIES = {
   },
 
   chadrea: () => {
-    const room = buildChadreaRoom(scene, { tier });
+    const room = buildChadreaRoom(scene, { tier, ...artOpts, art: CHADREA_HANG });
     const lights = setupChadreaLighting(scene, renderer, tier);
     // The city over the courtyard's far wall — the only place in this
     // residency you see out. Yawed a half turn so the skyline lies along +Z,

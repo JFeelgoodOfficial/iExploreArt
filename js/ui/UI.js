@@ -18,6 +18,10 @@ export class UI {
       info: document.getElementById('info-panel'),
       infoTitle: document.getElementById('info-title'),
       infoMeta: document.getElementById('info-meta'),
+      infoSpec: document.getElementById('info-spec'),
+      infoSeries: document.getElementById('info-series'),
+      infoDesc: document.getElementById('info-desc'),
+      infoContact: document.getElementById('info-contact'),
       dialogue: document.getElementById('dialogue'),
       dialogueText: document.getElementById('dialogue-text'),
       dialogueChoices: document.getElementById('dialogue-choices'),
@@ -71,12 +75,22 @@ export class UI {
     this.activePanel = 'info';
     this.controls.unlock();
     this.prompt(null);
-    // The panel is a wall label, nothing more: the work's title and who made it.
+    // The panel is a wall label: the work's title, who made it, and whatever
+    // else the manifest actually knows. Every line below the artist is
+    // optional and hides itself when the piece has nothing to put there, so a
+    // manifest that only carries a title still reads as a clean label.
+    //
     // The house artist unless the piece names its own — the residency halls hang
     // visiting artists, whose works carry `artist`. An empty string is a
     // deliberate blank (an uncredited hang), so it isn't filled in from the house.
     this.el.infoTitle.textContent = art.title;
     this.el.infoMeta.textContent = art.artist ?? GALLERY_INFO.artist;
+    // Year, medium and size on one line, in that order, separated the way a
+    // printed label does it. Any of the three may be missing.
+    setLine(this.el.infoSpec, [art.year, art.medium, art.dims].filter(Boolean).join(' · '));
+    setLine(this.el.infoSeries, art.series);
+    setLine(this.el.infoDesc, art.description);
+    setContact(this.el.infoContact, art.contact);
     this.el.info.hidden = false;
   }
 
@@ -128,4 +142,66 @@ export class UI {
     this.activePanel = null;
     if (!IS_TOUCH) this.controls.lock();
   }
+}
+
+// One optional label line: fill it and show it, or empty it and take it out of
+// the flow. `hidden` rather than display:none in JS so the panel's own CSS
+// keeps control of how each line looks.
+function setLine(el, text) {
+  const t = (text || '').trim();
+  el.textContent = t;
+  el.hidden = !t;
+}
+
+// The artist's own details, under the statement: a name, a line of what they
+// do, a phone number, and a row per handle and site. Built as DOM nodes rather
+// than an innerHTML string — a manifest is allowed to carry an apostrophe or an
+// ampersand in a name, and this way one can never end up parsed as markup.
+// Everything is optional; an entry with only a link renders only that link.
+function setContact(el, contact) {
+  el.textContent = '';
+  if (contact) {
+    const line = (cls, text) => {
+      if (!text) return;
+      const p = document.createElement('p');
+      p.className = cls;
+      p.textContent = text;
+      el.appendChild(p);
+    };
+    line('contact-name', contact.name);
+    line('contact-role', contact.role);
+    if (contact.phone) {
+      const p = document.createElement('p');
+      p.className = 'contact-phone';
+      // strip the number down for the href and leave the printed form alone
+      p.appendChild(anchor(`tel:${contact.phone.replace(/[^\d+]/g, '')}`, contact.phone));
+      el.appendChild(p);
+    }
+    for (const l of contact.links || []) {
+      const row = document.createElement('p');
+      row.className = 'contact-row';
+      if (l.handle) {
+        const h = document.createElement('span');
+        h.className = 'contact-handle';
+        h.textContent = l.handle;
+        row.appendChild(h);
+      }
+      // The handle is plain text on purpose: the manifests give a handle without
+      // saying which platform it is on, and guessing one would invent the link.
+      if (l.url) row.appendChild(anchor(l.url, l.label || l.url));
+      if (row.childElementCount) el.appendChild(row);
+    }
+  }
+  el.hidden = !el.childElementCount;
+}
+
+// Every outbound link opens in a new tab. This one is a pointer-locked WebGL
+// session with a room built in memory; navigating it away loses the gallery,
+// and coming back means the loading screen and the lift ride again.
+function anchor(href, text) {
+  const a = document.createElement('a');
+  a.href = href;
+  a.textContent = text;
+  if (!href.startsWith('tel:')) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+  return a;
 }
