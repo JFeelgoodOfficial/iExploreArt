@@ -3,10 +3,13 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Decetise Hall — residency five (room id `decetise`). Maria Decetise.
 //
-// One whole floor plate of a high rise. North (−Z) and east (+X) are floor-to-
-// ceiling glazing over the city; the west side slides open onto an infinity-pool
-// terrace under open sky, the water running off a weir at the plate's edge; the
-// south wall is the art wall. The lift core stands in the MIDDLE of the plate,
+// One whole floor plate of a high rise. Glazed on three sides over the city —
+// north (−Z), east (+X), and west (−X) over an infinity pool that fills the
+// terrace edge to edge and spills off a weir at the lip of the slab. The
+// terrace is looked at, not walked on: the west wall is sealed glass, and the
+// collision plan has nothing out there at all. The south wall is the art wall.
+//
+// The lift core stands in the MIDDLE of the plate,
 // which is where a visitor arrives, and the core sits in a courtyard — gravel
 // parterre, balustraded stone kerb, clipped hedges and topiary, a stone basin
 // with green park chairs, lamp posts — with five plane trees running up through
@@ -35,7 +38,12 @@ export const DX = {
   yard: 8,                                  // courtyard half-width (the parterre)
   yardEdge: 9.6,                            // where the solid ceiling slabs start
   holeR: 2.6,                               // ceiling panels dropped inside this radius
-  pool: { x0: -23.4, x1: -18.2, z0: -7, z1: 7 },
+  // The pool is the terrace: it runs from the plate's own edge (the weir hangs
+  // a hair past tx0, so the sheet falls off the building) east to within half a
+  // metre of the glass. There is no deck left to stand on beside it, which is
+  // the point — the west wall is sealed and the water is something you look at
+  // through it, not something you walk around.
+  pool: { x0: -23.8, x1: -17.5, z0: -8.4, z1: 8.4 },
 };
 
 // You arrive in the cabin, facing out of it up the courtyard's north walk.
@@ -361,13 +369,20 @@ export function buildDecetiseRoom(scene, opts = {}) {
   }
   glazing('x', DX.z0 - 0.05, DX.x0, DX.x1, 2.83);        // north wall of glass
   glazing('z', DX.x1 + 0.05, DX.z0, DX.z1, 2.6);         // east wall of glass
-  glazing('z', DX.x0 - 0.02, DX.z0, -3, 2.5);            // west, either side of
-  glazing('z', DX.x0 - 0.02, 3, DX.z1, 2.5);             // the terrace opening
-  for (const z of [-3, 3]) box(DX.x0, DX.ceil / 2, z, 0.2, DX.ceil, 0.2, M.steel, false);
-  box(DX.x0, DX.ceil - 0.25, 0, 0.35, 0.5, 6.2);         // lintel over the opening
-  box(DX.x0 - 1.2, DX.ceil - 0.14, 0, 2.4, 0.28, DX.z1 - DX.z0);   // soffit out over the terrace
+  // West: one unbroken run, not two flanking a doorway. The terrace used to
+  // slide open in the middle; it doesn't any more. The pool now reaches the
+  // glass and there is nowhere out there to stand, so the wall is a window onto
+  // the water and the city under it — sealed, and closed in decetiseSegments()
+  // to match. Restore the two split runs plus the posts and lintel if the
+  // terrace is ever meant to be walked on again.
+  glazing('z', DX.x0 - 0.02, DX.z0, DX.z1, 2.5);         // west wall of glass
+  box(DX.x0 - 1.2, DX.ceil - 0.14, 0, 2.4, 0.28, DX.z1 - DX.z0);   // soffit out over the water
 
-  // --- the terrace: infinity pool, coping, balustrade ---------------------
+  // --- the terrace: an infinity pool, edge to edge -------------------------
+  // Seen, never stood on. The water runs from the plate's west edge — where it
+  // spills over a weir that hangs past the slab, five storeys up — back to
+  // within half a metre of the glass, the whole length between the two ends of
+  // the pleached allée. What used to be deck round three sides is water now.
   const P = DX.pool;
   box((P.x0 + P.x1) / 2, -0.7, (P.z0 + P.z1) / 2, P.x1 - P.x0, 1.4, P.z1 - P.z0,
     new THREE.MeshStandardMaterial({ color: 0x1d4a4e, roughness: 0.35 }), false);
@@ -376,10 +391,14 @@ export function buildDecetiseRoom(scene, opts = {}) {
   water.position.set((P.x0 + P.x1) / 2, -0.06, (P.z0 + P.z1) / 2);
   add(water);
   const waterBase = water.geometry.attributes.position.array.slice();
-  // coping on three sides; the west side is the infinity edge and stays open
-  box((P.x0 + P.x1) / 2, 0.02, P.z0 - 0.28, P.x1 - P.x0 + 1.1, 0.12, 0.56, M.stonePale);
-  box((P.x0 + P.x1) / 2, 0.02, P.z1 + 0.28, P.x1 - P.x0 + 1.1, 0.12, 0.56, M.stonePale);
-  box(P.x1 + 0.28, 0.02, 0, 0.56, 0.12, P.z1 - P.z0 + 1.1, M.stonePale);
+  // Coping on three sides; the west side is the infinity edge and stays open.
+  // The east strip is all that separates water from glass — half a metre, so the
+  // pane reads as standing in the pool rather than across a walkway from it.
+  const COPE = DX.x0 - P.x1;                       // glass line back to the water
+  const endW = DX.x0 - P.x0, endX = (P.x0 + DX.x0) / 2;   // weir across to the glass
+  box(endX, 0.02, P.z0 - 0.28, endW, 0.12, 0.56, M.stonePale);
+  box(endX, 0.02, P.z1 + 0.28, endW, 0.12, 0.56, M.stonePale);
+  box(P.x1 + COPE / 2, 0.02, 0, COPE, 0.12, P.z1 - P.z0 + 1.1, M.stonePale);
   box(P.x0 - 0.25, -0.11, 0, 0.5, 0.1, P.z1 - P.z0, M.stonePale, false);      // the weir lip
   const sheet = new THREE.Mesh(new THREE.PlaneGeometry(P.z1 - P.z0, 0.7), M.sheet);
   sheet.rotation.y = Math.PI / 2;
@@ -420,24 +439,9 @@ export function buildDecetiseRoom(scene, opts = {}) {
     }
   }
 
-  function lounger(x, z, rot) {
-    const g = new THREE.Group();
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.07, 1.55), M.parkGreen);
-    seat.position.y = 0.42; seat.castShadow = true;
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.07, 0.72), M.parkGreen);
-    back.position.set(0, 0.66, -0.72); back.rotation.x = -0.7;
-    g.add(seat, back);
-    for (const [dx, dz] of [[-0.26, -0.6], [0.26, -0.6], [-0.26, 0.6], [0.26, 0.6]]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.42, 6), M.parkGreen);
-      leg.position.set(dx, 0.21, dz);
-      g.add(leg);
-    }
-    g.position.set(x, 0, z); g.rotation.y = rot;
-    add(g);
-  }
-  lounger(-19.2, -3.2, Math.PI / 2);
-  lounger(-19.2, -1.4, Math.PI / 2);
-  lounger(-19.2, 2.6, Math.PI / 2);
+  // No loungers. They stood on the deck the pool has since taken, which left
+  // them standing in the water; and furniture on a terrace nobody can reach is
+  // set for guests who will never arrive. The water runs out clean to the weir.
 
   // --- the lift core, in the middle of the plate --------------------------
   const C = DX.core;
@@ -607,43 +611,102 @@ export function buildDecetiseRoom(scene, opts = {}) {
     t.anisotropy = anisotropy;
     return t;
   }
-  // One leaf cluster, drawn with a midrib and toothed edges, on transparent
-  // ground. Two crossed quads of this read as a bough of foliage from any angle.
+  // One leaf cluster: a spray of plane-tree leaves on a twig, over transparent
+  // ground. Three of these quads crossed at 60° read as a bough of foliage from
+  // any angle, and each leaf is shaded base-to-tip so a flat card still turns in
+  // the light instead of reading as a sticker.
+  //
+  // The alpha lives in the canvas's own alpha channel, and the material cuts on
+  // it with `alphaTest`. It must NOT also be handed back as an `alphaMap`:
+  // three.js samples the GREEN channel of an alphaMap, and this texture is
+  // flagged sRGB, so a leaf's green linearised to about 0.2, every cluster in
+  // every canopy failed the test, and all five trees stood bare.
   function leafTexture() {
-    const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+    const S = 512;
+    const cv = document.createElement('canvas'); cv.width = cv.height = S;
     const g = cv.getContext('2d');
-    g.clearRect(0, 0, 256, 256);
-    const greens = [[74, 106, 48], [92, 124, 54], [58, 88, 42], [110, 138, 62], [46, 74, 38]];
-    function leaf(cx, cy, len, wid, ang, col, alpha) {
-      g.save();
-      g.translate(cx, cy); g.rotate(ang);
-      g.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha})`;
+    g.clearRect(0, 0, S, S);
+    // sunlit tips through to shaded interior, and a couple already turning
+    const greens = [
+      [96, 132, 56], [78, 112, 46], [110, 146, 62], [62, 94, 40],
+      [128, 154, 66], [52, 80, 36], [146, 150, 62],
+    ];
+    const clamp = (v) => Math.max(0, Math.min(255, v | 0));
+
+    // the five-lobed outline, drawn from the stalk
+    function blade(len, wid) {
       g.beginPath();
       g.moveTo(0, 0);
-      // five-lobed plane-tree leaf, roughed in with quadratics
       g.quadraticCurveTo(wid * 0.55, -len * 0.18, wid * 0.34, -len * 0.46);
       g.quadraticCurveTo(wid * 0.62, -len * 0.5, wid * 0.42, -len * 0.78);
       g.quadraticCurveTo(wid * 0.18, -len * 0.72, 0, -len);
       g.quadraticCurveTo(-wid * 0.18, -len * 0.72, -wid * 0.42, -len * 0.78);
       g.quadraticCurveTo(-wid * 0.62, -len * 0.5, -wid * 0.34, -len * 0.46);
       g.quadraticCurveTo(-wid * 0.55, -len * 0.18, 0, 0);
-      g.fill();
-      g.strokeStyle = `rgba(${col[0] + 26},${col[1] + 30},${col[2] + 18},${alpha * 0.8})`;
-      g.lineWidth = 1.1;
-      g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -len * 0.92); g.stroke();
+      g.closePath();
+    }
+
+    function leaf(cx, cy, len, wid, ang, col) {
+      g.save();
+      g.translate(cx, cy); g.rotate(ang);
+      // stalk
+      g.strokeStyle = `rgba(${clamp(col[0] * 0.66)},${clamp(col[1] * 0.7)},${clamp(col[2] * 0.56)},1)`;
+      g.lineWidth = Math.max(1.2, len * 0.03);
+      g.beginPath(); g.moveTo(0, len * 0.17); g.lineTo(0, 0); g.stroke();
+      // blade, shaded from a dark base to a light tip
+      const grd = g.createLinearGradient(0, 0, 0, -len);
+      grd.addColorStop(0, `rgba(${clamp(col[0] * 0.6)},${clamp(col[1] * 0.64)},${clamp(col[2] * 0.56)},1)`);
+      grd.addColorStop(0.45, `rgba(${clamp(col[0])},${clamp(col[1])},${clamp(col[2])},1)`);
+      grd.addColorStop(1, `rgba(${clamp(col[0] * 1.3)},${clamp(col[1] * 1.2)},${clamp(col[2] * 1.08)},1)`);
+      blade(len, wid);
+      g.fillStyle = grd; g.fill();
+      // a darker rim, so leaves stay separate where they overlap
+      g.strokeStyle = `rgba(${clamp(col[0] * 0.48)},${clamp(col[1] * 0.52)},${clamp(col[2] * 0.42)},0.6)`;
+      g.lineWidth = 1; g.stroke();
+      // midrib and the three pairs of veins a plane leaf carries
+      g.strokeStyle = `rgba(${clamp(col[0] + 44)},${clamp(col[1] + 48)},${clamp(col[2] + 28)},0.7)`;
+      g.lineWidth = Math.max(0.8, len * 0.014);
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -len * 0.9); g.stroke();
       for (let i = 1; i <= 3; i++) {
-        const y = -len * (0.2 * i + 0.12);
-        g.beginPath(); g.moveTo(0, y);
-        g.lineTo(wid * 0.3 * (i % 2 ? 1 : -1), y - len * 0.12);
-        g.stroke();
+        const y = -len * (0.2 * i + 0.1);
+        for (const sx of [1, -1]) {
+          g.beginPath(); g.moveTo(0, y);
+          g.quadraticCurveTo(sx * wid * 0.2, y - len * 0.06, sx * wid * 0.36, y - len * 0.16);
+          g.stroke();
+        }
       }
       g.restore();
     }
-    for (let i = 0; i < 22; i++) {
-      const cx = 40 + rand() * 176, cy = 70 + rand() * 176;
-      const len = 52 + rand() * 62, wid = 44 + rand() * 52;
-      leaf(cx, cy, len, wid, (rand() - 0.5) * 2.4, greens[Math.floor(rand() * greens.length)], 0.82 + rand() * 0.18);
+
+    // the twig the spray hangs off, and its side shoots
+    g.strokeStyle = 'rgba(84,72,54,0.95)';
+    g.lineCap = 'round';
+    g.lineWidth = S * 0.011;
+    g.beginPath();
+    g.moveTo(S * 0.5, S * 0.99);
+    g.bezierCurveTo(S * 0.44, S * 0.72, S * 0.56, S * 0.44, S * 0.5, S * 0.15);
+    g.stroke();
+    g.lineWidth = S * 0.005;
+    for (let i = 0; i < 5; i++) {
+      const y = S * (0.86 - i * 0.15), sx = i % 2 ? 1 : -1;
+      g.beginPath(); g.moveTo(S * 0.5, y);
+      g.quadraticCurveTo(S * (0.5 + sx * 0.12), y - S * 0.05, S * (0.5 + sx * 0.25), y - S * 0.13);
+      g.stroke();
     }
+
+    // Leaves back to front, thrown wider toward the top of the card: the tip of
+    // a bough carries more foliage than its base, and a card that fades out at
+    // the top reads as depth rather than as a rectangle.
+    const N = 34;
+    for (let i = 0; i < N; i++) {
+      const t = i / N;
+      const len = S * (0.17 + rand() * 0.12);
+      const cx = S * 0.5 + (rand() - 0.5) * S * (0.42 + t * 0.24);
+      const cy = S * (0.9 - t * 0.72) + (rand() - 0.5) * S * 0.1;
+      leaf(cx, cy, len, len * (0.8 + rand() * 0.32), (rand() - 0.5) * 2.7,
+        greens[Math.floor(rand() * greens.length)]);
+    }
+
     const t = new THREE.CanvasTexture(cv);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = anisotropy;
@@ -655,16 +718,24 @@ export function buildDecetiseRoom(scene, opts = {}) {
     map: barkMap, bumpMap: barkMap, bumpScale: 0.06, color: 0xc9c1b2, roughness: 0.95,
   });
   const leafTex = leafTexture();
+  // No `alphaMap` (see leafTexture) and no `transparent`: an alpha-tested cutout
+  // belongs in the opaque pass, where it writes depth and sorts against itself
+  // correctly. A transparent canopy sorts per-instance and shows its own cards
+  // through each other from the wrong side.
   const leafMat = new THREE.MeshStandardMaterial({
-    map: leafTex, alphaMap: leafTex, transparent: true, alphaTest: 0.42,
-    side: THREE.DoubleSide, roughness: 0.86, color: 0xffffff,
+    map: leafTex, alphaTest: 0.45,
+    side: THREE.DoubleSide, roughness: 0.72, color: 0xffffff,
   });
-  // a cluster billboard: two quads crossed at right angles
+  // A cluster billboard: three quads crossed at 60°. Two at right angles go
+  // edge-on twice per turn and the bough visibly thins as you walk round it.
   const clusterGeo = (() => {
-    const a = new THREE.PlaneGeometry(1, 1);
-    const b = new THREE.PlaneGeometry(1, 1);
-    b.rotateY(Math.PI / 2);
-    return mergeGeometries([a, b]);
+    const parts = [];
+    for (let i = 0; i < 3; i++) {
+      const q = new THREE.PlaneGeometry(1, 1);
+      q.rotateY((i / 3) * Math.PI);
+      parts.push(q);
+    }
+    return mergeGeometries(parts);
   })();
 
   const UP = new THREE.Vector3(0, 1, 0);
@@ -706,7 +777,10 @@ export function buildDecetiseRoom(scene, opts = {}) {
     crown.position.y = TRUNK_H;
     const geos = [];
     const anchors = [];
-    const leaders = lean ? 2 : 3;
+    // One more leader and one more level of forking than the crown used to
+    // carry. It was built thin because nothing was showing anyway; with the
+    // foliage back, a three-limb crown reads as a diagram of a tree.
+    const leaders = lean ? 3 : 4;
     for (let i = 0; i < leaders; i++) {
       const a = (i / leaders) * Math.PI * 2 + rand();
       const d = new THREE.Vector3(Math.cos(a) * 0.42, 1, Math.sin(a) * 0.42).normalize();
@@ -716,9 +790,14 @@ export function buildDecetiseRoom(scene, opts = {}) {
     limbs.castShadow = true;
     crown.add(limbs);
 
-    const perAnchor = lean ? 2 : 3;
+    // The low tier gets fewer anchors (a shallower fork), so it carries bigger
+    // cards on each — a canopy of the same mass, drawn coarser, rather than a
+    // visibly balder tree on a phone.
+    const perAnchor = lean ? 3 : 4;
+    const SCALE = lean ? 1.5 : 1.15;
     const leaves = new THREE.InstancedMesh(clusterGeo, leafMat, anchors.length * perAnchor);
     leaves.castShadow = true;
+    leaves.receiveShadow = true;
     const m4 = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const e = new THREE.Euler();
@@ -726,21 +805,33 @@ export function buildDecetiseRoom(scene, opts = {}) {
     const pv = new THREE.Vector3();
     let n = 0;
     for (const a of anchors) {
+      // How far out this anchor sits, so the canopy can be built the way a real
+      // one grows: the mass rides on the outside of the crown, and the cards
+      // out there hang bigger and tip over further under their own weight.
+      const out = Math.min(1, Math.hypot(a.x, a.z) / 3.4);
       for (let k = 0; k < perAnchor; k++) {
-        const sc = 0.95 + rand() * 0.85;
+        const sc = SCALE * (0.85 + rand() * 0.8 + out * 0.35);
         sv.set(sc, sc * (0.85 + rand() * 0.3), sc);
+        // Keep the whole card clear of the ceiling. Anchors sit well above it
+        // already, but the cards are big and jittered, and one dipping through
+        // the slab shows up as a sprig of foliage lying on the plaster — the
+        // canopy is meant to be seen through the oculi, not in the room.
+        const floorY = (DX.ceil - TRUNK_H) + sc * 0.6;   // crown-local
         pv.set(
-          a.x + (rand() - 0.5) * 0.85,
-          a.y + (rand() - 0.5) * 0.6,
-          a.z + (rand() - 0.5) * 0.85
+          a.x + (rand() - 0.5) * 1.0,
+          Math.max(floorY, a.y + (rand() - 0.5) * 0.7 - out * 0.25),
+          a.z + (rand() - 0.5) * 1.0
         );
-        e.set((rand() - 0.5) * 0.5, rand() * Math.PI * 2, (rand() - 0.5) * 0.5);
+        // Cards lean outward and droop; a canopy of upright rectangles is the
+        // tell that gives a billboard tree away from underneath.
+        e.set((rand() - 0.5) * 0.5 - out * 0.3, rand() * Math.PI * 2, (rand() - 0.5) * 0.6);
         q.setFromEuler(e);
         m4.compose(pv, q, sv);
         leaves.setMatrixAt(n, m4);
-        // a little tonal spread across the canopy — sunlit tips, shaded interior
-        const lit = 0.78 + rand() * 0.42;
-        leaves.setColorAt(n, new THREE.Color(lit * 1.02, lit, lit * 0.86));
+        // Tonal spread across the canopy: sunlit at the tips, deep in the shade
+        // of the interior, with the warm cast of a late afternoon on the lit side.
+        const lit = 0.6 + rand() * 0.34 + out * 0.28;
+        leaves.setColorAt(n, new THREE.Color(lit * 1.05, lit, lit * 0.82));
         n++;
       }
     }
@@ -852,30 +943,28 @@ export function buildDecetiseRoom(scene, opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Collision. One flat floor (terrace included), so `ground` is constant; the
-// segments are the shell, the pool, the core, the hedges, the basin and the
-// partitions. Same format as js/world/Collision.js expects.
+// Collision. One flat floor, so `ground` is constant; the segments are the
+// shell, the core, the hedges, the basin and the partitions. Nothing for the
+// terrace or the pool — the west wall is glass now and neither is reachable.
+// Same format as js/world/Collision.js expects.
 export function decetiseGround() { return 0; }
 
 export function decetiseSegments() {
-  const P = DX.pool;
   const seg = (ax, az, bx, bz) => ({ a: [ax, az], b: [bx, bz], level: 'all' });
   const rect = (x0, z0, x1, z1) => [
     seg(x0, z0, x1, z0), seg(x1, z0, x1, z1), seg(x1, z1, x0, z1), seg(x0, z1, x0, z0),
   ];
   return [
-    // interior shell, opened at the terrace doors
+    // Interior shell, closed on all four sides. The west wall used to open in
+    // the middle onto the terrace; it is glass the whole way now, so the room
+    // is a sealed box and the terrace is scenery. That also retires what used
+    // to follow here — a keep-in fence along the plate's edge and a ring round
+    // the pool, both of which existed to stop someone walking off the building
+    // or into the water. Nobody can get out there to do either.
     seg(DX.x0, DX.z0 + 0.25, DX.x1 - 0.25, DX.z0 + 0.25),
     seg(DX.x1 - 0.25, DX.z0 + 0.25, DX.x1 - 0.25, DX.z1 - 0.25),
     seg(DX.x1 - 0.25, DX.z1 - 0.25, DX.x0, DX.z1 - 0.25),
-    seg(DX.x0 + 0.1, DX.z0 + 0.25, DX.x0 + 0.1, -3),
-    seg(DX.x0 + 0.1, 3, DX.x0 + 0.1, DX.z1 - 0.25),
-    // terrace keep-in — nobody walks off the plate
-    seg(DX.tx0 + 0.4, DX.z0 + 0.4, DX.x0, DX.z0 + 0.4),
-    seg(DX.tx0 + 0.4, DX.z1 - 0.4, DX.x0, DX.z1 - 0.4),
-    seg(DX.tx0 + 0.4, DX.z0 + 0.4, DX.tx0 + 0.4, DX.z1 - 0.4),
-    // the pool: walked round, not into
-    ...rect(P.x0 - 0.55, P.z0 - 0.55, P.x1 + 0.55, P.z1 + 0.55),
+    seg(DX.x0 + 0.1, DX.z0 + 0.25, DX.x0 + 0.1, DX.z1 - 0.25),
     // the lift core, open to the north where the cabin doors are
     seg(-DX.core - 0.2, DX.core + 0.2, DX.core + 0.2, DX.core + 0.2),
     seg(-DX.core - 0.2, -DX.core - 0.2, -DX.core - 0.2, DX.core + 0.2),

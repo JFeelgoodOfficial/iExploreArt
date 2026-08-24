@@ -15,6 +15,13 @@ import { mulberry32 } from '../utils/proctex.js';
 //   seed         PRNG seed — a different skyline for a different window
 //   yaw          rotates the whole city about Y. +π/2 swings the −Z spread onto
 //                −X, which is what a west-facing window looks at.
+//   surround     ring the building instead of fanning out ahead of one window.
+//                The default city is a wedge along −Z, which is all a room with
+//                one wall of glass can see; a room glazed on three sides (the
+//                decetise plate) shows sky where the wedge runs out. This swings
+//                every block round the compass instead. Counts are unchanged —
+//                the same towers, redistributed — so it costs a rotation and
+//                nothing else. `yaw` stops mattering when it is on.
 //   fog          set scene.fog. Global and shared, so only the first caller
 //                should; the distances suit any room whose interior is under
 //                ~20 m across, which both of ours are.
@@ -34,7 +41,12 @@ export function buildCityView(scene, renderer, opts = {}) {
   const {
     name = 'city', seed = 4242, yaw = 0, fog = true, sky: wantSky = true,
     sunPosition = new THREE.Vector3(-21, 30, 21), nearProps: wantNearProps = true,
+    surround = false,
   } = opts;
+
+  // Rotate a point about Y, the same sense as group.rotation.y. Everything
+  // `surround` does is this, applied to positions that were authored along −Z.
+  const spin = (x, z, a) => [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)];
 
   const group = new THREE.Group();
   group.name = name;
@@ -56,6 +68,22 @@ export function buildCityView(scene, renderer, opts = {}) {
     su.mieCoefficient.value = 0.004;
     su.mieDirectionalG.value = 0.8;
     su.sunPosition.value.copy(localSunDir);
+    // Clamp the dome's own output. The sun disc this shader draws runs to five
+    // and six figures of radiance, and the composer's buffer is half-float,
+    // which tops out at 65504: a clear line of sight to the sun overflows it to
+    // Infinity, UnrealBloomPass blurs that Infinity into NaN across the whole
+    // mip chain, and the frame comes out solid black. It only bites where
+    // nothing stands between a window and the sun, which is why it surfaced on
+    // the decetise plate — every other room has the city in the way.
+    //
+    // 60 is far under the ceiling and still thirty times the bloom threshold
+    // (js/Effects.js), so the sun keeps its glare and tone-maps to white.
+    sky.material.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        'gl_FragColor = vec4( texColor, 1.0 );',
+        'gl_FragColor = vec4( min( texColor, vec3( 60.0 ) ), 1.0 );'
+      );
+    };
     group.add(sky);
     // Only the instance that owns the atmosphere clears the scene background;
     // every other room sets its own through RoomManager on entry.
@@ -88,7 +116,23 @@ export function buildCityView(scene, renderer, opts = {}) {
   // them doesn't shift the PRNG under the tower rings that follow — the two
   // tiers see the same skyline, one of them just without the clutter on it.
   const keepProp = (g) => { if (wantNearProps) nearProps.push(g); return g; };
-  for (const b of nearDefs) {
+  // The angle comes off the index, not the PRNG, so switching `surround` on
+  // moves the blocks without shifting the random stream the towers below draw
+  // from — the same skyline, put round the compass instead of stacked ahead.
+  //
+  // Two corrections go with the turn. The blocks are pushed out: these are
+  // authored 26–70 m from a window that only ever looks one way, and swung onto
+  // a bearing of their own the nearest of them stopped being a rooftop and
+  // became a facade filling the glass. And the ring is rotated half a step, so
+  // eight blocks at 45° apart sit BETWEEN the compass points rather than on
+  // them — a window looks down a gap, not into a wall.
+  const NEAR_OUT = 1.8;
+  nearDefs.forEach((def, i) => {
+    const [bx, bz] = surround
+      ? spin(def.x * NEAR_OUT, def.z * NEAR_OUT,
+        (i / nearDefs.length) * Math.PI * 2 + Math.PI / nearDefs.length)
+      : [def.x, def.z];
+    const b = { ...def, x: bx, z: bz };
     const h = b.top + 45; // extend well below the visible horizon
     const g = new THREE.BoxGeometry(b.w, h, b.d);
     g.translate(b.x, b.top - h / 2, b.z);
@@ -97,7 +141,7 @@ export function buildCityView(scene, renderer, opts = {}) {
     const pw = 0.35;
     keepProp(strip(b.x, b.top, b.z, b.w, b.d, pw));
     const nAC = 1 + Math.floor(rand() * 3);
-    for (let i = 0; i < nAC; i++) {
+    for (let j = 0; j < nAC; j++) {
       const ac = new THREE.BoxGeometry(0.9 + rand() * 1.4, 0.7 + rand() * 0.5, 0.9 + rand());
       ac.translate(b.x + (rand() - 0.5) * (b.w - 3), b.top + 0.35, b.z + (rand() - 0.5) * (b.d - 3));
       keepProp(ac);
@@ -112,34 +156,42 @@ export function buildCityView(scene, renderer, opts = {}) {
       tank.translate(b.x + (rand() - 0.5) * (b.w - 4), b.top + 1.4, b.z + (rand() - 0.5) * (b.d - 4));
       keepProp(tank);
     }
-  }
+  });
   const nearMesh = new THREE.Mesh(mergeGeometries(near), facadeMat);
   group.add(nearMesh);
   if (nearProps.length) group.add(new THREE.Mesh(mergeGeometries(nearProps), rooftopMat));
 
   // --- mid + far rings: instanced towers -----------------------------------
-  group.add(instancedRing(facadeMat, rand, 80, 75, 190, 10, 45, 12));
-  group.add(instancedRing(facadeMat, rand, 130, 190, 400, 25, 95, 18));
+  group.add(instancedRing(facadeMat, rand, 80, 75, 190, 10, 45, 12, false, surround));
+  group.add(instancedRing(facadeMat, rand, 130, 190, 400, 25, 95, 18, false, surround));
 
   // dark curtain-wall towers catching the sky in their glass
   const glassTowerMat = new THREE.MeshStandardMaterial({
     color: 0x2e3944, metalness: 0.85, roughness: 0.28,
   });
-  group.add(instancedRing(glassTowerMat, rand, 26, 90, 360, 40, 120, 15, true));
+  group.add(instancedRing(glassTowerMat, rand, 26, 90, 360, 40, 120, 15, true, surround));
 
   // --- ground far below (fills gaps between blocks) ------------------------
+  // Surrounded, the street below has to run out under every window, so the
+  // plate is square and centred instead of a slab laid out ahead of one.
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(1200, 700),
+    surround ? new THREE.PlaneGeometry(1500, 1500) : new THREE.PlaneGeometry(1200, 700),
     new THREE.MeshLambertMaterial({ color: 0x4d4a45 })
   );
   ground.rotation.x = -Math.PI / 2;
-  ground.position.set(12, -42, -300);
+  ground.position.set(surround ? 0 : 12, -42, surround ? 0 : -300);
   group.add(ground);
 
   // --- drifting clouds ------------------------------------------------------
+  // Surrounded, a cloud parked out along −Z would be edge-on from the windows
+  // facing the other way — a flat plane seen from 90° is nothing at all. So each
+  // one hangs under a holder turned to its own quarter of the sky: the plane
+  // still faces the middle of the room, and `update` still drifts it along its
+  // own local x, which is now the tangent rather than world x.
   const cloudTex = cloudTexture();
   const clouds = [];
-  for (let i = 0; i < 4; i++) {
+  const CLOUDS = 4;
+  for (let i = 0; i < CLOUDS; i++) {
     const w = 160 + rand() * 200;
     const c = new THREE.Mesh(
       new THREE.PlaneGeometry(w, w * 0.36),
@@ -151,13 +203,21 @@ export function buildCityView(scene, renderer, opts = {}) {
     c.position.set(-250 + rand() * 500, 80 + rand() * 90, -320 - rand() * 120);
     c.userData.speed = 0.8 + rand() * 0.7;
     clouds.push(c);
-    group.add(c);
+    if (surround) {
+      const holder = new THREE.Group();
+      holder.rotation.y = (i / CLOUDS) * Math.PI * 2 + rand() * 0.8;
+      holder.add(c);
+      group.add(holder);
+    } else {
+      group.add(c);
+    }
   }
 
   // --- birds ----------------------------------------------------------------
   const birdTex = birdTexture();
   const birds = [];
-  for (let i = 0; i < 7; i++) {
+  const BIRDS = 7;
+  for (let i = 0; i < BIRDS; i++) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: birdTex, fog: false, depthWrite: false }));
     const scale = 1.6 + rand() * 1.4;
     s.scale.set(scale, scale * 0.45, 1);
@@ -167,14 +227,23 @@ export function buildCityView(scene, renderer, opts = {}) {
       dir: rand() > 0.5 ? 1 : -1,
     };
     birds.push(s);
-    group.add(s);
+    // Sprites always face the camera, so only the circle they fly needs moving
+    // — same holder trick as the clouds, and `update` keeps writing local space.
+    if (surround) {
+      const holder = new THREE.Group();
+      holder.rotation.y = (i / BIRDS) * Math.PI * 2 + rand() * 0.7;
+      holder.add(s);
+      group.add(holder);
+    } else {
+      group.add(s);
+    }
   }
 
   scene.add(group);
 
-  // The city only shows through the north window; skip the cloud/bird churn
-  // whenever it isn't on screen. nearMesh always draws when the city is
-  // visible, so its onBeforeRender marks the city as seen this frame.
+  // The city only shows through a window; skip the cloud/bird churn whenever it
+  // isn't on screen. nearMesh always draws when the city is visible, so its
+  // onBeforeRender marks the city as seen this frame.
   let seen = false;
   nearMesh.onBeforeRender = () => { seen = true; };
 
@@ -207,7 +276,7 @@ function strip(x, top, z, w, d, t) {
   return mergeGeometries(parts);
 }
 
-function instancedRing(mat, rand, count, zMin, zMax, hMin, hMax, footprint, glassy = false) {
+function instancedRing(mat, rand, count, zMin, zMax, hMin, hMax, footprint, glassy = false, surround = false) {
   const geo = new THREE.BoxGeometry(1, 1, 1);
   geo.translate(0, 0.5, 0); // pivot at base
   const mesh = new THREE.InstancedMesh(geo, mat, count);
@@ -217,13 +286,24 @@ function instancedRing(mat, rand, count, zMin, zMax, hMin, hMax, footprint, glas
   for (let i = 0; i < count; i++) {
     const z = -(zMin + rand() * (zMax - zMin));
     const spread = Math.abs(z) * 1.9 + 60;
-    const x = 12 + (rand() - 0.5) * spread;
+    let x = 12 + (rand() - 0.5) * spread;
+    let zz = z;
+    // Surrounded, the wedge becomes an annulus: the block keeps the point it was
+    // drawn at and is swung to a random bearing. Its distance is hypot(x, z),
+    // which is never less than |z| and so never less than zMin — whatever the
+    // lateral spread does, no tower can land nearer than the ring's own floor,
+    // and none of them end up inside the room looking out at it.
+    if (surround) {
+      const a = rand() * Math.PI * 2;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      [x, zz] = [x * ca + z * sa, -x * sa + z * ca];
+    }
     const h = hMin + Math.pow(rand(), 1.6) * (hMax - hMin);
     const w = footprint * (0.5 + rand() * 0.9);
     const d = footprint * (0.5 + rand() * 0.9);
     e.set(0, (rand() - 0.5) * 0.35, 0);
     q.setFromEuler(e);
-    m.compose(new THREE.Vector3(x, -40, z), q, new THREE.Vector3(w, h + 40, d));
+    m.compose(new THREE.Vector3(x, -40, zz), q, new THREE.Vector3(w, h + 40, d));
     mesh.setMatrixAt(i, m);
     if (glassy) continue;
     // per-building tint: concrete greys, warm limestone, occasional brick

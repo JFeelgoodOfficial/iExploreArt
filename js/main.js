@@ -453,15 +453,16 @@ const ROOM_FACTORIES = {
   decetise: () => {
     const room = buildDecetiseRoom(scene, { tier, ...artOpts, art: DECETISE_HANG });
     const lights = setupDecetiseLighting(scene, renderer, tier);
-    // A whole floor plate five storeys up, glazed on two sides and open to a
-    // terrace on a third — so there is no single window to aim the skyline at.
-    // Yawed an eighth turn: the city's spread runs from −Z round to −X, which
-    // puts it behind the north wall of glass (the benches face it) AND out past
-    // the pool's weir on the terrace, the two places anyone stands to look out.
-    // `fog` is global and the gallery already set it; the sun matches
+    // A whole floor plate five storeys up, glazed on three of its four sides —
+    // north, east, and the west wall over the pool. Every other room in the
+    // building looks out of one wall, so the default city is a wedge aimed at
+    // it; here a wedge leaves two windows showing bare sky whichever way it is
+    // yawed. `surround` rings the building with the same towers instead, so the
+    // city is there out of every window and over the pool's weir. `fog` is
+    // global and the gallery already set it; the sun matches
     // setupDecetiseLighting's, or the daylight arrives from two quarters at once.
     const city = buildCityView(scene, renderer, {
-      name: 'city-decetise', seed: 1207, yaw: Math.PI / 4, fog: false,
+      name: 'city-decetise', seed: 1207, surround: true, fog: false,
       sunPosition: DX_SUN, nearProps: tier.name !== 'low',
     });
     // The skyline is authored to be read from near its own rooftops. Lifted, so
