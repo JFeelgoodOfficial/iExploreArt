@@ -21,6 +21,7 @@ export class UI {
       infoSpec: document.getElementById('info-spec'),
       infoSeries: document.getElementById('info-series'),
       infoDesc: document.getElementById('info-desc'),
+      infoContact: document.getElementById('info-contact'),
       dialogue: document.getElementById('dialogue'),
       dialogueText: document.getElementById('dialogue-text'),
       dialogueChoices: document.getElementById('dialogue-choices'),
@@ -89,6 +90,7 @@ export class UI {
     setLine(this.el.infoSpec, [art.year, art.medium, art.dims].filter(Boolean).join(' · '));
     setLine(this.el.infoSeries, art.series);
     setLine(this.el.infoDesc, art.description);
+    setContact(this.el.infoContact, art.contact);
     this.el.info.hidden = false;
   }
 
@@ -149,4 +151,57 @@ function setLine(el, text) {
   const t = (text || '').trim();
   el.textContent = t;
   el.hidden = !t;
+}
+
+// The artist's own details, under the statement: a name, a line of what they
+// do, a phone number, and a row per handle and site. Built as DOM nodes rather
+// than an innerHTML string — a manifest is allowed to carry an apostrophe or an
+// ampersand in a name, and this way one can never end up parsed as markup.
+// Everything is optional; an entry with only a link renders only that link.
+function setContact(el, contact) {
+  el.textContent = '';
+  if (contact) {
+    const line = (cls, text) => {
+      if (!text) return;
+      const p = document.createElement('p');
+      p.className = cls;
+      p.textContent = text;
+      el.appendChild(p);
+    };
+    line('contact-name', contact.name);
+    line('contact-role', contact.role);
+    if (contact.phone) {
+      const p = document.createElement('p');
+      p.className = 'contact-phone';
+      // strip the number down for the href and leave the printed form alone
+      p.appendChild(anchor(`tel:${contact.phone.replace(/[^\d+]/g, '')}`, contact.phone));
+      el.appendChild(p);
+    }
+    for (const l of contact.links || []) {
+      const row = document.createElement('p');
+      row.className = 'contact-row';
+      if (l.handle) {
+        const h = document.createElement('span');
+        h.className = 'contact-handle';
+        h.textContent = l.handle;
+        row.appendChild(h);
+      }
+      // The handle is plain text on purpose: the manifests give a handle without
+      // saying which platform it is on, and guessing one would invent the link.
+      if (l.url) row.appendChild(anchor(l.url, l.label || l.url));
+      if (row.childElementCount) el.appendChild(row);
+    }
+  }
+  el.hidden = !el.childElementCount;
+}
+
+// Every outbound link opens in a new tab. This one is a pointer-locked WebGL
+// session with a room built in memory; navigating it away loses the gallery,
+// and coming back means the loading screen and the lift ride again.
+function anchor(href, text) {
+  const a = document.createElement('a');
+  a.href = href;
+  a.textContent = text;
+  if (!href.startsWith('tel:')) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+  return a;
 }

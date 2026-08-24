@@ -31,12 +31,23 @@ const ARTIST = 'Erin Carle';
 const FALL = 'Fall Series';
 const SPRING = 'Spring Series';
 
+// Shown under the statement on every one of her labels (js/ui/UI.js). Same
+// shape as Chad Rea's card in data/chadrea-artworks.js, which carries a name, a
+// role and a phone number as well — every field is optional, and hers is the
+// portfolio alone.
+const CONTACT = {
+  links: [
+    { url: 'https://erincarleart.myportfolio.com/', label: 'erincarleart.myportfolio.com' },
+  ],
+};
+
 const fall = (id, title, file, px) => ({
   id, title, artist: ARTIST, series: FALL,
   year: '', medium: '',
   image: `assets/art/erin-carle/fall26/${file}`,
   px,
   description: `From Erin Carle's ${FALL}, in residence in the Rococo Hall.`,
+  contact: CONTACT,
 });
 
 // `extra` carries per-piece exceptions — currently `wide` and `outline`, below.
@@ -46,6 +57,7 @@ const spring = (id, title, file, px, extra) => ({
   image: `assets/art/erin-carle/spring1/${file}`,
   px,
   description: `From Erin Carle's ${SPRING}, in residence in the Nouveau Hall.`,
+  contact: CONTACT,
   ...extra,
 });
 

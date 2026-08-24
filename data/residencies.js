@@ -25,6 +25,23 @@
 //            stop there; the curator still lists it, marked closed, so a
 //            visitor asking after it gets an answer. Delete the flag to reopen.
 
+// Erin Carle holds two floors, and the curator answers for the artist rather
+// than for the room — so the bio is written once here and referenced by both,
+// instead of being copied into each entry where the two could drift apart.
+const ERIN_CARLE_BIO = 'Erin Carle is a surrealist painter and curator whose work '
+  + 'explores transformation, the natural world, and the complexities of the female '
+  + 'experience. Through dreamlike imagery and symbolic narratives, she investigates '
+  + 'cycles of growth, decay, metamorphosis, and resilience. Drawing from surrealist '
+  + 'processes, her paintings blur the boundaries between the human body and nature, '
+  + 'creating imagined worlds that examine identity, vulnerability, and power through '
+  + 'subtle feminist undertones. Erin received her Bachelor of Fine Arts in Painting '
+  + 'from Texas State University in 2022 and is currently an MFA candidate in Painting '
+  + 'at the University of Texas San Antonio. Her work has been exhibited at venues '
+  + 'including The George Washington Carver Museum in Austin, Texas; The Center for '
+  + 'Contemporary Arts in Abilene, Texas; VOLTA Art Fair in Basel, Switzerland; Texas '
+  + 'State Galleries in San Marcos, Texas; and other regional and international '
+  + 'exhibitions.';
+
 export const RESIDENCIES = [
   {
     id: 'courtyard',
@@ -38,6 +55,7 @@ export const RESIDENCIES = [
     floor: 2,
     artist: 'Erin Carle',
     blurb: 'a domed hall in leaded glass and mahogany, with a stair hall beyond the portal — seven pieces from her Spring Series are hanging there now',
+    bio: ERIN_CARLE_BIO,
   },
   {
     id: 'rococo',
@@ -45,6 +63,7 @@ export const RESIDENCIES = [
     floor: 3,
     artist: 'Erin Carle',
     blurb: 'gilt boiserie under a painted ceiling, with a gallery running on three sides — she has hung the whole of the Fall Series across it, ten pieces',
+    bio: ERIN_CARLE_BIO,
   },
   {
     id: 'chadrea',

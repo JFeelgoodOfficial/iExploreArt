@@ -37,6 +37,21 @@ const STATEMENT = 'Paintings over “finished” paintings. A practice of lettin
   + 'permanence than with the moment. An affirmation that nothing, including the '
   + 'self, is ever really done evolving.';
 
+// The artist's own card, under the statement on every one of his labels. The
+// handles are plain text and the sites are links (js/ui/UI.js): the list gives
+// a handle without naming a platform, and inventing an instagram.com/... URL
+// for it would be putting words in his mouth.
+const CONTACT = {
+  name: ARTIST,
+  role: 'Artist & Cultural Provocateur | Brand Architect | Creative Advisor',
+  phone: '(310) 738-8886',
+  links: [
+    { handle: '@chadrea', url: 'https://www.chadrea.com', label: 'www.chadrea.com' },
+    { handle: '@cult.of.happy', url: 'https://www.cultofhappy.com', label: 'www.cultofhappy.com' },
+    { handle: '@lockh.arthouse', url: 'https://www.lockharthousetx.com', label: 'www.lockharthousetx.com' },
+  ],
+};
+
 const IN = 0.0254;
 // h, w in inches — the artist's order — out as the label text and [w, h] metres.
 const inches = (h, w) => ({
@@ -55,6 +70,7 @@ const work = (n, medium, h, w, px) => ({
   image: `assets/art/chadrea/${SERIES} ${n}.webp`,
   px,
   description: STATEMENT,
+  contact: CONTACT,
   ...inches(h, w),
 });
 
