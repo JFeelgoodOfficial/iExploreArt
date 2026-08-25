@@ -89,26 +89,16 @@ export const CURTAIL = (() => {
 // being written out in three places that could drift apart.
 export const PLINTH = { x: 2.05, z: -8.0, w: 0.42, h: 1.32, r: 0.56 };
 
-// The lift back to reception, set into the wing's south wall — the one large
-// surface in the room that carries nothing. The car itself is never built: you
-// press the plate, the veil comes down and you step out of the reception cabin
-// downstairs, so this is a portal, two leaves and a call plate, and no shaft.
-// main.js hangs the interaction hitbox off these numbers.
-export const LIFT = { x: 9.0, z: WING.z1, w: 1.72, h: 2.35, jamb: 0.17 };
-
 // The courtyard. The wing's south wall used to be the room's one blank
-// surface; it is two openings now, either side of the lift, onto a walled
-// terrace with a reflecting pool. Open to the sky, and the city stands over
-// its far wall — the only place in this residency you see out.
+// surface; it is one wide opening now — the lift that used to stand in the
+// middle of it is gone, and the wall simply stops at head height and lets the
+// terrace in. The way out of this hall is the foyer door in the south wall of
+// the hall itself (DOOR_S). Open to the sky, and the city stands over the
+// courtyard's far wall — the only place in this residency you see out.
 export const COURT = { x0: WING.x0, x1: WING.x1, z0: WING.z1, z1: 21.5, wall: 4.6, t: 0.35 };
 export const POOL = { x0: 6.50, x1: 11.40, z0: 13.90, z1: 19.30, depth: 0.85, coping: 0.22 };
-// The head of the wing's openings; everything above it is spandrel and parapet.
+// The head of the wing's opening; everything above it is spandrel and parapet.
 export const OPENING = { head: 2.85, parapet: 6.70 };
-// The lift shaft, expressed on the courtyard side and running straight up past
-// the parapet. Its north face is the wall the lift doors sit in.
-// w 2.60, not 2.10: the architrave alone is 2.06 across, and at 2.10 the
-// call plate had nowhere to sit once the wall either side became opening.
-export const SHAFT = { w: 2.60, d: 1.30, top: 9.20 };
 
 // The volute's path, [x, z, y] — GENERATED from the stone rather than authored
 // by hand, so the rail follows the steps instead of merely resembling them. It
@@ -744,16 +734,15 @@ export function buildChadreaRoom(scene, opts = {}) {
     const pl = plasterMat(0xf1ece2, 0.94);
     wallPanel(pl, WING.z1 - WING.z0, WING.h, WING.x1, WING.h / 2, (WING.z0 + WING.z1) / 2, -Math.PI / 2);
     wallPanel(pl, WING.x1 - WING.x0 + 1, WING.h, (WING.x0 + WING.x1) / 2, WING.h / 2, WING.z0, 0);
-    // South: no longer a wall. Two openings onto the courtyard, either side of
-    // the lift shaft, with a spandrel over them carried up to a parapet — from
-    // the terrace the wing has to read as a building, not an open edge.
-    const sx0 = LIFT.x - SHAFT.w / 2, sx1 = LIFT.x + SHAFT.w / 2;
+    // South: no longer a wall. One wide opening onto the courtyard — the lift
+    // that used to stand in the middle of it is gone — with a spandrel over it
+    // carried up to a parapet, so from the terrace the wing still reads as a
+    // building rather than an open edge. Head height unchanged.
     box(WING.x1 - WING.x0, OPENING.parapet - OPENING.head, COURT.t, pl,
       (WING.x0 + WING.x1) / 2, (OPENING.parapet + OPENING.head) / 2, WING.z1);
-    // the reveals down each side of the two openings
-    for (const [ox, w] of [[WING.x0, 0.3], [sx0, 0.3], [sx1, 0.3], [WING.x1, 0.3]]) {
-      box(w, OPENING.head, COURT.t, pl, ox + (ox === WING.x0 || ox === sx1 ? w / 2 : -w / 2),
-        OPENING.head / 2, WING.z1);
+    // the reveals down each side of the opening
+    for (const [ox, w, dir] of [[WING.x0, 0.3, 1], [WING.x1, 0.3, -1]]) {
+      box(w, OPENING.head, COURT.t, pl, ox + dir * w / 2, OPENING.head / 2, WING.z1);
     }
     const cl = new THREE.Mesh(new THREE.PlaneGeometry(WING.x1 - WING.x0 + 1, WING.z1 - WING.z0), pl);
     cl.rotation.x = Math.PI / 2;
@@ -765,41 +754,6 @@ export function buildChadreaRoom(scene, opts = {}) {
     box(0.5, 0.08, 2.6, woodMat(), WING.x1 - 0.42, 0.44, 9.1);
     for (const bz of [8.1, 10.1]) box(0.06, 0.44, 0.06, steel, WING.x1 - 0.42, 0.22, bz);
 
-    // --- the lift back to reception ---------------------------------------
-    // A blackened architrave standing proud of the plaster, with the leaves set
-    // back inside it. Built as four members round the opening rather than one
-    // slab, so the reveal has real depth and the doors sit in shadow.
-    {
-      const brass = new THREE.MeshStandardMaterial({
-        color: 0xc9b48a, roughness: 0.34, metalness: 0.6, envMapIntensity: 0.9,
-      });
-      const dark = blackenedMat();
-      const J = LIFT.jamb;
-      const face = LIFT.z - 0.05;         // architrave centre: it stands 0.1 proud
-      const hx = LIFT.w / 2 + J / 2;      // jamb centreline off the opening
-      for (const s of [-1, 1]) box(J, LIFT.h + J, 0.10, dark, LIFT.x + s * hx, (LIFT.h + J) / 2, face);
-      box(LIFT.w + 2 * J, J, 0.10, dark, LIFT.x, LIFT.h + J / 2, face);
-      // the leaves, meeting on a 20 mm shadow gap and set back behind the frame
-      const leaf = brushedMat();
-      for (const s of [-1, 1]) {
-        box(LIFT.w / 2 - 0.01, LIFT.h, 0.05, leaf,
-          LIFT.x + s * (LIFT.w / 4 + 0.005), LIFT.h / 2, LIFT.z - 0.025);
-      }
-      // brass sill, and the indicator over the head — 0.07, so it sits inside
-      // the 0.17 architrave rather than spilling over both its edges
-      box(LIFT.w, 0.015, 0.07, brass, LIFT.x, 0.008, LIFT.z - 0.035);
-      const dial = new THREE.Mesh(new THREE.CircleGeometry(0.07, 32), brass);
-      dial.position.set(LIFT.x, LIFT.h + J / 2, face - 0.056);
-      dial.rotation.y = Math.PI;          // faces −z, back into the wing
-      g.add(dial);
-      // the call plate, at the hand height the rest of the building uses
-      const px = LIFT.x + LIFT.w / 2 + J + 0.135;   // on the shaft's own face
-      box(0.18, 0.30, 0.04, dark, px, 1.15, LIFT.z - 0.02);
-      const btn = new THREE.Mesh(new THREE.CircleGeometry(0.045, 24), brass);
-      btn.position.set(px, 1.15, LIFT.z - 0.045);
-      btn.rotation.y = Math.PI;
-      g.add(btn);
-    }
   }
 
   // --- the courtyard -------------------------------------------------------
@@ -881,12 +835,6 @@ export function buildChadreaRoom(scene, opts = {}) {
     water.position.set((POOL.x0 + POOL.x1) / 2, -0.06, (POOL.z0 + POOL.z1) / 2);
     water.name = 'ch-pool';
     g.add(water);
-
-    // --- the lift shaft, straight up the wing's face ----------------------
-    const sm = concrete(SHAFT.w, SHAFT.top, { tint: 0x8f8880, bump: 0.06 });
-    const scx = LIFT.x, scz = COURT.z0 + SHAFT.d / 2;
-    box(SHAFT.w, SHAFT.top, SHAFT.d, sm, scx, SHAFT.top / 2, scz);
-    box(SHAFT.w + 0.14, 0.10, SHAFT.d + 0.14, cop, scx, SHAFT.top + 0.05, scz);
 
     // a bench along the west wall, and two planted vessels on the terrace
     box(0.5, 0.08, 2.4, woodMat(), COURT.x0 + 0.42, 0.44, 15.4);
@@ -1453,12 +1401,15 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
   sun.shadow.normalBias = 0.03;
   scene.add(sun, sun.target);
 
-  // A downlight over the lift. Its leaves face north, away from wingSun, so
+  // A downlight where the wing meets the terrace opening, washing the head of
+  // it so the threshold reads at night. (It lit the lift that used to stand
+  // here; the opening still wants the wash.) Its face looks north, away from
+  // wingSun, so
   // without this the one thing in the wing you are meant to walk to is the
   // darkest surface in it.
   const liftLamp = new THREE.SpotLight(0xfff0dc, 16, 8, 0.75, 0.9, 1.7);
-  liftLamp.position.set(LIFT.x, LIFT.h + 1.55, LIFT.z - 1.15);
-  liftLamp.target.position.set(LIFT.x, LIFT.h * 0.45, LIFT.z - 0.1);
+  liftLamp.position.set(9.0, 3.9, WING.z1 - 1.15);
+  liftLamp.target.position.set(9.0, 1.05, WING.z1 - 0.1);
   scene.add(liftLamp, liftLamp.target);
 
   // daylight in the wing, from past its east wall
@@ -1631,9 +1582,9 @@ export function chadreaSegments() {
   // --- the shell, at every height -----------------------------------------
   c.push(seg(HALL.x0, HALL.z0, HALL.x0, HALL.z1));        // west art wall
   c.push(seg(HALL.x0, HALL.z0, PIER.x, HALL.z0));         // north wall
-  // South wall — the HALL's only. The wing's share of this line is two
-  // openings onto the courtyard now, with only the lift shaft solid between
-  // them, so it stops at the wing rather than running the full width.
+  // South wall — the HALL's only. The wing's share of this line is one wide
+  // opening onto the courtyard now, so it stops at the wing rather than
+  // running the full width.
   c.push(seg(HALL.x0, HALL.z1, WING.x0, HALL.z1));
   // the pier: two solid blocks either side of the arch opening
   c.push(...rect(PIER.x, HALL.z0, PIER.x + PIER.t, PIER.az0));
@@ -1642,11 +1593,10 @@ export function chadreaSegments() {
   c.push(seg(PIER.x, WING.z0, WING.x1, WING.z0));         // north wall
   c.push(seg(WING.x1, WING.z0, WING.x1, COURT.z1));       // east wall, on into the court
 
-  // the courtyard: west and south walls, and the lift shaft standing in the
-  // middle of the wing's face between its two openings
+  // the courtyard: west and south walls. Nothing stands in the wing's face
+  // any more — it is one clear opening from the wing out to the pool.
   c.push(seg(COURT.x0, COURT.z0, COURT.x0, COURT.z1));
   c.push(seg(COURT.x0, COURT.z1, COURT.x1, COURT.z1));
-  c.push(...rect(LIFT.x - SHAFT.w / 2, COURT.z0, LIFT.x + SHAFT.w / 2, COURT.z0 + SHAFT.d));
   // …and the pool, fenced on its coping. Nothing here is standable water.
   c.push(...rect(POOL.x0 - POOL.coping, POOL.z0 - POOL.coping,
                  POOL.x1 + POOL.coping, POOL.z1 + POOL.coping, F));

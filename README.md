@@ -6,9 +6,13 @@ the desk and Mira, the curator. The signage above the desk names the currently
 featured artist, one of their works hangs beside the door, and the door itself
 opens straight into their hall — the hall is built during the loading screen,
 so stepping through reads as walking out of the matching door on the far side.
-The foyer's other two sides open over an infinity pool the visitor can only
-look at: a vibrant sunset over the water to the east, a twinkling night sky to
-the south, one city skyline standing round the whole of it. The gallery's
+The foyer's other two sides open, behind a waist-high glass screen, onto a
+pool terrace the visitor can look at but not walk out onto: patio, then an
+infinity pool whose far lip is the building's own edge, then the drop — the
+foyer stands high in a tower, and the city skyline runs below and beyond the
+water. A vibrant sunset sits low over the east side and a twinkling night sky
+over the south, blending through twilight at the corner, painted on one whole
+sky dome so it never runs out however far you look up. The gallery's
 music plays in the foyer only — step into a hall and it stops, step back out
 and it returns. Nothing is for sale here: pressing **E** on a painting opens a
 wall label with its title and artist, and nothing else.
@@ -96,8 +100,8 @@ Chad Rea holds **Brutalism Hall** on floor 4
 gallery: one long board-formed hall under an 8.6 m soffit, a mezzanine reached
 by a single cantilevered flight, and a rounded plaster arch through the pier
 wall into a white, daylit wing that opens again onto a walled courtyard with a
-reflecting pool, the city standing over its far wall and the lift shaft
-running straight up the wing's face between the two openings. The whole of his
+reflecting pool, the city standing over its far wall
+and the wing's south side standing open the whole way to the terrace. The whole of his
 *Beautiful Decay* series hangs there — twenty works from
 **`data/chadrea-artworks.js`**, unframed box canvases flat on the concrete, at
 their true catalogue size (`SCALE` in that file, 1 at the artist's request).

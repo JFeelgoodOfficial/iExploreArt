@@ -21,8 +21,7 @@ import {
 } from './world/brutalism/brutalist.js';
 import {
   buildChadreaRoom, setupChadreaLighting,
-  chadreaGround, chadreaSegments, SPAWN as CH_SPAWN, LIFT as CH_LIFT,
-  SUN_POS as CH_SUN,
+  chadreaGround, chadreaSegments, SPAWN as CH_SPAWN, SUN_POS as CH_SUN,
 } from './world/chadrea/chadrea.js';
 import {
   buildDecetiseRoom, setupDecetiseLighting,
@@ -431,21 +430,14 @@ const ROOM_FACTORIES = {
     // Read from a 1.65 m eye over a 4.6 m wall, so the near rooftops want to
     // sit above it rather than below the coping.
     city.group.position.y = 3.4;
-    // Two ways out of this hall: the foyer door in the south wall (built and
-    // wired inside buildChadreaRoom — the visitor arrives in front of it),
-    // and the lift in the wing's south wall below. Both ride the veil, so the
-    // trip reads as a passage rather than a cut.
-    const liftDoor = doorHitbox(CH_LIFT.w + 0.2, CH_LIFT.h, CH_LIFT.x, CH_LIFT.h / 2,
-      CH_LIFT.z - 0.16, Math.PI, 'chadrea-lift-to-reception');
-    liftDoor.userData.door = {
-      label: 'ride the lift to reception',
-      onEnter: () => travelTo('foyer'),
-    };
-    scene.add(liftDoor);
+    // One way out: the foyer door in the hall's south wall, built and wired
+    // inside buildChadreaRoom — the visitor arrives standing in front of it.
+    // The lift that used to stand in the wing is gone; that face of the wing
+    // is one clear opening onto the terrace and its pool now.
     return {
       room: { ...room, lights, city },
       def: {
-        targets: [liftDoor, ...room.interactables],
+        targets: [...room.interactables],
         spawn: CH_SPAWN,
         segments: chadreaSegments(),
         ground: chadreaGround,
