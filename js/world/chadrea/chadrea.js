@@ -836,10 +836,12 @@ export function buildChadreaRoom(scene, opts = {}) {
     water.name = 'ch-pool';
     g.add(water);
 
-    // a bench along the west wall, and two planted vessels on the terrace
+    // a bench along the west wall, and one planted vessel at the terrace's
+    // far end — the second, by the pool's north corner, stood in the way of
+    // the walk out of the wing and is gone
     box(0.5, 0.08, 2.4, woodMat(), COURT.x0 + 0.42, 0.44, 15.4);
     for (const bz of [14.4, 16.4]) box(0.06, 0.44, 0.06, steel, COURT.x0 + 0.42, 0.22, bz);
-    for (const [vx, vz, vr] of [[12.15, 12.6, 0.34], [12.15, 20.3, 0.28]]) {
+    for (const [vx, vz, vr] of [[12.15, 20.3, 0.28]]) {
       const pts = [];
       for (let i = 0; i <= 14; i++) {
         const u = i / 14;

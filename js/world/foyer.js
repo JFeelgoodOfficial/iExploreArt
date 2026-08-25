@@ -48,7 +48,7 @@ export function buildFoyerColliders() {
 // opts: { anisotropy, artMaxEdge, onDoor } — onDoor is called when the visitor
 // takes the featured door; main.js points it at travelTo(featured hall).
 export function buildFoyerRoom(scene, mats, opts = {}) {
-  const { anisotropy = 8, artMaxEdge = 0, onDoor } = opts;
+  const { anisotropy = 8, artMaxEdge = 0, onDoor, tier } = opts;
   const g = new THREE.Group();
   g.name = 'foyer';
 
@@ -87,7 +87,7 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
       DOOR_CX, DOOR.h + (FY.h - DOOR.h) / 2, FY.z0 - 0.15);                   // lintel
 
   // --- the open corner: parapet, posts, water, sky, city --------------------
-  const update = buildPoolCorner(g, mats);
+  const update = buildPoolCorner(g, mats, tier);
 
   // --- the doorway reveal ---------------------------------------------------
   // Walnut jambs and head, a shallow dark throat, and a closed pair of doors
@@ -238,7 +238,7 @@ const WATER_Y = -0.12;              // the pool sits a hand below the paving
 const A_SOUTH = 0, A_EAST = Math.PI / 2;
 const dirOf = (A) => [Math.sin(A), Math.cos(A)];
 
-function buildPoolCorner(g, mats) {
+function buildPoolCorner(g, mats, tier) {
   const CXX = (FY.x0 + FY.x1) / 2, CZZ = (FY.z0 + FY.z1) / 2;
   const W = FY.x1 - FY.x0, D = FY.z1 - FY.z0;
 
@@ -250,51 +250,147 @@ function buildPoolCorner(g, mats) {
     return add(m);
   };
 
-  // --- the glass screen: waist high, no posts ------------------------------
-  // A quieter clone of the shared rail glass — at full envMapIntensity the
-  // sheets catch the bright interior HDR and flare into white panels against
-  // the night side. The cap rail is the only solid line in it.
+  // --- the glass screen ----------------------------------------------------
+  // Waist-high, no posts, and it runs the whole way round: across the two
+  // foyer openings, and again along the terrace's outer edge above the pool.
+  // Runs are given as explicit spans rather than centred lengths, so each one
+  // stops exactly where the next begins — the corners meet, they never cross.
   const glass = mats.railGlass.clone();
   glass.envMapIntensity = 0;      // the interior HDR turned it into a grey fog bank
   glass.opacity = 0.05;
   glass.roughness = 0.02;
+  const GT = 0.04, GH = 1.02, CAP = 0.09;
+
   const pane = (w, h, d, mat, x, y, z) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     m.position.set(x, y, z);
     return add(m);
   };
-  pane(0.04, 1.02, D + 0.6, glass, FY.x1 + 0.02, 0.51, CZZ);
-  pane(0.09, 0.04, D + 0.62, mats.woodDark, FY.x1 + 0.02, 1.04, CZZ);
-  pane(W + 0.62, 1.02, 0.04, glass, CXX, 0.51, FY.z1 + 0.02);
-  pane(W + 0.62, 0.04, 0.09, mats.woodDark, CXX, 1.04, FY.z1 + 0.02);
+  // A screen running along x, or along z, spanning a…b, with its cap rail.
+  const screen = (run, at, a, b) => {
+    const len = b - a, mid = (a + b) / 2;
+    if (run === 'x') {
+      pane(len, GH, GT, glass, mid, GH / 2, at);
+      pane(len, 0.04, CAP, mats.woodDark, mid, GH + 0.02, at);
+    } else {
+      pane(GT, GH, len, glass, at, GH / 2, mid);
+      pane(CAP, 0.04, len, mats.woodDark, at, GH + 0.02, mid);
+    }
+  };
+  // The foyer's own two openings: the east run carries through the corner and
+  // the south run butts on its face.
+  const FE = FY.x1 + 0.02, FS = FY.z1 + 0.02;
+  screen('z', FE, FY.z0 - 0.3, FS + GT / 2);
+  screen('x', FS, FY.x0 - 0.31, FE - GT / 2);
+  // …and the terrace edge, along the pool's outer lip. Same rule at the far
+  // corner, so those two meet without passing through each other either.
+  const TE = DECK.x1 - GT / 2, TS = DECK.z1 - GT / 2;
+  screen('z', TE, DECK.z0, TS + GT / 2);
+  screen('x', TS, DECK.x0, TE - GT / 2);
 
-  // --- the paving, and the basin the pool sits in --------------------------
+  // --- the paving ----------------------------------------------------------
   const paving = new THREE.MeshStandardMaterial({
     color: 0x494440, roughness: 0.9, metalness: 0, envMapIntensity: 0.12,
-  });
-  const basinMat = new THREE.MeshStandardMaterial({
-    color: 0x1d2a35, roughness: 0.75, metalness: 0, envMapIntensity: 0.15,
   });
   slab(FY.x1 + 0.3, DECK.z0, POOL_E.x0, POOL_S.z0, paving);        // east patio
   slab(DECK.x0, FY.z1 + 0.3, POOL_E.x0, POOL_S.z0, paving);        // south patio
   slab(DECK.x0, POOL_S.z0, POOL_S.x0, DECK.z1, paving);            // west margin
-  slab(POOL_E.x0, POOL_E.z0, POOL_E.x1, POOL_E.z1, basinMat, WATER_Y - 0.03);
-  slab(POOL_S.x0, POOL_S.z0, POOL_S.x1, POOL_S.z1, basinMat, WATER_Y - 0.03);
 
-  // --- the water -----------------------------------------------------------
-  // Unlit on purpose: a lit material catches the foyer's hemisphere light and
-  // reads as a fog bank, and the shared environment map is a bright interior
-  // HDR. Flat dark dusk-water, with the reflections painted on as lanes.
-  const water = new THREE.MeshBasicMaterial({ color: 0x14293c, fog: false });
-  for (const p of [POOL_E, POOL_S]) {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(p.x1 - p.x0, p.z1 - p.z0), water);
-    m.rotation.x = -Math.PI / 2;
-    m.position.set((p.x0 + p.x1) / 2, WATER_Y, (p.z0 + p.z1) / 2);
-    add(m);
+  // --- the pool ------------------------------------------------------------
+  // One L of water round the building's corner — a single surface, so there is
+  // no seam down it and nothing standing in the middle of it. The basin is
+  // tiled and lit from under the water, the way a roof pool is after dark, and
+  // its two outer sides are the infinity lip.
+  const lShape = () => {
+    const sh = new THREE.Shape();
+    sh.moveTo(POOL_E.x0, POOL_E.z0);
+    sh.lineTo(POOL_E.x1, POOL_E.z0);
+    sh.lineTo(POOL_E.x1, POOL_E.z1);
+    sh.lineTo(POOL_S.x0, POOL_S.z1);
+    sh.lineTo(POOL_S.x0, POOL_S.z0);
+    sh.lineTo(POOL_E.x0, POOL_S.z0);
+    sh.closePath();
+    return sh;
+  };
+  const DEPTH = 1.05;
+  const tile = poolTileTexture();
+  tile.repeat.set(1 / 0.55, 1 / 0.55);          // a 55 cm tile, in world units
+  const tileMat = new THREE.MeshStandardMaterial({
+    map: tile, color: 0xa8ccd6, roughness: 0.5, metalness: 0, envMapIntensity: 0.12,
+  });
+  const floorGeo = new THREE.ShapeGeometry(lShape());
+  floorGeo.rotateX(Math.PI / 2);
+  const basinFloor = new THREE.Mesh(floorGeo, tileMat);
+  basinFloor.position.y = WATER_Y - DEPTH;
+  basinFloor.receiveShadow = true;
+  add(basinFloor);
+  // the basin's sides, one per side of the L. The two outer ones stop at the
+  // waterline: that lip is what the sheet runs over.
+  const WT = 0.16;
+  const wall = (x0, z0, x1, z1, top) => {
+    const h = top - (WATER_Y - DEPTH);
+    pane(Math.max(x1 - x0, WT), h, Math.max(z1 - z0, WT), tileMat,
+         (x0 + x1) / 2, WATER_Y - DEPTH + h / 2, (z0 + z1) / 2);
+  };
+  wall(POOL_E.x0, POOL_E.z0 - WT, POOL_E.x1, POOL_E.z0, 0);           // north end
+  wall(POOL_E.x0 - WT, POOL_E.z0, POOL_E.x0, POOL_S.z0, 0);           // west, long arm
+  wall(POOL_S.x0 - WT, POOL_S.z0, POOL_S.x0, POOL_S.z1, 0);           // west, short arm
+  wall(POOL_S.x0, POOL_S.z0 - WT, POOL_E.x0, POOL_S.z0, 0);           // the L's step
+  wall(POOL_E.x1, POOL_E.z0, POOL_E.x1 + WT, POOL_E.z1, WATER_Y);     // east lip
+  wall(POOL_S.x0, POOL_S.z1, POOL_E.x1, POOL_S.z1 + WT, WATER_Y);     // south lip
+
+  // The coping, a pale stone lip on the sides you can stand at — following the
+  // L's real boundary, never across the water.
+  const coping = new THREE.MeshStandardMaterial({
+    color: 0x6f675e, roughness: 0.82, metalness: 0, envMapIntensity: 0.14,
+  });
+  const CW = 0.3;
+  pane(CW, 0.06, POOL_S.z0 - POOL_E.z0, coping,
+       POOL_E.x0 - CW / 2, -0.03, (POOL_E.z0 + POOL_S.z0) / 2);
+  pane(POOL_E.x0 - POOL_S.x0, 0.06, CW, coping,
+       (POOL_S.x0 + POOL_E.x0) / 2, -0.03, POOL_S.z0 - CW / 2);
+  pane(CW, 0.06, POOL_S.z1 - POOL_S.z0, coping,
+       POOL_S.x0 - CW / 2, -0.03, (POOL_S.z0 + POOL_S.z1) / 2);
+
+  // The water: the same L, one surface. Two ripple normals crossing and
+  // scrolling past each other (the trick the courtyard pool downstairs uses —
+  // still water reads as plastic), over a body deep enough to take its colour
+  // from the tile beneath it.
+  const rA = rippleNormal(256, 11), rB = rippleNormal(256, 29);
+  rA.repeat.set(1 / 2.1, 1 / 2.1);
+  rB.repeat.set(1 / 3.4, 1 / 3.4);
+  const waterGeo = new THREE.ShapeGeometry(lShape(), 12);
+  waterGeo.rotateX(Math.PI / 2);
+  // Deliberately NOT transmissive. The scene's shared environment map is a
+  // bright interior HDR, and a transmissive sheet under it renders as milk
+  // whatever the tint — the courtyard pool downstairs gets away with it
+  // because it stands in daylight. This is dusk water: dark, faintly lit from
+  // under, with the tile just readable through it and two ripple layers on
+  // top, the clearcoat one rough enough not to mirror the room.
+  const waterMat = new THREE.MeshPhysicalMaterial({
+    color: 0x0e3c4f, roughness: 0.17, metalness: 0,
+    transmission: 0, transparent: true, opacity: 0.8,
+    clearcoat: 0.55, clearcoatRoughness: 0.28,
+    clearcoatNormalMap: rB, clearcoatNormalScale: new THREE.Vector2(0.35, 0.35),
+    normalMap: rA, normalScale: new THREE.Vector2(0.4, 0.4),
+    emissive: new THREE.Color(0x0b3d4e), emissiveIntensity: 0.5,
+    envMapIntensity: 0.22, side: THREE.DoubleSide, fog: false,
+  });
+  const waterMesh = new THREE.Mesh(waterGeo, waterMat);
+  waterMesh.position.y = WATER_Y;
+  waterMesh.name = 'foyer-pool';
+  add(waterMesh);
+
+  // Underwater light — two lamps down the long arm, one in the short, so the
+  // pool is the brightest thing on the terrace once the sun is down.
+  for (const [lx, lz] of [[POOL_E.x0 + 2.3, 2.0], [POOL_E.x0 + 2.3, 9.6],
+                          [POOL_S.x0 + 3.2, POOL_S.z0 + 2.1]]) {
+    const l = new THREE.PointLight(0x5fc6dc, 2.6, 7, 2);
+    l.position.set(lx, WATER_Y - 0.55, lz);
+    g.add(l);
   }
 
-  // The reflections. `yaw` turns the lane in the water plane; the glint runs
-  // bright toward the light it answers, so yaw points it at the sun or moon.
+  // the sun's own reflection, laid on the water toward it
   const lane = (len, wide, x, z, color, opacity, yaw) => {
     const m = new THREE.Mesh(
       new THREE.PlaneGeometry(len, wide),
@@ -304,28 +400,10 @@ function buildPoolCorner(g, mats) {
       })
     );
     m.rotation.set(-Math.PI / 2, yaw, 0, 'YXZ');
-    m.position.set(x, WATER_Y + 0.004, z);
+    m.position.set(x, WATER_Y + 0.006, z);
     return add(m);
   };
-  const poolEcx = (POOL_E.x0 + POOL_E.x1) / 2;
-  lane(POOL_E.x1 - POOL_E.x0, 9.0, poolEcx, CZZ + 1.0, 0x8f3550, 0.4, 0);      // sunset wash
-  lane(POOL_E.x1 - POOL_E.x0, 1.5, poolEcx, CZZ, 0xffb877, 0.62, 0);           // the sun's own
-  lane(POOL_S.z1 - POOL_S.z0, 1.1, CXX - 0.6, (POOL_S.z0 + POOL_S.z1) / 2,
-       0x93a8dc, 0.2, -Math.PI / 2);                                           // the moon's
-
-  const coping = new THREE.MeshStandardMaterial({
-    color: 0x6f675e, roughness: 0.82, metalness: 0, envMapIntensity: 0.14,
-  });
-  pane(0.26, 0.06, POOL_E.z1 - POOL_E.z0, coping,
-       POOL_E.x0 + 0.13, -0.03, (POOL_E.z0 + POOL_E.z1) / 2);
-  pane(POOL_S.x1 - POOL_S.x0, 0.06, 0.26, coping,
-       (POOL_S.x0 + POOL_S.x1) / 2, -0.03, POOL_S.z0 + 0.13);
-
-  // the weir: a thin bright line right at each infinity edge, where the sheet
-  // goes over and the water reads as running out into nothing
-  const weir = new THREE.MeshBasicMaterial({ color: 0x9fc0d8, fog: false, transparent: true, opacity: 0.5 });
-  pane(0.05, 0.05, POOL_E.z1 - POOL_E.z0, weir, POOL_E.x1 - 0.03, WATER_Y + 0.01, (POOL_E.z0 + POOL_E.z1) / 2);
-  pane(POOL_S.x1 - POOL_S.x0, 0.05, 0.05, weir, (POOL_S.x0 + POOL_S.x1) / 2, WATER_Y + 0.01, POOL_S.z1 - 0.03);
+  lane(POOL_E.x1 - POOL_E.x0, 1.5, (POOL_E.x0 + POOL_E.x1) / 2, CZZ, 0xffc98d, 0.28, 0);
 
   // --- the sky: a whole sphere, so it never runs out -----------------------
   const SKY_R = 420;
@@ -449,6 +527,9 @@ function buildPoolCorner(g, mats) {
 
   return function update(t) {
     starUniforms.uTime.value = t;
+    // the two ripple sheets crossing, each drifting at its own rate
+    rA.offset.set(t * 0.013, t * 0.009);
+    rB.offset.set(-t * 0.008, t * 0.015);
   };
 }
 
@@ -522,8 +603,8 @@ function skyTexture() {
   const PPD = W / 360;                                // pixels per degree, both axes
   const sunX = uOfA(A_EAST) * W, sunY = H / 2 - 3.1 * PPD;
   let grad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 46 * PPD);
-  grad.addColorStop(0, 'rgba(255,206,132,0.75)');
-  grad.addColorStop(0.3, 'rgba(255,140,70,0.3)');
+  grad.addColorStop(0, 'rgba(255,206,132,0.6)');
+  grad.addColorStop(0.3, 'rgba(255,140,70,0.24)');
   grad.addColorStop(1, 'rgba(255,110,60,0)');
   ctx.fillStyle = grad;
   ctx.fillRect(sunX - 46 * PPD, sunY - 46 * PPD, 92 * PPD, 92 * PPD);
@@ -533,11 +614,6 @@ function skyTexture() {
   grad.addColorStop(1, 'rgba(255,190,110,0)');
   ctx.fillStyle = grad;
   ctx.beginPath(); ctx.arc(sunX, sunY, 3.4 * PPD, 0, Math.PI * 2); ctx.fill();
-  // flat cloud bars catching it from underneath
-  ctx.fillStyle = 'rgba(255,168,110,0.26)';
-  for (const [dx, dy, w, h] of [[-34, -13, 46, 1.5], [-9, -20, 34, 1.2], [16, -9, 40, 1.7]]) {
-    ctx.fillRect(sunX + dx * PPD, sunY + dy * PPD, w * PPD, h * PPD);
-  }
 
   // ── the moon, high over the night side ──────────────────────────────────
   const moonX = uOfA(-0.5) * W, moonY = H / 2 - 34 * PPD;
@@ -552,8 +628,165 @@ function skyTexture() {
   ctx.beginPath(); ctx.arc(moonX - 0.45 * PPD, moonY - 0.35 * PPD, 0.4 * PPD, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(moonX + 0.55 * PPD, moonY + 0.45 * PPD, 0.28 * PPD, 0, Math.PI * 2); ctx.fill();
 
+  // ── the cloud deck, drawn over both the sun and the moon ────────────────
+  paintClouds(ctx, W, H);
+
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// A flat deck of cloud at a fixed altitude, drawn in perspective rather than
+// as a pattern smeared across the sky. For a pixel looking out at elevation e,
+// the deck is met at horizontal distance h/tan(e) — so the cloud shapes pile
+// up and compress toward the horizon on their own, which is the thing that
+// makes a cloud layer read as real. Sampling a circle on that plane closes
+// seamlessly all the way round the compass, so nothing has to tile.
+//
+// Shape is fractal noise, domain-warped once to kill the grid in it. Light is
+// a second sample taken a step toward the sun: where the deck thins in that
+// direction the light gets through, which gives the tops their rim and leaves
+// the undersides heavy.
+function paintClouds(ctx, W, H) {
+  const cw = 1024, ch = 512;                    // drawn here, scaled up after
+  const off = document.createElement('canvas');
+  off.width = cw; off.height = ch;
+  const octx = off.getContext('2d');
+  const img = octx.createImageData(cw, ch);
+
+  const hash = (x, y) => {
+    const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return n - Math.floor(n);
+  };
+  const vnoise = (x, y) => {
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const a = hash(xi, yi), b = hash(xi + 1, yi);
+    const c2 = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
+    return a * (1 - u) * (1 - v) + b * u * (1 - v) + c2 * (1 - u) * v + d * u * v;
+  };
+  const fbm = (x, y) => {
+    let sum = 0, amp = 0.5, f = 1;
+    for (let i = 0; i < 5; i++) { sum += amp * vnoise(x * f, y * f); amp *= 0.5; f *= 2; }
+    return sum;
+  };
+  const density = (x, y) => {
+    const wx = fbm(x * 0.6 + 5.2, y * 0.6 + 1.3);
+    const wy = fbm(x * 0.6 + 9.2, y * 0.6 + 7.7);
+    return fbm(x + 2.1 * wx, y + 2.1 * wy);
+  };
+
+  const ALT = 1400;                 // deck altitude, metres above the terrace
+  const SCALE = 1 / 2600;           // noise units per metre
+  const COVER = 0.46;               // lower = more sky
+  const smooth = (t) => t * t * (3 - 2 * t);
+  const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t);
+  // the sun's direction on the deck, for the light sample
+  const [sunDx, sunDz] = dirOf(A_EAST);
+
+  for (let py = 0; py < ch; py++) {
+    const e = (0.5 - py / (ch - 1)) * Math.PI;          // elevation, + is up
+    if (e <= 0.012) continue;                           // below the deck's reach
+    const d = ALT / Math.tan(e);
+    if (d > 90000) continue;
+    // Distance haze: far cloud loses contrast into the horizon's own glow.
+    const near = Math.exp(-d / 26000);
+    for (let px = 0; px < cw; px++) {
+      const A = ((px / (cw - 1)) - 0.25) * Math.PI * 2;
+      const [ax, az] = dirOf(A);
+      const cx = ax * d * SCALE, cz = az * d * SCALE;
+      const n = density(cx, cz);
+      let a = smooth(clamp01((n - COVER) / 0.2));
+      if (a <= 0.004) continue;
+      a *= 0.35 + 0.65 * near;
+      // thinner at the very top of the sky, where the deck runs out overhead
+      a *= 1 - smooth(clamp01((e - 1.15) / 0.42));
+      // light: is the deck thinner a step toward the sun?
+      const L = 0.06;
+      const nl = density(cx + sunDx * L, cz + sunDz * L);
+      const lit = smooth(clamp01((n - nl) * 3.4 + 0.45));
+      // how much of the sunset's own warmth reaches this bearing at all
+      const dA = Math.abs(Math.atan2(Math.sin(A - A_EAST), Math.cos(A - A_EAST)));
+      const warm = 1 - smooth(clamp01(dA / 1.5));
+      // shadowed body → lit top, then tinted by how near the sun it is
+      const base = [26 + 34 * lit, 22 + 30 * lit, 34 + 38 * lit];
+      const glow = [96 + 159 * lit, 48 + 140 * lit, 52 + 92 * lit];
+      const k = warm * (0.35 + 0.65 * near);
+      const i = (py * cw + px) * 4;
+      img.data[i] = base[0] + (glow[0] - base[0]) * k;
+      img.data[i + 1] = base[1] + (glow[1] - base[1]) * k;
+      img.data[i + 2] = base[2] + (glow[2] - base[2]) * k;
+      img.data[i + 3] = a * 255;
+    }
+  }
+  octx.putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(off, 0, 0, W, H);
+}
+
+// Pale glass mosaic for the pool's basin: a tile grid with grout, each tile
+// nudged a shade off its neighbours so the floor reads through moving water.
+function poolTileTexture() {
+  const S = 256, N = 4;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#20596b';
+  ctx.fillRect(0, 0, S, S);
+  const t = S / N;
+  let seed = 4211;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const k = 0.86 + rnd() * 0.24;
+      ctx.fillStyle = `rgb(${Math.round(48 * k)},${Math.round(112 * k)},${Math.round(132 * k)})`;
+      ctx.fillRect(x * t + 1.5, y * t + 1.5, t - 3, t - 3);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+// A tileable ripple normal map — a few crossed swells summed into a height
+// field and differenced. Two of these, scrolled past each other by update(),
+// are what stop still water reading as a sheet of plastic.
+function rippleNormal(size = 256, seed = 11) {
+  let st = seed >>> 0;
+  const rand = () => { st = (st * 1664525 + 1013904223) >>> 0; return st / 4294967296; };
+  const waves = [];
+  for (let i = 0; i < 5; i++) {
+    const a = rand() * Math.PI * 2;
+    const k = (1 + Math.floor(rand() * 4)) * Math.PI * 2 / size;
+    waves.push({
+      kx: Math.cos(a) * k * (1 + Math.floor(rand() * 3)),
+      kz: Math.sin(a) * k * (1 + Math.floor(rand() * 3)),
+      amp: 0.6 / (i + 1), ph: rand() * 6.28,
+    });
+  }
+  const h = (x, y) => waves.reduce((sm, w) => sm + w.amp * Math.sin(w.kx * x + w.kz * y + w.ph), 0);
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const nx = -(h(x + 1, y) - h(x - 1, y)) * 0.9;
+      const ny = -(h(x, y + 1) - h(x, y - 1)) * 0.9;
+      const len = Math.hypot(nx, ny, 1);
+      const i = (y * size + x) * 4;
+      img.data[i] = ((nx / len) * 0.5 + 0.5) * 255;
+      img.data[i + 1] = ((ny / len) * 0.5 + 0.5) * 255;
+      img.data[i + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+      img.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
 

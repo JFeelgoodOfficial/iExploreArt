@@ -608,7 +608,7 @@ rooms.define('courtyard', {
 // that rides the veil into the featured hall (data/featured.js).
 const { value: fy, layer: foyerLayer } = rooms.captureLayer(() => {
   const room = buildFoyerRoom(scene, materials, {
-    ...artOpts,
+    tier, ...artOpts,
     onDoor: () => travelTo(FEATURED.residencyId),
   });
   curator = new Curator(scene, materials, ui, player, {
