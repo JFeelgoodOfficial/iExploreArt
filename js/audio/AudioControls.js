@@ -62,6 +62,11 @@ export function buildAudioControls({ music, fountain, camera }) {
     music: readStored(LS_MUSIC),   // true = muted
     sound: readStored(LS_SOUND),
   };
+  // Scene-driven silence, separate from the visitor's own mute: the music
+  // belongs to the foyer, so main.js suppresses it in every other room. The
+  // mute buttons keep their own state underneath — walking back into the
+  // foyer restores whatever the visitor chose.
+  let suppressMusic = false;
 
   // ── the buttons ──────────────────────────────────────────────────────────
   // Every [data-audio] button in the page drives the same toggle: the frosted
@@ -78,7 +83,7 @@ export function buildAudioControls({ music, fountain, camera }) {
 
   function apply(kind) {
     const muted = state[kind];
-    if (kind === 'music' && music) music.setVolume(muted ? 0 : onVol.music);
+    if (kind === 'music' && music) music.setVolume(muted || suppressMusic ? 0 : onVol.music);
     if (kind === 'sound' && fountain) fountain.setVolume(muted ? 0 : onVol.sound);
     for (const btn of btns[kind]) {
       btn.classList.toggle('muted', muted);
@@ -138,7 +143,12 @@ export function buildAudioControls({ music, fountain, camera }) {
 
   function reveal() { if (wrap) wrap.hidden = false; }
 
-  return { unlock, reveal, toggle, isMuted: (k) => !!state[k] };
+  function setMusicSuppressed(on) {
+    suppressMusic = !!on;
+    apply('music');
+  }
+
+  return { unlock, reveal, toggle, setMusicSuppressed, isMuted: (k) => !!state[k] };
 }
 
 function readStored(key) {
