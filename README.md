@@ -84,9 +84,10 @@ there answers an **E** press. To hang real pieces it needs a
 does it; the hang loop in `brutalism/brutalist.js` is the pattern to copy.
 
 Maria Decetise holds **Decetise Hall** on floor 5 (`js/world/decetise.js`) —
-one whole floor plate of a high rise, glazed the length of its north and east
-sides, sliding open on the west onto a terrace where an infinity pool runs off
-the edge of the building. The lift core stands in the middle of the plate rather
+one whole floor plate of a high rise, glazed the length of its north, east and
+west sides — the west wall looks out over an infinity pool that fills the
+terrace edge to edge and spills off the lip of the slab, five storeys up. The
+terrace is scenery: there is no door onto it and nothing to stand on out there. The lift core stands in the middle of the plate rather
 than against a wall, and it stands in a French parterre: gravel, a balustraded
 stone kerb, clipped hedges, a basin, park chairs, and five plane trees growing
 up through oculi cut in the ceiling. Its eleven works hang from `DECETISE_HANG`,
