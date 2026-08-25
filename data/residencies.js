@@ -89,12 +89,13 @@ export const RESIDENCIES = [
     floor: 5,
     artist: 'Maria Decetise',
     blurb: 'one whole floor plate five storeys up — two walls of glass over the city, '
-      + 'a terrace to the west where an infinity pool runs off the edge of the plate, '
-      + 'and the lift standing in the middle of a French parterre, gravel and clipped '
-      + 'hedges and green park chairs, with five plane trees growing up through oculi '
-      + 'cut in the ceiling; eleven works hang there — six on the art wall, one on each '
-      + 'of the two freestanding partitions, and three on the faces of the lift core '
-      + 'itself, which are the first pictures you see as the doors open',
+      + 'and on the third no wall at all: the room opens straight onto an infinity pool '
+      + 'that fills the terrace and runs off the edge of the building. The lift stands '
+      + 'in the middle of a French parterre, gravel and clipped hedges and green park '
+      + 'chairs, with five plane trees growing up through oculi cut in the ceiling and '
+      + 'four more out at the ends of the water; nine works hang there — six on the art '
+      + 'wall, and three on the faces of the lift core itself, which are the first '
+      + 'pictures you see as the doors open',
   },
   {
     id: 'brutalist',
