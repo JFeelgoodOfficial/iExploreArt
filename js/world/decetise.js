@@ -66,8 +66,18 @@ export const SPAWN = { x: 0, z: 0.4, yaw: 0 };
 export const SUN_POS = new THREE.Vector3(-96, 88, 34);
 
 const TREES = [[-6, -6], [6, -6], [-6, 6], [6, 6], [0, -7.2]];
-// Out on the terrace, two at each end of the water, clear of the coping.
-const ALLEE = [[-22.2, -9.8], [-19.4, -9.8], [-22.2, 9.8], [-19.4, 9.8]];
+// Out on the terrace, one at each end of the water. There were four — a pair at
+// each end — and all four grew into the building: the roof's soffit overhangs
+// the terrace as far as x = -19.4, and a crown of this kind is five metres
+// across, so the inner pair pushed three to five metres INTO the room and even
+// the outer pair grazed the overhang by about a metre. The inner pair is gone.
+// The two left stand as far west as the deck allows and carry a capped crown
+// (`crownR` below), which is what actually keeps them out of the roof — no tree
+// this size can stand on a seven-metre terrace and clear a 2.4 m overhang by
+// position alone. Measured after the change: the crowns reach x = -19.70 and
+// -19.88, and the soffit begins at -19.4 — 30 to 48 cm of daylight between the
+// foliage and the building, and nothing of either tree inside the room.
+const ALLEE = [[-22.8, -9.8], [-22.8, 9.8]];
 const LAMPS = [[-7.4, -7.4], [7.4, -7.4], [-7.4, 7.4], [7.4, 7.4]];
 
 // There are no freestanding partitions. The plate had two standing off the
@@ -863,7 +873,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
   function plantTree(tx, tz, o = {}) {
     const {
       trunkH = 3.3, rTop = 0.24, rBot = 0.4, limbLen = 1.9, limbRad = 0.2,
-      scale = 1, grate = true, clearY = null,
+      scale = 1, grate = true, clearY = null, crownR = null,
     } = o;
     const g = new THREE.Group();
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, trunkH, 16, 3), barkMat);
@@ -926,6 +936,13 @@ export function buildDecetiseRoom(scene, opts = {}) {
         let y = a.y + (rand() - 0.5) * 0.7 - out * 0.25;
         if (clearY !== null) y = Math.max((clearY - trunkH) + sc * 0.6, y);
         pv.set(a.x + (rand() - 0.5) * 1.0, y, a.z + (rand() - 0.5) * 1.0);
+        // A hard horizontal limit on the crown, for a tree standing under
+        // something. Cards past it are pulled back in rather than dropped, so
+        // the canopy stays full and simply stops where the building begins.
+        if (crownR) {
+          const r = Math.hypot(pv.x, pv.z);
+          if (r > crownR) { pv.x *= crownR / r; pv.z *= crownR / r; }
+        }
         // Cards lean outward and droop; a canopy of upright rectangles is the
         // tell that gives a billboard tree away from underneath.
         e.set((rand() - 0.5) * 0.5 - out * 0.3, rand() * Math.PI * 2, (rand() - 0.5) * 0.6);
@@ -950,11 +967,14 @@ export function buildDecetiseRoom(scene, opts = {}) {
     trees.push({ crown, phase: rand() * 6.28 });
   }
 
-  // the five up through the ceiling, and the four out on the terrace
+  // The five up through the ceiling, and the two left on the terrace. The
+  // terrace pair is smaller and its crown is capped: it stands under the roof's
+  // overhang, so past `crownR` it would be growing into the soffit.
   for (const [tx, tz] of TREES) plantTree(tx, tz, { clearY: DX.ceil });
   for (const [tx, tz] of ALLEE) {
     plantTree(tx, tz, {
-      trunkH: 2.5, rTop: 0.17, rBot: 0.28, limbLen: 1.5, limbRad: 0.15, scale: 0.8,
+      trunkH: 2.2, rTop: 0.15, rBot: 0.25, limbLen: 0.8, limbRad: 0.12,
+      scale: 0.5, crownR: 1.5,
     });
   }
 
