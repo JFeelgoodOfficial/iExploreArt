@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CURATOR_POS } from '../world/layout.js';
 import { DIALOGUE } from '../../data/dialogue.js';
 import { LISTED_RESIDENCIES, findResidency } from '../../data/residencies.js';
+import { FEATURED } from '../../data/featured.js';
 import { queueUpload } from '../utils/texqueue.js';
 
 // Mira, the curator: a photographic billboard behind the reception desk that
@@ -27,14 +28,18 @@ export class Curator {
     this.player = player;
     ui.curator = this;
     const { manager, renderer, tier } = opts;
+    // Where she stands. She kept her desk when the reception moved out to the
+    // foyer, so the foyer passes its own spot; the old post behind the hall
+    // desk stays the default.
+    const pos = opts.pos || CURATOR_POS;
     const aniso = renderer
       ? Math.min(tier?.anisotropy ?? 8, renderer.capabilities.getMaxAnisotropy())
       : (tier?.anisotropy ?? 8);
 
     const g = new THREE.Group();
     g.name = 'curator';
-    g.position.set(CURATOR_POS.x, 0, CURATOR_POS.z);
-    g.rotation.y = CURATOR_POS.facing;
+    g.position.set(pos.x, 0, pos.z);
+    g.rotation.y = pos.facing;
 
     const skin = new THREE.MeshStandardMaterial({ color: 0xc9a284, roughness: 0.75 });
     const coat = new THREE.MeshStandardMaterial({ color: 0x2f6f73, roughness: 0.85 });
@@ -85,7 +90,7 @@ export class Curator {
 
     scene.add(g);
     this.group = g;
-    this._baseYaw = CURATOR_POS.facing;
+    this._baseYaw = pos.facing;
     this._lookWeight = 0;
     this.billboard = null;
 
@@ -201,7 +206,7 @@ export class Curator {
         }));
         choices.push({ label: 'Back.', next: 'start' });
         this.ui.showDialogueNode(
-          'Here is what the lift serves. Ask me about any of them:',
+          'Here is everything iExploreArt holds. Ask me about any of them:',
           choices,
           (c) => this._choose(c)
         );
@@ -210,12 +215,16 @@ export class Curator {
       if (a.type === 'residency') {
         const r = findResidency(a.id);
         if (r) {
+          // One show opens onto the foyer at a time (data/featured.js). The
+          // featured hall gets the door beside the desk; the others she can
+          // describe but not walk anyone into — each hall's own share link is
+          // the way straight in.
           const where = `the ${ordinal(r.floor)} floor`;
           const text = r.closed
-            ? `${r.name} is closed to visitors just now — the lift won't stop on ${where} while it is. When it reopens: ${r.blurb}.`
-            : r.artist
-              ? `${r.artist} works in ${r.name}, up on ${where} — ${r.blurb}. Take the lift just there, behind me, and press ${r.floor}.`
-              : `${r.name} is up on ${where} — ${r.blurb}. Take the lift just there, behind me, and press ${r.floor}.`;
+            ? `${r.name} is closed to visitors just now. When it reopens: ${r.blurb}.`
+            : r.id === FEATURED.residencyId
+              ? `${r.artist ? r.artist + '’s show is what we have open — ' : ''}${r.blurb}. The door just there, beside my desk, takes you straight into ${r.name}.`
+              : `${r.artist ? `${r.artist} works in ${r.name}` : r.name}, up on ${where} — ${r.blurb}. We open one show onto the foyer at a time, so it isn’t walkable from here just now; the artist’s own link opens it directly.`;
           this.ui.showDialogueNode(text, this._afterResidency(r), (c) => this._choose(c));
         }
         return;

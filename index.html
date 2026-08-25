@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>iExploreArt | A Gallery by JFeelgood</title>
-  <meta name="description" content="Walk through the iExploreArt gallery — original works by JFeelgood in an immersive first-person space. Speak with the curator and ride the lift up to the artist residencies." />
+  <title>iExploreArt | Virtual Galleries for Contemporary Art</title>
+  <meta name="description" content="Walk through iExploreArt's virtual galleries — immersive first-person halls built for contemporary artists. Speak with the curator and step through the door into the current show." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -27,7 +27,7 @@
     <div class="loading-inner">
       <div class="brand-mark">iE</div>
       <h1>iExploreArt</h1>
-      <p class="tagline">A gallery by JFeelgood</p>
+      <p class="tagline">Virtual galleries for contemporary art</p>
       <div class="progress"><div id="progress-bar"></div></div>
       <button id="enter-btn" class="btn primary" disabled>Preparing the gallery&hellip;</button>
       <p class="hint" id="controls-hint">
@@ -43,10 +43,12 @@
     <div id="prompt" hidden></div>
   </div>
 
-  <!-- Audio controls: separate music + sound mute toggles (M / N on desktop) -->
+  <!-- Audio controls: separate music + sound mute toggles (M / N on desktop).
+       The same toggles are repeated inside the pause panel, because pointer
+       lock makes these corner buttons unreachable by mouse while walking. -->
   <div id="audio-controls" hidden>
-    <button id="btn-music" class="audio-btn" type="button" aria-label="Mute music" aria-pressed="false" title="Music (M)"></button>
-    <button id="btn-sound" class="audio-btn" type="button" aria-label="Mute sound" aria-pressed="false" title="Sound (N)"></button>
+    <button id="btn-music" class="audio-btn" data-audio="music" type="button" aria-label="Mute music" aria-pressed="false" title="Music (M)"></button>
+    <button id="btn-sound" class="audio-btn" data-audio="sound" type="button" aria-label="Mute sound" aria-pressed="false" title="Sound (N)"></button>
   </div>
 
   <!-- Touch joystick -->
@@ -56,11 +58,16 @@
   <div id="pause" class="overlay panel-overlay" hidden>
     <div class="panel">
       <h2>Paused</h2>
-      <p class="muted">You are inside the iExploreArt gallery.</p>
+      <p class="muted">You are inside the iExploreArt galleries.</p>
       <div class="pause-controls">
         <p><b>W A S D</b> / arrows — walk &nbsp;·&nbsp; <b>mouse</b> — look around</p>
         <p><b>E</b> — view a painting / talk to the curator &nbsp;·&nbsp; <b>Shift</b> — walk faster</p>
-        <p>Find the stairs by the east wall for the upper floor, and the lift beside the front desk for the artist residencies. The curator can tell you about every piece.</p>
+        <p>The door beside the reception desk opens into the current show. Mira, at the desk, can tell you about every artist and hall.</p>
+        <p><b>M</b> — music &nbsp;·&nbsp; <b>N</b> — sound &nbsp;·&nbsp; or the buttons below</p>
+      </div>
+      <div class="pause-audio">
+        <button class="audio-btn" data-audio="music" type="button" aria-label="Mute music" aria-pressed="false" title="Music (M)"></button>
+        <button class="audio-btn" data-audio="sound" type="button" aria-label="Mute sound" aria-pressed="false" title="Sound (N)"></button>
       </div>
       <button id="resume-btn" class="btn primary">Return to the gallery</button>
     </div>

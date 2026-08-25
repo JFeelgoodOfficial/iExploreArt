@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { PLAYER } from './config.js';
-import { SPAWN } from './world/layout.js';
+// The player wakes in the foyer, so the pre-entry camera and the collision
+// seed have to use its spawn — the hall's own SPAWN (world/layout.js) would
+// put frame one outside the foyer's colliders.
+import { SPAWN } from './world/foyer.js';
 import { resolveMovement, sampleGround } from './world/Collision.js';
 
 // First-person rig. Movement intent comes from a controls module as

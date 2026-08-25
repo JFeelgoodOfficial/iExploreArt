@@ -37,6 +37,9 @@ import { createRoomManager } from './RoomManager.js';
 import { groundHeight as galleryGround, buildColliders as buildGalleryColliders } from './world/layout.js';
 import { buildWallFountain } from './world/WallFountain.js';
 import { buildDetails } from './world/Details.js';
+import { buildFoyerRoom, foyerGround, FY_CURATOR } from './world/foyer.js';
+import { FEATURED } from '../data/featured.js';
+import { LISTED_RESIDENCIES, findResidency } from '../data/residencies.js';
 import { buildLedEqualizer } from './world/led-equalizer.js';
 import { buildMusic } from './audio/Music.js';
 import { buildAudioControls } from './audio/AudioControls.js';
@@ -95,8 +98,11 @@ const fountain = buildWallFountain(scene, camera, materials, tier, { volume: 0.7
 const music = buildMusic(camera);
 const details = buildDetails(scene, materials, tier);
 const equalizer = buildLedEqualizer(scene, materials, { sound: music.sound });
-const curator = new Curator(scene, materials, ui, player, { manager: assets.manager, renderer, tier });
-interaction.register(curator.interactables);
+// Mira moved out to the foyer with the reception desk — she is constructed
+// inside the foyer's captureLayer below, so she hides with that room. The
+// frame loop only runs after this module finishes, so the late assignment is
+// safe.
+let curator;
 // Music + ambient-sound mute toggles, plus the mobile Web Audio unlock.
 const audio = buildAudioControls({ music, fountain, camera });
 
@@ -114,16 +120,17 @@ function doorHitbox(w, h, x, y, z, rotY, name) {
   return m;
 }
 
-// The reception lift: the door beside the curator is now an elevator, and the
-// only way to an artist residency. Built before the gallery snapshot so the
-// cabin belongs to the gallery layer.
+// The reception lift, in the hall's west wall. Retired from visitor use since
+// the reception (and the way in) moved out to the foyer, but left fully wired:
+// if Hall of JFeelgood reopens, the cabin still rides. Built before the
+// gallery snapshot so it belongs to the gallery layer.
 const lift = buildReceptionLift(scene, materials);
 // The floor buttons first: aiming at one rides straight to that floor, and the
 // plate behind them is the fallback that opens the picker list.
 interaction.register([...lift.buttons, lift.panel]);
 
 // Snapshot everything currently in the scene as the gallery "layer", and the
-// current interaction targets (artworks + curator + the lift panel).
+// current interaction targets (artworks + the lift panel).
 const galleryChildren = new Set(scene.children);
 const galleryTargets = interaction.targets.slice();
 
@@ -169,7 +176,7 @@ function arcSegments(cx, cz, r, a0, a1, steps = 10, level = 'all') {
 // the visitor arrived. Hub and spoke — you ride up, you walk back.
 function returnDoor(x, y, z, rotY) {
   const hit = doorHitbox(2.0, 2.3, x, y, z, rotY, 'door-to-reception');
-  hit.userData.door = { label: 'return to reception', onEnter: () => rooms.enter('gallery') };
+  hit.userData.door = { label: 'return to reception', onEnter: () => { rooms.enter('foyer'); reflectHash('foyer'); } };
   scene.add(hit);
   return hit;
 }
@@ -251,7 +258,7 @@ const ROOM_FACTORIES = {
     // the lift set into the stair hall's west wall rides back to reception
     // (entering 'gallery' spawns you inside the reception cabin, doors open)
     const liftDoor = doorHitbox(1.6, 2.3, -4.1, 1.25, 8.5, Math.PI / 2, 'nouveau-lift-to-reception');
-    liftDoor.userData.door = { label: 'ride the lift to reception', onEnter: () => travelTo('gallery') };
+    liftDoor.userData.door = { label: 'ride the lift to reception', onEnter: () => travelTo('foyer') };
     scene.add(liftDoor);
     return {
       room,
@@ -434,7 +441,7 @@ const ROOM_FACTORIES = {
       CH_LIFT.z - 0.16, Math.PI, 'chadrea-lift-to-reception');
     liftDoor.userData.door = {
       label: 'ride the lift to reception',
-      onEnter: () => travelTo('gallery'),
+      onEnter: () => travelTo('foyer'),
     };
     scene.add(liftDoor);
     return {
@@ -484,7 +491,7 @@ const ROOM_FACTORIES = {
       Math.PI, 'decetise-lift-to-reception');
     liftDoor.userData.door = {
       label: 'ride the lift to reception',
-      onEnter: () => travelTo('gallery'),
+      onEnter: () => travelTo('foyer'),
     };
     scene.add(liftDoor);
     return {
@@ -522,6 +529,7 @@ async function travelTo(id) {
     await new Promise((r) => setTimeout(r, 600));  // #veil's CSS fade is 0.5 s
     await ensureRoom(id);
     rooms.enter(id);
+    reflectHash(id);
     if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
   } catch (e) {
     console.error('[travel] failed', e);
@@ -531,7 +539,43 @@ async function travelTo(id) {
   }
 }
 
+// --- share links ------------------------------------------------------------
+// Every open hall has a slug (data/residencies.js), and visiting the page as
+// #that-slug walks straight into the hall once the visitor clicks Enter — the
+// link an artist hands out for their own show, whether or not it is the one
+// the foyer door opens onto. Unknown, closed, or unbuildable targets fall
+// through to the foyer. Raw room ids are accepted too.
+function roomFromHash() {
+  const h = decodeURIComponent(location.hash.replace(/^#/, '')).trim().toLowerCase();
+  if (!h) return null;
+  const r = LISTED_RESIDENCIES.find((x) => x.slug === h || x.id === h);
+  if (!r || r.closed) return null;
+  if (!rooms.has(r.id) && !ROOM_FACTORIES[r.id]) return null;
+  return r.id;
+}
+
+// Keep the address bar honest: arriving in a hall writes its slug, returning
+// to the foyer clears it. replaceState doesn't fire hashchange, so this never
+// echoes back into the listener below.
+function reflectHash(id) {
+  const r = findResidency(id);
+  const url = r && !r.closed
+    ? `#${r.slug || r.id}`
+    : location.pathname + location.search;
+  history.replaceState(null, '', url);
+}
+
+// A hash pasted or edited mid-visit travels there (or back to the foyer).
+window.addEventListener('hashchange', () => {
+  const dest = roomFromHash() || 'foyer';
+  if (dest !== rooms.current) travelTo(dest);
+});
+
 // --- register every room --------------------------------------------------
+// The old reception hall — Hall of JFeelgood now (data/residencies.js), closed
+// to visitors since the reception moved out to the foyer. Everything stays
+// built and defined so reopening it is a data change: delete the residency's
+// `closed` flag and give visitors a way in (the lift below still works).
 rooms.define('gallery', {
   layer: [...galleryChildren],
   targets: galleryTargets,
@@ -555,9 +599,33 @@ rooms.define('courtyard', {
   bake: () => cy.lights.bake(),
 });
 
-// Collision.js seeds its active room at module load, so the gallery's real
-// segments + the cabin ground override only go live once this runs.
-rooms.start('gallery');
+// --- the foyer: where every visit begins ------------------------------------
+// A small reception lobby on its own coordinate patch (js/world/foyer.js): the
+// desk, Mira, the featured show's signage and one of its works, and the door
+// that rides the veil into the featured hall (data/featured.js).
+const { value: fy, layer: foyerLayer } = rooms.captureLayer(() => {
+  const room = buildFoyerRoom(scene, materials, {
+    ...artOpts,
+    onDoor: () => travelTo(FEATURED.residencyId),
+  });
+  curator = new Curator(scene, materials, ui, player, {
+    manager: assets.manager, renderer, tier, pos: FY_CURATOR,
+  });
+  return room;
+});
+rooms.define('foyer', {
+  layer: foyerLayer,
+  targets: [fy.door, ...fy.interactables, ...curator.interactables],
+  spawn: fy.spawn,
+  segments: fy.colliders,
+  ground: foyerGround,
+  background: new THREE.Color(0x2b241d),
+  bake: () => { renderer.shadowMap.needsUpdate = true; },
+});
+
+// Collision.js seeds its active room at module load, so the start room's real
+// segments + ground only go live once this runs.
+rooms.start('foyer');
 
 // Reception lift: press E inside the cabin → pick a residency → it rides up and
 // arrives behind the veil.
@@ -583,14 +651,13 @@ lift.panel.userData.lift = {
 };
 
 // The courtyard's own lift serves that room's three floors, plus a starred
-// button that rides the veil back to the reception hall (you step out of the
-// reception cabin, right by the desk).
+// button that rides the veil back to the reception foyer.
 const cyLift = courtyardRoom.lift;
 cyLift.panel.userData.lift = {
   open: () => ui.openLift(
-    ['★ Reception Hall', ...cyLift.labels],
+    ['★ Reception', ...cyLift.labels],
     cyLift.currentIndex() + 1,
-    (i) => (i === 0 ? travelTo('gallery') : cyLift.selectFloor(i - 1))
+    (i) => (i === 0 ? travelTo('foyer') : cyLift.selectFloor(i - 1))
   ),
 };
 
@@ -622,6 +689,9 @@ enterBtn.addEventListener('click', () => {
   audio.reveal();      // show the music / sound mute buttons
   ui.enter();
   controls.lock();
+  // A share link (#slug) skips the walk: ride the veil straight to the hall.
+  const dest = roomFromHash();
+  if (dest && dest !== rooms.current) travelTo(dest);
 });
 
 lighting.bake();

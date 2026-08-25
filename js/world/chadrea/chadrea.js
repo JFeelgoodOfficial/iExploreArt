@@ -3,6 +3,7 @@ import { fitToSlot } from '../../art/fit.js';
 import { loadArtTexture } from '../../art/load.js';
 import { generatePainting } from '../../art/placeholder.js';
 import { mulberry32 } from '../../utils/proctex.js';
+import { SHOW_CARD } from '../../../data/chadrea-artworks.js';
 
 // ---------------------------------------------------------------------------
 // CHADREA HALL — residency four (room id `chadrea`).
@@ -190,9 +191,9 @@ export const SLOTS = [
   // stretch is two positions, not four.
   /*  0 */ { id: 'CH-W1', pos: [HALL.x0 + 0.09, 2.55, 3.0], n: [1, 0, 0], maxW: 3.2, maxH: 4.0 },
   /*  1 */ { id: 'CH-W2', pos: [HALL.x0 + 0.09, 1.75, 9.4], n: [1, 0, 0], maxW: 3.2, maxH: 4.0 },
-  // …and the bay under the mezzanine. A lower room, so the run steps down: two
-  // full-height works either side of the two smallest in the series, which hang
-  // 1.5 m apart as a pair rather than at the spacing the open wall uses.
+  // …and the bay under the mezzanine. A lower room, closer viewing — slots 3
+  // and 4 hang 1.5 m apart as a pair, and carry the two mustard-ground works
+  // that read together (data/chadrea-artworks.js).
   /*  2 */ { id: 'CH-W3', pos: [HALL.x0 + 0.09, 1.75, -3.6], n: [1, 0, 0], maxW: 2.2, maxH: 2.8 },
   /*  3 */ { id: 'CH-W4', pos: [HALL.x0 + 0.09, 1.55, -6.0], n: [1, 0, 0], maxW: 2.2, maxH: 2.8 },
   /*  4 */ { id: 'CH-W5', pos: [HALL.x0 + 0.09, 1.55, -7.5], n: [1, 0, 0], maxW: 2.2, maxH: 2.8 },
@@ -206,10 +207,12 @@ export const SLOTS = [
   // --- south wall ----------------------------------------------------------
   // The wall you arrive with your back to. It carried the door out to reception
   // until that came off (there is a lift in the wing), and it is a bare 12 m of
-  // concrete with nothing else on it. It takes two — and it took a pair of wash
-  // lamps in setupChadreaLighting to be worth hanging on at all.
-  /*  7 */ { id: 'CH-S1', pos: [-4.00, 1.75, HALL.z1 - 0.09], n: [0, 0, -1], maxW: 3.2, maxH: 3.6 },
-  /*  8 */ { id: 'CH-S2', pos: [0.60, 1.75, HALL.z1 - 0.09], n: [0, 0, -1], maxW: 3.2, maxH: 3.6 },
+  // concrete with nothing else on it. It takes two — hung as a PAIR now, 1.3 m
+  // centre to centre, because the two works here share one ground and are read
+  // together (data/chadrea-artworks.js); maxW is capped so nothing hung later
+  // can overlap. The washes in setupChadreaLighting aim at these positions.
+  /*  7 */ { id: 'CH-S1', pos: [-0.65, 1.75, HALL.z1 - 0.09], n: [0, 0, -1], maxW: 1.2, maxH: 3.6 },
+  /*  8 */ { id: 'CH-S2', pos: [0.65, 1.75, HALL.z1 - 0.09], n: [0, 0, -1], maxW: 1.2, maxH: 3.6 },
   // --- the mezzanine deck's own two walls, at its corner -------------------
   // MEZZ.top + 1.40 rather than the 1.55 used on foot: the west wall's cove
   // recess is cut at y 6.475, and at eye height a work up here would run into
@@ -220,8 +223,11 @@ export const SLOTS = [
   // The dark mass the lit west wall is measured against. It stays darker than
   // the west wall — that contrast is the room — but the two washes that used to
   // graze it have become four, enough that a picture on it is a picture.
-  /* 11 */ { id: 'CH-P1', pos: [PIER.x - 0.09, 1.75, 1.0], n: [-1, 0, 0], maxW: 2.6, maxH: 3.6 },
-  /* 12 */ { id: 'CH-P2', pos: [PIER.x - 0.09, 1.85, -3.0], n: [-1, 0, 0], maxW: 2.6, maxH: 3.6 },
+  // Hung as a pair too — the two found-poster works read side by side
+  // (data/chadrea-artworks.js), so the run tightens to 1.45 m centre to centre
+  // and maxW drops to keep any future hang from overlapping.
+  /* 11 */ { id: 'CH-P1', pos: [PIER.x - 0.09, 1.75, -0.10], n: [-1, 0, 0], maxW: 1.3, maxH: 3.6 },
+  /* 12 */ { id: 'CH-P2', pos: [PIER.x - 0.09, 1.75, -1.55], n: [-1, 0, 0], maxW: 1.3, maxH: 3.6 },
   // --- the pier's east face: the wing's west side, either side of the arch --
   // PIER.x + PIER.t, not PIER.x + PIER.t / 2: the slab is extruded off PIER.x
   // rather than centred on it, so it occupies x 4.0…4.9 and its east face is
@@ -242,13 +248,13 @@ export const SLOTS = [
   /* 17 */ { id: 'CH-C1', pos: [COURT.x0 + 0.09, 1.75, 12.5], n: [1, 0, 0], maxW: 2.6, maxH: 3.2 },
   /* 18 */ { id: 'CH-C2', pos: [COURT.x1 - 0.09, 1.75, 17.4], n: [-1, 0, 0], maxW: 2.6, maxH: 3.2 },
   /* 19 */ { id: 'CH-C3', pos: [9.00, 1.90, COURT.z1 - 0.09], n: [0, 0, -1], maxW: 2.6, maxH: 3.2 },
-  // --- the artist ----------------------------------------------------------
-  // On the pier by the arch, the first wall on your right as you arrive. A
-  // deliberately small envelope: the portrait carries no `size`, so it fits
-  // itself to this, and at the paintings' envelope it would hang as the largest
-  // thing in the room.
-  /* 20 */ { id: 'CH-PORTRAIT', pos: [PIER.x - 0.09, 1.65, 9.4], n: [-1, 0, 0], maxW: 1.10, maxH: 1.40 },
 ];
+
+// Where the artist's portrait used to hang — the pier by the arch, the first
+// wall on your right as you arrive — the show's painted title wall goes
+// instead (buildChadreaRoom): name, artist, statement, lettered straight onto
+// the concrete the way a museum does it. The portraitLamp keeps lighting it.
+export const TITLE_WALL = { x: PIER.x - 0.095, y: 1.9, z: 9.4, w: 1.7, h: 2.3 };
 
 // Ground floor at the south end, facing north up the hall: the arch is on your
 // right, the flight and the skylight ahead. Yaw 0 looks along −z.
@@ -540,6 +546,52 @@ function sizeFor(piece, slot) {
   const [w, h] = piece.size;
   const k = Math.min(1, slot.maxW / w, slot.maxH / h);
   return [w * k, h * k];
+}
+
+// The title wall's lettering (see TITLE_WALL): show name, artist, statement,
+// drawn on a transparent ground so the concrete reads through. Pale warm ink,
+// not dark — this pier is deliberately the dark mass of the room, and painted
+// lettering on it has to read the way lit vinyl does, light on dark.
+function titleWallTexture() {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 1386;   // TITLE_WALL's 1.7 × 2.3 aspect
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+  const ink = '#eee5d6';
+  ctx.fillStyle = ink;
+  ctx.textAlign = 'left';
+  const M = 72;                       // margin
+  let y = 190;
+  ctx.font = '600 118px "Cormorant Garamond", Georgia, serif';
+  for (const word of SHOW_CARD.title.split(' ')) {   // one word a line, stacked
+    ctx.fillText(word, M, y);
+    y += 128;
+  }
+  y += 8;
+  ctx.font = '500 46px Inter, sans-serif';
+  ctx.fillStyle = '#c8bca8';
+  ctx.fillText(SHOW_CARD.artist, M, y);
+  y += 110;
+  // the statement, word-wrapped
+  ctx.font = '400 31px Inter, sans-serif';
+  ctx.fillStyle = ink;
+  const words = SHOW_CARD.description.split(' ');
+  let line = '';
+  for (const w of words) {
+    const probe = line ? `${line} ${w}` : w;
+    if (ctx.measureText(probe).width > c.width - M * 2 && line) {
+      ctx.fillText(line, M, y);
+      y += 48;
+      line = w;
+    } else {
+      line = probe;
+    }
+  }
+  if (line) ctx.fillText(line, M, y);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
 }
 
 export function buildChadreaRoom(scene, opts = {}) {
@@ -1094,6 +1146,29 @@ export function buildChadreaRoom(scene, opts = {}) {
     });
   }
 
+  // --- the show's title wall -----------------------------------------------
+  // Where the artist's portrait used to hang: the show's name, the artist, and
+  // his statement, lettered straight onto the concrete the way a museum paints
+  // a title wall. A transparent canvas texture on a Standard material, so the
+  // board-marks show between the letters and the portraitLamp lights it like
+  // paint rather than a lightbox. Pressing E on it opens the show card
+  // (data/chadrea-artworks.js SHOW_CARD).
+  {
+    const tw = TITLE_WALL;
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(tw.w, tw.h),
+      new THREE.MeshStandardMaterial({
+        map: titleWallTexture(), transparent: true, roughness: 0.9, metalness: 0,
+      })
+    );
+    plane.position.set(tw.x, tw.y, tw.z);
+    plane.rotation.y = -Math.PI / 2;
+    plane.name = 'chadrea-title-wall';
+    plane.userData.artwork = SHOW_CARD;
+    g.add(plane);
+    interactables.push(plane);
+  }
+
   // --- console: blackened steel carcass, reclaimed-wood top ----------------
   {
     const cx = HALL.x0 + 0.44, cz = 2.7, L = 4.6;
@@ -1369,12 +1444,12 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
   // mass the lit west wall is measured against.
   //
   // Four of them, not the original two, and aimed at 1.9 rather than 2.4: the
-  // face hangs four pictures now (SLOTS CH-P1, CH-P2, CH-PORTRAIT and the works
-  // read through the arch), and two lamps at z −7 and −1 left everything south
-  // of the opening — the portrait included — in the dark. The z run skips
-  // 2.4…8, which is the archway and not a wall at all.
+  // face carries the found-poster pair (SLOTS CH-P1/CH-P2, tightened to read
+  // side by side), the title wall by the arch, and the works read through the
+  // arch. The middle two lamps aim at the pair's slots; the z run skips 2.4…8,
+  // which is the archway and not a wall at all.
   const pierWash = [];
-  for (const z of [-7.0, -3.0, 0.6, 9.2]) {
+  for (const z of [-7.0, -1.6, -0.1, 9.2]) {
     const s = new THREE.SpotLight(0xffe0b8, 13, 22, 0.95, 1.0, 1.7);
     s.position.set(-1.6, 6.2, z + 1.6);
     s.target.position.set(PIER.x - 0.05, 1.9, z);
@@ -1382,14 +1457,13 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
     pierWash.push(s);
   }
 
-  // A picture light for the portrait (SLOTS CH-PORTRAIT), close in and narrow.
-  // The pier washes are 22 m throws from across the hall, tuned to graze a
-  // whole wall; the portrait is a black-and-white photograph, the one thing in
-  // the residency with no colour to carry it, and on a grazed dark wall it read
-  // as a grey smudge. This is the lamp a portrait gets.
+  // A picture light for the title wall (TITLE_WALL — the show's name and
+  // statement, painted where the portrait used to hang). The pier washes are
+  // 22 m throws from across the hall, tuned to graze a whole wall; lettering
+  // on dark grazed concrete needs its own close, narrow lamp to be read.
   const portraitLamp = new THREE.SpotLight(0xfff2e0, 9, 4.2, 0.55, 0.7, 1.8);
   portraitLamp.position.set(PIER.x - 1.05, 3.55, 9.4);
-  portraitLamp.target.position.set(PIER.x - 0.09, 1.65, 9.4);
+  portraitLamp.target.position.set(PIER.x - 0.09, 1.9, 9.4);
   scene.add(portraitLamp, portraitLamp.target);
 
   // The south wall. Nothing in the room pointed at it: the sun comes through
@@ -1399,7 +1473,7 @@ export function setupChadreaLighting(scene, renderer, tier = {}) {
   // washes, weaker than the west wall's rim so the hall still reads as lit from
   // one end.
   const southWash = [];
-  for (const x of [-4.0, 0.6]) {
+  for (const x of [-0.65, 0.65]) {
     const s = new THREE.SpotLight(0xffdcb0, 15, 14, 0.85, 0.95, 1.7);
     s.position.set(x, 5.4, HALL.z1 - 3.2);
     s.target.position.set(x, 1.75, HALL.z1);
