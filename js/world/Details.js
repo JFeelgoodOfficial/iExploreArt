@@ -1,42 +1,48 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { DESK, BENCHES, PLINTHS, POTS } from './layout.js';
+import { BENCHES, PLINTHS, POTS } from './layout.js';
 import { leafClusterTexture, flowerCardTexture } from '../utils/proctex.js';
 import { applyWind } from './wind.js';
 
-// Furniture and life: reception desk, benches, plinth sculptures, potted
-// plants, wall signage, and dust motes drifting in the sun shaft.
+// Furniture and life: benches, plinth sculptures, potted plants, and dust
+// motes drifting in the sun shaft. The reception desk build lives here too,
+// but as an export — the desk itself moved out to the foyer
+// (js/world/foyer.js) when the reception did; this hall no longer sets it up.
 
-export function buildDetails(scene, mats, tier) {
-  const group = new THREE.Group();
-  group.name = 'details';
-
-  // --- reception desk -------------------------------------------------------
-  const dw = DESK.x1 - DESK.x0, dd = DESK.z1 - DESK.z0;
-  const dx = (DESK.x0 + DESK.x1) / 2, dz = (DESK.z0 + DESK.z1) / 2;
-  const deskBody = new THREE.Mesh(new THREE.BoxGeometry(dw, DESK.h - 0.05, dd), mats.woodDark);
-  deskBody.position.set(dx, (DESK.h - 0.05) / 2, dz);
+// The reception desk: dark-wood body, marble top, brass reading lamp, vase of
+// flowers. `desk` is a DESK-style rect {x0,x1,z0,z1,h}; the caller owns the
+// matching collider.
+export function buildReceptionDesk(group, mats, desk) {
+  const dw = desk.x1 - desk.x0, dd = desk.z1 - desk.z0;
+  const dx = (desk.x0 + desk.x1) / 2, dz = (desk.z0 + desk.z1) / 2;
+  const deskBody = new THREE.Mesh(new THREE.BoxGeometry(dw, desk.h - 0.05, dd), mats.woodDark);
+  deskBody.position.set(dx, (desk.h - 0.05) / 2, dz);
   const deskTop = new THREE.Mesh(new THREE.BoxGeometry(dw + 0.12, 0.05, dd + 0.12), mats.marble);
-  deskTop.position.set(dx, DESK.h - 0.025, dz);
+  deskTop.position.set(dx, desk.h - 0.025, dz);
   group.add(deskBody, deskTop);
 
   // brass reading lamp on the desk
   const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.04, 12), mats.brass);
-  lampBase.position.set(dx, DESK.h + 0.02, dz - 0.75);
+  lampBase.position.set(dx, desk.h + 0.02, dz - 0.75);
   const lampStem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.34, 8), mats.brass);
-  lampStem.position.set(dx, DESK.h + 0.2, dz - 0.75);
+  lampStem.position.set(dx, desk.h + 0.2, dz - 0.75);
   const lampShade = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, 0.11, 12, 1, true), mats.brass);
-  lampShade.position.set(dx, DESK.h + 0.38, dz - 0.75);
+  lampShade.position.set(dx, desk.h + 0.38, dz - 0.75);
   const lampGlow = new THREE.PointLight(0xffd9a0, 3, 2.2, 2);
-  lampGlow.position.set(dx, DESK.h + 0.33, dz - 0.75);
+  lampGlow.position.set(dx, desk.h + 0.33, dz - 0.75);
   group.add(lampBase, lampStem, lampShade, lampGlow);
 
   // a small vase of flowers on the desk
   const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.16, 10), mats.marble);
-  vase.position.set(dx - 0.05, DESK.h + 0.08, dz + 0.7);
+  vase.position.set(dx - 0.05, desk.h + 0.08, dz + 0.7);
   const vaseFlowers = cardCross(flowerCardTexture(256, 501, 335), 0.3, 0.38);
-  vaseFlowers.position.set(dx - 0.05, DESK.h + 0.3, dz + 0.7);
+  vaseFlowers.position.set(dx - 0.05, desk.h + 0.3, dz + 0.7);
   group.add(vase, vaseFlowers);
+}
+
+export function buildDetails(scene, mats, tier) {
+  const group = new THREE.Group();
+  group.name = 'details';
 
   // --- benches --------------------------------------------------------------
   for (const b of BENCHES) {
@@ -85,15 +91,6 @@ export function buildDetails(scene, mats, tier) {
       group.add(card);
     }
   }
-
-  // --- wall signage above the desk -----------------------------------------
-  const sign = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.2, 0.62),
-    new THREE.MeshBasicMaterial({ map: signTexture(), transparent: true })
-  );
-  sign.position.set(0.17, 2.55, 12.0);
-  sign.rotation.y = Math.PI / 2;
-  group.add(sign);
 
   // --- dust motes in the sun shaft -----------------------------------------
   const moteCount = tier.motes;
@@ -162,18 +159,32 @@ function cardCross(tex, w, h) {
   return new THREE.Mesh(g, mat);
 }
 
-function signTexture() {
+// Painted wall signage: a serif title over a letter-spaced grey subtitle, on a
+// transparent ground so the wall shows through. Used by the foyer for the desk
+// sign and the door lintel (js/world/foyer.js). The subtitle is spaced here so
+// callers pass plain words.
+export function signTexture(title, subtitle) {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 288;
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, 1024, 288);
-  ctx.fillStyle = '#2a2521';
   ctx.textAlign = 'center';
-  ctx.font = '600 128px "Cormorant Garamond", Georgia, serif';
-  ctx.fillText('iExploreArt', 512, 150);
-  ctx.font = '500 34px Inter, sans-serif';
-  ctx.fillStyle = '#6f675f';
-  ctx.fillText('A   G A L L E R Y   B Y   J F E E L G O O D', 512, 224);
+  // Either line shrinks to fit rather than running off the plate — the
+  // featured show's name (data/featured.js) is whatever length it is.
+  const fit = (text, weight, size, family, maxW = 940) => {
+    ctx.font = `${weight} ${size}px ${family}`;
+    const w = ctx.measureText(text).width;
+    if (w > maxW) ctx.font = `${weight} ${Math.floor((size * maxW) / w)}px ${family}`;
+  };
+  ctx.fillStyle = '#2a2521';
+  fit(title, 600, 128, '"Cormorant Garamond", Georgia, serif');
+  ctx.fillText(title, 512, 150);
+  if (subtitle) {
+    const spaced = subtitle.toUpperCase().split('').join(' ');
+    ctx.fillStyle = '#6f675f';
+    fit(spaced, 500, 34, 'Inter, sans-serif');
+    ctx.fillText(spaced, 512, 224);
+  }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;

@@ -49,7 +49,10 @@ export const MEZZ_RECTS = [
 // Freestanding gallery wall on the ground floor.
 export const FREE_WALL = { x0: 10, x1: 14, z0: 6.8, z1: 7.2, h: 3.2 };
 
-// Reception desk against the west wall, south of the entry door.
+// Where the reception desk stood, against the west wall, before the reception
+// moved out to the foyer (js/world/foyer.js — the desk build itself is
+// js/world/Details.js buildReceptionDesk). Kept for when this hall reopens as
+// Hall of JFeelgood and the spot wants furniture again.
 export const DESK = { x0: 1.6, x1: 2.4, z0: 10.8, z1: 13.2, h: 1.08 };
 // West-wall opening onto the reception lift. Walk-through — the cabin is built
 // behind it by js/world/ReceptionLift.js.
@@ -163,8 +166,6 @@ export function buildColliders() {
   c.push(...rect(17.0, 21.3, 22.1, 22.25, 0));
   // freestanding wall (ground floor only)
   c.push(...rect(FREE_WALL.x0 - 0.05, FREE_WALL.z0, FREE_WALL.x1 + 0.05, FREE_WALL.z1, 0));
-  // reception desk
-  c.push(...rect(DESK.x0, DESK.z0, DESK.x1, DESK.z1, 0));
   // benches & plinths & pots
   for (const b of BENCHES) c.push(...rect(b.x - b.w / 2, b.z - b.d / 2, b.x + b.w / 2, b.z + b.d / 2, 0));
   for (const p of PLINTHS) c.push(...rect(p.x - p.s / 2, p.z - p.s / 2, p.x + p.s / 2, p.z + p.s / 2, 0));

@@ -760,7 +760,7 @@ function liftPanelTex() {
   ctx.textAlign = 'center'; ctx.font = 'bold 28px Georgia';
   ctx.fillText('LIFT', 128, 40);
   // Top-down like a real panel; the starred row rides back to reception.
-  const rows = [['3', 'Floor 3'], ['2', 'Floor 2'], ['1', 'Floor 1'], ['★', 'Reception Hall']];
+  const rows = [['3', 'Floor 3'], ['2', 'Floor 2'], ['1', 'Floor 1'], ['★', 'Reception']];
   for (let i = 0; i < 4; i++) {
     const cy = 78 + i * 48;
     ctx.fillStyle = '#e7dcc5'; ctx.beginPath(); ctx.arc(52, cy, 19, 0, Math.PI * 2); ctx.fill();
