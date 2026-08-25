@@ -3,10 +3,12 @@ import { FEATURED, featuredResidency, featuredArtwork } from '../../data/feature
 import { buildReceptionDesk, signTexture } from './Details.js';
 import { loadArtTexture } from '../art/load.js';
 
-// The reception foyer — where every visit begins. A small lobby, not a
-// gallery: the reception desk with Mira behind it, the house sign above,
-// a single door in the north wall that opens onto the currently featured
-// show (data/featured.js), and one work from that show beside the door.
+// The reception foyer — where every visit begins. A small lobby high in a
+// tower, not a gallery: the reception desk with Mira behind it, the house sign
+// above, a single door in the north wall that opens onto the currently
+// featured show (data/featured.js), and one work from that show beside the
+// door. Its other two sides give onto a pool terrace over the city
+// (buildPoolCorner, below), behind glass the visitor cannot pass.
 //
 // The foyer shares the one world scene the way every room does — as a layer
 // the RoomManager toggles — and sits on its own coordinate patch, east of the
@@ -207,151 +209,212 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// The pool corner. The foyer's east and south sides give onto one sheet of
-// water that runs to an infinity edge with a city standing beyond it — and
-// the sky above the water disagrees with itself on purpose: a vibrant sunset
-// over the east side, a star-strewn night over the south, meeting in a band
-// of twilight at the corner. One curved backdrop carries both, so there is no
-// seam, only dusk.
+// The terrace. The foyer stands high in a tower, and its east and south sides
+// give onto an open pool deck behind a waist-high glass screen: patio, then an
+// infinity pool whose far lip is the building's own edge, then the drop and
+// the city far below. The sky over it disagrees with itself on purpose — a
+// vibrant sunset low over the east water, a star-strewn night to the south,
+// blending through twilight at the corner.
 //
-// Everything out there is scenery, not world: the perimeter colliders hold
-// the visitor at the parapet, the backdrop and towers are unlit and unfogged
-// (the global haze would grey the night out), and the only moving part is the
-// twinkle — one time uniform driving per-star point sizes.
+// The sky is a whole sphere rather than a wall of it: from inside the foyer
+// you can look anywhere, including straight up, and never find where it stops.
+//
+// Everything out there is scenery, not world: the foyer's own perimeter
+// colliders hold the visitor at the glass, and the backdrop, towers and water
+// are all unlit and unfogged (the global haze would grey the night out). The
+// only moving part is the twinkle — one time uniform driving star point sizes.
+
+// The deck slab, and the pool set into it as an L round the building's
+// corner. The pool's outer edges ARE the deck's outer edges: that is the
+// infinity edge, and past it there is only air.
+const DECK = { x0: FY.x0 - 0.4, x1: FY.x1 + 7.2, z0: FY.z0 - 1.4, z1: FY.z1 + 6.6, t: 2.4 };
+const POOL_E = { x0: FY.x1 + 2.6, x1: DECK.x1, z0: DECK.z0, z1: DECK.z1 };
+const POOL_S = { x0: FY.x0 + 1.2, x1: FY.x1 + 2.6, z0: FY.z1 + 2.4, z1: DECK.z1 };
+const WATER_Y = -0.12;              // the pool sits a hand below the paving
+
+// Azimuth convention out here: A = 0 looks south (+Z), A = π/2 looks east
+// (+X) — the two directions the foyer is open to. Everything below (the sky
+// texture, the towers, the stars) is placed by it.
+const A_SOUTH = 0, A_EAST = Math.PI / 2;
+const dirOf = (A) => [Math.sin(A), Math.cos(A)];
+
 function buildPoolCorner(g, mats) {
   const CXX = (FY.x0 + FY.x1) / 2, CZZ = (FY.z0 + FY.z1) / 2;
   const W = FY.x1 - FY.x0, D = FY.z1 - FY.z0;
 
   const add = (mesh) => { g.add(mesh); return mesh; };
-  const noShadowBox = (w, h, d, mat, x, y, z) => {
+  const slab = (x0, z0, x1, z1, mat, top = 0, thick = DECK.t) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, thick, z1 - z0), mat);
+    m.position.set((x0 + x1) / 2, top - thick / 2, (z0 + z1) / 2);
+    m.receiveShadow = true;
+    return add(m);
+  };
+
+  // --- the glass screen: waist high, no posts ------------------------------
+  // A quieter clone of the shared rail glass — at full envMapIntensity the
+  // sheets catch the bright interior HDR and flare into white panels against
+  // the night side. The cap rail is the only solid line in it.
+  const glass = mats.railGlass.clone();
+  glass.envMapIntensity = 0;      // the interior HDR turned it into a grey fog bank
+  glass.opacity = 0.05;
+  glass.roughness = 0.02;
+  const pane = (w, h, d, mat, x, y, z) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     m.position.set(x, y, z);
     return add(m);
   };
+  pane(0.04, 1.02, D + 0.6, glass, FY.x1 + 0.02, 0.51, CZZ);
+  pane(0.09, 0.04, D + 0.62, mats.woodDark, FY.x1 + 0.02, 1.04, CZZ);
+  pane(W + 0.62, 1.02, 0.04, glass, CXX, 0.51, FY.z1 + 0.02);
+  pane(W + 0.62, 0.04, 0.09, mats.woodDark, CXX, 1.04, FY.z1 + 0.02);
 
-  // --- parapet: waist-high glass with a walnut cap, and one corner post ----
-  // A quieter clone of the shared rail glass: at full envMapIntensity the
-  // sheets catch the bright interior HDR and flare into white panels against
-  // the night side.
-  const parapetGlass = mats.railGlass.clone();
-  parapetGlass.envMapIntensity = 0.25;
-  parapetGlass.opacity = 0.12;
-  noShadowBox(0.05, 1.02, D + 0.6, parapetGlass, FY.x1 + 0.02, 0.51, CZZ);
-  noShadowBox(0.1, 0.045, D + 0.75, mats.woodDark, FY.x1 + 0.02, 1.05, CZZ);
-  noShadowBox(W + 0.6, 1.02, 0.05, parapetGlass, CXX, 0.51, FY.z1 + 0.02);
-  noShadowBox(W + 0.75, 0.045, 0.1, mats.woodDark, CXX, 1.05, FY.z1 + 0.02);
-  const post = noShadowBox(0.16, FY.h + 0.2, 0.16, mats.steel, FY.x1 + 0.06, FY.h / 2, FY.z1 + 0.06);
-  post.castShadow = true;
+  // --- the paving, and the basin the pool sits in --------------------------
+  const paving = new THREE.MeshStandardMaterial({
+    color: 0x494440, roughness: 0.9, metalness: 0, envMapIntensity: 0.12,
+  });
+  const basinMat = new THREE.MeshStandardMaterial({
+    color: 0x1d2a35, roughness: 0.75, metalness: 0, envMapIntensity: 0.15,
+  });
+  slab(FY.x1 + 0.3, DECK.z0, POOL_E.x0, POOL_S.z0, paving);        // east patio
+  slab(DECK.x0, FY.z1 + 0.3, POOL_E.x0, POOL_S.z0, paving);        // south patio
+  slab(DECK.x0, POOL_S.z0, POOL_S.x0, DECK.z1, paving);            // west margin
+  slab(POOL_E.x0, POOL_E.z0, POOL_E.x1, POOL_E.z1, basinMat, WATER_Y - 0.03);
+  slab(POOL_S.x0, POOL_S.z0, POOL_S.x1, POOL_S.z1, basinMat, WATER_Y - 0.03);
 
   // --- the water -----------------------------------------------------------
-  // Two adjacent planes (never overlapping — coplanar water z-fights) tinted
-  // for dusk; unfogged so the far reaches stay dark under the night side
-  // instead of greying into the haze. scene.environment gives it its sheen.
   // Unlit on purpose: a lit material catches the foyer's hemisphere light and
   // reads as a fog bank, and the shared environment map is a bright interior
   // HDR. Flat dark dusk-water, with the reflections painted on as lanes.
-  const water = new THREE.MeshBasicMaterial({ color: 0x152638, fog: false });
-  const pool = (w, d, x, z) => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), water);
+  const water = new THREE.MeshBasicMaterial({ color: 0x14293c, fog: false });
+  for (const p of [POOL_E, POOL_S]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(p.x1 - p.x0, p.z1 - p.z0), water);
     m.rotation.x = -Math.PI / 2;
-    m.position.set(x, -0.07, z);
+    m.position.set((p.x0 + p.x1) / 2, WATER_Y, (p.z0 + p.z1) / 2);
     add(m);
-  };
-  pool(68, 152, FY.x1 + 34, 31);          // east sheet
-  pool(42, 100, FY.x1 - 21, FY.z1 + 50);  // south sheet, up to the east one's edge
+  }
 
-  // the sunset's reflection on the east water: a broad warm wash, and the
-  // sun's own glint lane down the middle of it
-  const lane = (w, d, x, z, color, opacity, y, spin = 0) => {
+  // The reflections. `yaw` turns the lane in the water plane; the glint runs
+  // bright toward the light it answers, so yaw points it at the sun or moon.
+  const lane = (len, wide, x, z, color, opacity, yaw) => {
     const m = new THREE.Mesh(
-      new THREE.PlaneGeometry(w, d),
+      new THREE.PlaneGeometry(len, wide),
       new THREE.MeshBasicMaterial({
         map: glintTexture(), transparent: true, blending: THREE.AdditiveBlending,
         depthWrite: false, fog: false, color, opacity,
       })
     );
-    m.rotation.set(-Math.PI / 2, 0, spin);   // spin turns the lane in the water plane
-    m.position.set(x, y, z);
-    add(m);
+    m.rotation.set(-Math.PI / 2, yaw, 0, 'YXZ');
+    m.position.set(x, WATER_Y + 0.004, z);
+    return add(m);
   };
-  lane(64, 42, FY.x1 + 32, CZZ + 6, 0xa03a4c, 0.35, -0.06);   // sky wash
-  lane(50, 4.2, FY.x1 + 26, CZZ, 0xffb36b, 0.5, -0.055);      // sun glint
-  // the moon's, faint, receding south toward it
-  lane(36, 3.2, CXX - 8, FY.z1 + 20, 0x8fa4d8, 0.16, -0.055, Math.PI / 2);
+  const poolEcx = (POOL_E.x0 + POOL_E.x1) / 2;
+  lane(POOL_E.x1 - POOL_E.x0, 9.0, poolEcx, CZZ + 1.0, 0x8f3550, 0.4, 0);      // sunset wash
+  lane(POOL_E.x1 - POOL_E.x0, 1.5, poolEcx, CZZ, 0xffb877, 0.62, 0);           // the sun's own
+  lane(POOL_S.z1 - POOL_S.z0, 1.1, CXX - 0.6, (POOL_S.z0 + POOL_S.z1) / 2,
+       0x93a8dc, 0.2, -Math.PI / 2);                                           // the moon's
 
-  // --- the sky: one arc, night through dusk into sunset --------------------
-  const SKY_R = 130, SKY_H = 140;
-  const THETA0 = -0.7, THETA_LEN = 3.17;   // θ: 0 = south (+z), π/2 = east (+x)
-  const skyGeo = new THREE.CylinderGeometry(SKY_R, SKY_R, SKY_H, 96, 1, true, THETA0, THETA_LEN);
-  const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({
-    map: skyTexture(THETA0, THETA_LEN), side: THREE.BackSide, fog: false, depthWrite: false,
-  }));
-  sky.position.set(CXX, 20, CZZ);
+  const coping = new THREE.MeshStandardMaterial({
+    color: 0x6f675e, roughness: 0.82, metalness: 0, envMapIntensity: 0.14,
+  });
+  pane(0.26, 0.06, POOL_E.z1 - POOL_E.z0, coping,
+       POOL_E.x0 + 0.13, -0.03, (POOL_E.z0 + POOL_E.z1) / 2);
+  pane(POOL_S.x1 - POOL_S.x0, 0.06, 0.26, coping,
+       (POOL_S.x0 + POOL_S.x1) / 2, -0.03, POOL_S.z0 + 0.13);
+
+  // the weir: a thin bright line right at each infinity edge, where the sheet
+  // goes over and the water reads as running out into nothing
+  const weir = new THREE.MeshBasicMaterial({ color: 0x9fc0d8, fog: false, transparent: true, opacity: 0.5 });
+  pane(0.05, 0.05, POOL_E.z1 - POOL_E.z0, weir, POOL_E.x1 - 0.03, WATER_Y + 0.01, (POOL_E.z0 + POOL_E.z1) / 2);
+  pane(POOL_S.x1 - POOL_S.x0, 0.05, 0.05, weir, (POOL_S.x0 + POOL_S.x1) / 2, WATER_Y + 0.01, POOL_S.z1 - 0.03);
+
+  // --- the sky: a whole sphere, so it never runs out -----------------------
+  const SKY_R = 420;
+  const sky = new THREE.Mesh(
+    new THREE.SphereGeometry(SKY_R, 64, 40),
+    new THREE.MeshBasicMaterial({
+      map: skyTexture(), side: THREE.BackSide, fog: false, depthWrite: false,
+    })
+  );
+  sky.position.set(CXX, 0, CZZ);
   sky.renderOrder = -2;
   sky.name = 'foyer-sky';
   add(sky);
 
-  // --- the city, past the infinity edge ------------------------------------
-  // A ring of silhouette towers standing well below pool level — the water
-  // simply ends and the city is there under it. One instanced mesh; the night
-  // side's towers get their windows as a separate point cloud.
-  const N = 56;
+  // --- the city, far below -------------------------------------------------
+  // We are high up: the towers' tops sit below the terrace, so the city is
+  // something you look down on and the horizon stays clear above it. One
+  // instanced mesh; the night side's windows are a separate point cloud. A gap
+  // is left due east so the low sun is seen over open water, not through a
+  // tower.
+  const N = 150;
   const towers = new THREE.InstancedMesh(
     new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial({ color: 0x14101f, fog: false }),
+    new THREE.MeshBasicMaterial({ color: 0x0f0c18, fog: false }),
     N
   );
   const M = new THREE.Matrix4();
   const windows = [];
   let seed = 9271;
   const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  let n = 0;
   for (let i = 0; i < N; i++) {
-    const th = THETA0 + 0.06 + ((THETA_LEN - 0.12) * i) / (N - 1) + (rnd() - 0.5) * 0.03;
-    const r = 70 + rnd() * 35;
-    const w = 4 + rnd() * 7, dep = 4 + rnd() * 7, h = 8 + rnd() * 18;
-    const x = CXX + Math.sin(th) * r, z = CZZ + Math.cos(th) * r;
-    // Bases sit under the water plane — the towers rise straight out of the
-    // bay, so most of every tower clears the surface.
+    const A = -1.05 + rnd() * 3.6;                     // south round through east
+    if (Math.abs(A - A_EAST) < 0.15) continue;         // the sun's gap
+    const r = 90 + Math.pow(rnd(), 0.65) * 250;
+    const w = 8 + rnd() * 18, dep = 8 + rnd() * 18;
+    // We are high up, so the skyline is mostly BELOW us — roofs, not facades —
+    // with a few peers rising near the terrace. Nearer towers reach higher, so
+    // the city recedes downward into the haze.
+    const near = 1 - (r - 90) / 250;
+    const top = -34 + near * 30 + rnd() * 16 * (0.4 + near);
+    const h = 70 + rnd() * 130;
+    const [sx, sz] = dirOf(A);
+    const x = CXX + sx * r, z = CZZ + sz * r;
     M.makeScale(w, h, dep);
-    M.setPosition(x, -8 + h / 2, z);
-    towers.setMatrixAt(i, M);
-    // lit windows on the faces that look back at the foyer — night side only,
-    // and only above the waterline
-    if (th < 0.55) {
-      const count = 6 + Math.floor(rnd() * 14);
+    M.setPosition(x, top - h / 2, z);
+    towers.setMatrixAt(n++, M);
+    // lit windows on the faces that look back at us — night side, and only
+    // on the nearer towers, or the far ones turn into a wall of sparks
+    if (A < 0.8 && r < 250) {
+      const count = 12 + Math.floor(rnd() * 30);
       for (let k = 0; k < count; k++) {
-        const fr = r - dep / 2 - 0.3;
-        const wx = CXX + Math.sin(th) * fr + (rnd() - 0.5) * w * 0.8;
-        const wz = CZZ + Math.cos(th) * fr + (rnd() - 0.5) * 0.5;
-        windows.push(wx, 0.5 + rnd() * (h - 7), wz);
+        const fr = r - dep / 2 - 0.6;
+        windows.push(
+          CXX + sx * fr + (rnd() - 0.5) * w * 0.85,
+          top - 1.5 - rnd() * Math.min(h - 3, 48),
+          CZZ + sz * fr + (rnd() - 0.5) * dep * 0.3
+        );
       }
     }
   }
+  towers.count = n;
   towers.instanceMatrix.needsUpdate = true;
   add(towers);
 
   const winGeo = new THREE.BufferGeometry();
   winGeo.setAttribute('position', new THREE.Float32BufferAttribute(windows, 3));
-  const winPts = new THREE.Points(winGeo, new THREE.PointsMaterial({
-    map: starSprite(), color: 0xffd9a0, size: 0.9, transparent: true, opacity: 0.85,
+  add(new THREE.Points(winGeo, new THREE.PointsMaterial({
+    map: starSprite(), color: 0xffd6a0, size: 1.5, transparent: true, opacity: 0.9,
     blending: THREE.AdditiveBlending, depthWrite: false, fog: false, sizeAttenuation: true,
-  }));
-  add(winPts);
+  })));
 
   // --- the stars, and their twinkle ----------------------------------------
-  // Scattered over the night arc only. The twinkle is one uTime uniform
-  // scaling each star's point size on its own seed — the same trick the old
-  // hall's dust motes use, applied to gl_PointSize instead of position.
-  const S = 340;
+  // Over the night half of the dome, from just above the horizon up to the
+  // zenith — looking straight up from the terrace you are under them. The
+  // twinkle is one uTime uniform scaling each star's point size on its own
+  // seed.
+  const S = 520;
   const sPos = new Float32Array(S * 3);
   const sSeed = new Float32Array(S);
+  const R = SKY_R - 12;
   for (let i = 0; i < S; i++) {
-    const th = THETA0 + 0.02 + rnd() * 1.05;             // south quadrant of the arc
-    const r = SKY_R - 5;
-    const y = 8 + Math.pow(rnd(), 0.7) * 76;
-    sPos[i * 3] = CXX + Math.sin(th) * r;
-    sPos[i * 3 + 1] = y;
-    sPos[i * 3 + 2] = CZZ + Math.cos(th) * r;
+    const A = -1.0 + rnd() * 1.85;                      // south, fading toward east
+    const e = 0.04 + Math.pow(rnd(), 0.75) * 1.42;      // horizon → zenith
+    const [sx, sz] = dirOf(A);
+    const ce = Math.cos(e);
+    sPos[i * 3] = CXX + sx * ce * R;
+    sPos[i * 3 + 1] = Math.sin(e) * R;
+    sPos[i * 3 + 2] = CZZ + sz * ce * R;
     sSeed[i] = rnd() * Math.PI * 2;
   }
   const starGeo = new THREE.BufferGeometry();
@@ -359,7 +422,7 @@ function buildPoolCorner(g, mats) {
   starGeo.setAttribute('aSeed', new THREE.BufferAttribute(sSeed, 1));
   const starUniforms = { uTime: { value: 0 } };
   const starMat = new THREE.PointsMaterial({
-    map: starSprite(), color: 0xeaf2ff, size: 1.1, transparent: true, opacity: 0.95,
+    map: starSprite(), color: 0xeaf2ff, size: 3.4, transparent: true, opacity: 0.95,
     blending: THREE.AdditiveBlending, depthWrite: false, fog: false, sizeAttenuation: true,
   });
   starMat.onBeforeCompile = (shader) => {
@@ -367,19 +430,20 @@ function buildPoolCorner(g, mats) {
     shader.vertexShader = 'attribute float aSeed;\nuniform float uTime;\n' + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace(
       'gl_PointSize = size;',
-      'gl_PointSize = size * (0.55 + 0.45 * sin(uTime * (1.2 + fract(aSeed) * 1.6) + aSeed * 13.0));'
+      'gl_PointSize = size * (0.5 + 0.5 * sin(uTime * (1.2 + fract(aSeed) * 1.6) + aSeed * 13.0));'
     );
   };
-  const stars = new THREE.Points(starGeo, starMat);
-  add(stars);
+  add(new THREE.Points(starGeo, starMat));
 
   // --- the light the two skies throw into the room -------------------------
-  const sunLow = new THREE.DirectionalLight(0xff8f4f, 0.5);
-  sunLow.position.set(CXX + 40, 7, CZZ);
+  const [ex, ez] = dirOf(A_EAST);
+  const sunLow = new THREE.DirectionalLight(0xff9256, 0.8);
+  sunLow.position.set(CXX + ex * 60, 5, CZZ + ez * 60);
   sunLow.target.position.set(CXX, 1, CZZ);
   g.add(sunLow, sunLow.target);
-  const moonCool = new THREE.DirectionalLight(0x6f83c9, 0.28);
-  moonCool.position.set(CXX - 4, 14, CZZ + 45);
+  const [nx, nz] = dirOf(A_SOUTH);
+  const moonCool = new THREE.DirectionalLight(0x6f83c9, 0.26);
+  moonCool.position.set(CXX + nx * 40, 26, CZZ + nz * 40);
   moonCool.target.position.set(CXX, 1, CZZ);
   g.add(moonCool, moonCool.target);
 
@@ -388,21 +452,39 @@ function buildPoolCorner(g, mats) {
   };
 }
 
-// The wrapped sky: canvas u runs along the arc (θ = THETA0 at u 0), v up.
-// Night at the south end, a violet twilight band at the corner, then the
-// sunset burning at the east — sun disc painted where θ = π/2 faces the
-// east opening. A moon hangs in the night end.
-function skyTexture(theta0, thetaLen) {
-  const c = document.createElement('canvas');
-  c.width = 2048; c.height = 512;
-  const ctx = c.getContext('2d');
-  const uOf = (theta) => (theta - theta0) / thetaLen;
+// The dome's texture, equirectangular: u wraps the compass, v runs zenith
+// (top) to nadir (bottom) with the horizon across the middle. Three's
+// SphereGeometry puts u = 0 at −X, so u = 0.25 is south (+Z) and u = 0.5 is
+// east (+X) — the mapping `uOfA` below encodes, and the whole scene is placed
+// against.
+//
+// Night sits at the south, the sunset is centred due east, and the mix runs on
+// angular distance from it, so the corner between the two openings is real
+// twilight rather than a seam. The gradient itself is painted small and
+// scaled up — smooth colour needs no resolution, and the sun, moon and clouds
+// go on afterwards at full size.
+const uOfA = (A) => (((0.25 + A / (Math.PI * 2)) % 1) + 1) % 1;
 
-  // paint per-column: blend night → sunset gradients across the arc
-  const nightStops = [[0, '#02030c'], [0.55, '#071228'], [0.82, '#0d2138'], [1, '#173a52']];
-  const sunsetStops = [[0, '#2a1a52'], [0.3, '#7c2a68'], [0.55, '#c33d52'], [0.78, '#f2793a'], [1, '#ffcf78']];
-  const lerp = (a, b, k) => a + (b - a) * k;
+function skyTexture() {
+  const W = 2048, H = 1024;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+
+  // ── the gradient, painted at 1/8 scale ──────────────────────────────────
+  const gw = 256, gh = 128;
+  const gc = document.createElement('canvas');
+  gc.width = gw; gc.height = gh;
+  const gx = gc.getContext('2d');
+  const img = gx.createImageData(gw, gh);
+
+  // stops run zenith (0) → horizon (1) → nadir (2), sampled on that scale
+  const night = [[0, '#01020a'], [0.55, '#050d1c'], [0.95, '#08182a'], [1, '#0d2438'],
+                 [1.08, '#071019'], [1.5, '#04080e'], [2, '#020409']];
+  const sunset = [[0, '#2a1a52'], [0.42, '#7c2a68'], [0.72, '#c33d52'], [0.92, '#f2793a'],
+                  [1, '#ffd68a'], [1.1, '#7a3a3a'], [1.5, '#2a1520'], [2, '#0d070c']];
   const hex = (s) => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+  const lerp = (a, b, k) => a + (b - a) * k;
   const sample = (stops, v) => {
     for (let i = 1; i < stops.length; i++) {
       if (v <= stops[i][0]) {
@@ -413,65 +495,65 @@ function skyTexture(theta0, thetaLen) {
     }
     return hex(stops[stops.length - 1][1]);
   };
-  const uNightEnd = uOf(0.45), uSunsetStart = uOf(1.05);
-  const img = ctx.createImageData(c.width, c.height);
-  for (let x = 0; x < c.width; x++) {
-    const u = x / (c.width - 1);
-    // 0 = pure night, 1 = pure sunset, smooth twilight between
-    let m = (u - uNightEnd) / (uSunsetStart - uNightEnd);
-    m = Math.max(0, Math.min(1, m));
-    m = m * m * (3 - 2 * m);
-    for (let y = 0; y < c.height; y++) {
-      const v = 1 - y / (c.height - 1);          // 1 at the top of the sky
-      const down = 1 - v;                        // 1 at the horizon
-      const nightPx = sample(nightStops, down);
-      const sunsetPx = sample(sunsetStops, down);
-      const i = (y * c.width + x) * 4;
-      img.data[i] = lerp(nightPx[0], sunsetPx[0], m);
-      img.data[i + 1] = lerp(nightPx[1], sunsetPx[1], m);
-      img.data[i + 2] = lerp(nightPx[2], sunsetPx[2], m);
+  const wrapPi = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  const smooth = (t) => t * t * (3 - 2 * t);
+
+  for (let px = 0; px < gw; px++) {
+    // canvas u → azimuth, then how far that is from due east
+    const A = ((px / (gw - 1)) - 0.25) * Math.PI * 2;
+    const d = Math.abs(wrapPi(A - A_EAST));
+    const m = 1 - smooth(Math.min(1, d / 1.2));       // 1 at the sunset, 0 by the south
+    for (let py = 0; py < gh; py++) {
+      const v = (py / (gh - 1)) * 2;                  // 0 zenith, 1 horizon, 2 nadir
+      const a = sample(night, v), b = sample(sunset, v);
+      const i = (py * gw + px) * 4;
+      img.data[i] = lerp(a[0], b[0], m);
+      img.data[i + 1] = lerp(a[1], b[1], m);
+      img.data[i + 2] = lerp(a[2], b[2], m);
       img.data[i + 3] = 255;
     }
   }
-  ctx.putImageData(img, 0, 0);
+  gx.putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(gc, 0, 0, W, H);
 
-  // the sun, low over the east water: a hot disc in a broad warm bloom
-  const sunX = uOf(Math.PI / 2) * c.width;
-  const sunY = c.height * 0.86;
-  let grad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 300);
-  grad.addColorStop(0, 'rgba(255,214,140,0.85)');
-  grad.addColorStop(0.35, 'rgba(255,150,80,0.35)');
-  grad.addColorStop(1, 'rgba(255,120,60,0)');
+  // ── the sun, low over the east water ────────────────────────────────────
+  const PPD = W / 360;                                // pixels per degree, both axes
+  const sunX = uOfA(A_EAST) * W, sunY = H / 2 - 3.1 * PPD;
+  let grad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 46 * PPD);
+  grad.addColorStop(0, 'rgba(255,206,132,0.75)');
+  grad.addColorStop(0.3, 'rgba(255,140,70,0.3)');
+  grad.addColorStop(1, 'rgba(255,110,60,0)');
   ctx.fillStyle = grad;
-  ctx.fillRect(sunX - 320, sunY - 320, 640, 640);
-  grad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 34);
-  grad.addColorStop(0, 'rgba(255,246,222,1)');
-  grad.addColorStop(0.75, 'rgba(255,214,140,0.95)');
+  ctx.fillRect(sunX - 46 * PPD, sunY - 46 * PPD, 92 * PPD, 92 * PPD);
+  grad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 3.4 * PPD);
+  grad.addColorStop(0, 'rgba(255,250,232,1)');
+  grad.addColorStop(0.7, 'rgba(255,219,150,0.98)');
   grad.addColorStop(1, 'rgba(255,190,110,0)');
   ctx.fillStyle = grad;
-  ctx.beginPath(); ctx.arc(sunX, sunY, 34, 0, Math.PI * 2); ctx.fill();
-  // a few flat cloud bars catching the light
-  ctx.fillStyle = 'rgba(255,170,110,0.28)';
-  for (const [dx, dy, w, h] of [[-260, -120, 340, 10], [-80, -170, 260, 8], [120, -90, 300, 12]]) {
-    ctx.fillRect(sunX + dx, sunY + dy, w, h);
+  ctx.beginPath(); ctx.arc(sunX, sunY, 3.4 * PPD, 0, Math.PI * 2); ctx.fill();
+  // flat cloud bars catching it from underneath
+  ctx.fillStyle = 'rgba(255,168,110,0.26)';
+  for (const [dx, dy, w, h] of [[-34, -13, 46, 1.5], [-9, -20, 34, 1.2], [16, -9, 40, 1.7]]) {
+    ctx.fillRect(sunX + dx * PPD, sunY + dy * PPD, w * PPD, h * PPD);
   }
 
-  // the moon, high in the night end
-  const moonX = uOf(-0.35) * c.width, moonY = c.height * 0.22;
-  grad = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 60);
-  grad.addColorStop(0, 'rgba(220,230,255,0.5)');
-  grad.addColorStop(1, 'rgba(220,230,255,0)');
+  // ── the moon, high over the night side ──────────────────────────────────
+  const moonX = uOfA(-0.5) * W, moonY = H / 2 - 34 * PPD;
+  grad = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 9 * PPD);
+  grad.addColorStop(0, 'rgba(214,226,255,0.42)');
+  grad.addColorStop(1, 'rgba(214,226,255,0)');
   ctx.fillStyle = grad;
-  ctx.fillRect(moonX - 60, moonY - 60, 120, 120);
-  ctx.fillStyle = 'rgba(235,240,252,0.95)';
-  ctx.beginPath(); ctx.arc(moonX, moonY, 13, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(160,175,210,0.5)';
-  ctx.beginPath(); ctx.arc(moonX - 4, moonY - 3, 3.4, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(moonX + 5, moonY + 4, 2.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillRect(moonX - 9 * PPD, moonY - 9 * PPD, 18 * PPD, 18 * PPD);
+  ctx.fillStyle = 'rgba(236,241,253,0.96)';
+  ctx.beginPath(); ctx.arc(moonX, moonY, 1.5 * PPD, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(158,174,210,0.45)';
+  ctx.beginPath(); ctx.arc(moonX - 0.45 * PPD, moonY - 0.35 * PPD, 0.4 * PPD, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(moonX + 0.55 * PPD, moonY + 0.45 * PPD, 0.28 * PPD, 0, Math.PI * 2); ctx.fill();
 
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = THREE.ClampToEdgeWrapping;
   return t;
 }
 
@@ -492,22 +574,22 @@ function starSprite() {
   return _starSprite;
 }
 
-// The glint lane under the sun: bright at the far (sun) end, gone at the near.
+// A reflection lane: bright at the far end, gone at the near, and feathered
+// along its length so it lies on the water rather than sitting on it.
 function glintTexture() {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 32;
   const ctx = c.getContext('2d');
   const grad = ctx.createLinearGradient(0, 0, 256, 0);
   grad.addColorStop(0, 'rgba(255,255,255,0)');
-  grad.addColorStop(0.75, 'rgba(255,235,200,0.45)');
-  grad.addColorStop(1, 'rgba(255,244,220,0.9)');
+  grad.addColorStop(0.72, 'rgba(255,235,200,0.42)');
+  grad.addColorStop(1, 'rgba(255,244,220,0.95)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 256, 32);
-  // soften the lane's edges
   const edge = ctx.createLinearGradient(0, 0, 0, 32);
   edge.addColorStop(0, 'rgba(0,0,0,1)');
-  edge.addColorStop(0.35, 'rgba(0,0,0,0)');
-  edge.addColorStop(0.65, 'rgba(0,0,0,0)');
+  edge.addColorStop(0.38, 'rgba(0,0,0,0)');
+  edge.addColorStop(0.62, 'rgba(0,0,0,0)');
   edge.addColorStop(1, 'rgba(0,0,0,1)');
   ctx.globalCompositeOperation = 'destination-out';
   ctx.fillStyle = edge;
