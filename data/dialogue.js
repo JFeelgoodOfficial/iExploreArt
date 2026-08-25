@@ -1,33 +1,25 @@
 // The curator's conversation tree — pure data, no DOM. The runner in
 // js/curator/Curator.js interprets it. Choice actions:
 //   next: 'nodeId'        → go to node
-//   action: {type:'residencyList'}    → list the residency floors
-//   action: {type:'residency', id}    → tell which room that artist works in
+//   action: {type:'residencyList'}    → list every hall the gallery holds
+//   action: {type:'residency', id}    → tell about that hall and its artist
 //   next: null            → end conversation
+//
+// Mira stands in the foyer now, and the foyer opens onto one show at a time —
+// so her welcome is built from data/featured.js at module load. Change the
+// featured show there and she introduces the new one without an edit here.
+
+import { FEATURED, featuredResidency } from './featured.js';
+
+const f = featuredResidency();
 
 export const DIALOGUE = {
   start: {
-    text: 'Welcome to iExploreArt. I’m Mira, the gallery’s curator. Everything on these walls is original work by JFeelgood — take your time with it. Is there anything I can tell you?',
+    text: `Welcome to iExploreArt. I’m Mira, the curator. Just now we’re showing ${f.artist} — the whole of the ${FEATURED.series} series, hung through ${f.name}. The door beside my desk takes you straight in. Is there anything I can tell you?`,
     choices: [
-      { label: 'Tell me about this gallery.', next: 'gallery' },
-      { label: 'I’m looking for a resident artist.', next: 'residency' },
+      { label: 'Tell me about the show.', action: { type: 'residency', id: FEATURED.residencyId } },
+      { label: 'What else does iExploreArt hold?', action: { type: 'residencyList' } },
       { label: 'Just looking, thank you.', next: 'bye' },
-    ],
-  },
-
-  gallery: {
-    text: 'iExploreArt is two things at once — an exhibition hall and an artist residency. The main room you’re standing in hangs work by the gallery’s creator, the artist JFeelgood. The lift beside my desk carries you up to the artists of our privileged residency program, each of them given a floor of their own to work in and hang.',
-    choices: [
-      { label: 'I’m looking for a resident artist.', next: 'residency' },
-      { label: 'Back.', next: 'start' },
-    ],
-  },
-
-  residency: {
-    text: 'Our residencies are upstairs — whole rooms, not studios behind a door. The lift just behind me goes to them; step in and press the floor. Shall I tell you what’s up there?',
-    choices: [
-      { label: 'Yes — what’s in residence?', action: { type: 'residencyList' } },
-      { label: 'Back.', next: 'start' },
     ],
   },
 

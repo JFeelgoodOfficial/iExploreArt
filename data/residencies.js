@@ -8,6 +8,9 @@
 // Each entry describes one destination:
 //   id     : room id, matching the id registered with the RoomManager in main.js.
 //   name   : shown on the lift button and by the curator.
+//   slug   : the hall's share URL — visiting the page as #slug walks straight
+//            into that hall after the loading screen (js/main.js). Raw ids work
+//            too, but the slug is the one artists hand out.
 //   floor  : which floor the lift climbs to. Drives the ride length, so the
 //            further up the residency, the longer the ride.
 //   artist : resident's name, when the room is credited to one. Omit it and the
@@ -54,14 +57,29 @@ export const ERIN_CARLE_BIO = 'Erin Carle is a surrealist painter and curator wh
 
 export const RESIDENCIES = [
   {
+    // The hall the gallery was built around — the old reception room. Closed
+    // since the reception moved out to the foyer; the room is still defined in
+    // main.js, so reopening it is a matter of deleting this flag and giving
+    // visitors a way in.
+    id: 'gallery',
+    name: 'Hall of JFeelgood',
+    slug: 'hall-of-jfeelgood',
+    floor: 0,
+    artist: 'JFeelgood',
+    closed: true,
+    blurb: 'the double-height hall the gallery was built around — nineteen of JFeelgood’s own works over two floors, a mezzanine, and a walled courtyard with a great tree',
+  },
+  {
     id: 'courtyard',
     name: 'The Courtyard',
+    slug: 'courtyard',
     floor: 1,
     blurb: 'three storeys of arcaded hallway around an open garden, hung the whole way round',
   },
   {
     id: 'nouveau',
     name: 'Nouveau Hall',
+    slug: 'nouveau-hall',
     floor: 2,
     artist: 'Erin Carle',
     blurb: 'a domed hall in leaded glass and mahogany, with a stair hall beyond the portal — seven pieces from her Spring Series are hanging there now',
@@ -70,14 +88,18 @@ export const RESIDENCIES = [
   {
     id: 'rococo',
     name: 'Rococo Hall',
+    slug: 'rococo-hall',
     floor: 3,
     artist: 'Erin Carle',
     blurb: 'gilt boiserie under a painted ceiling, with a gallery running on three sides — she has hung the whole of the Fall Series across it, ten pieces',
     bio: ERIN_CARLE_BIO,
   },
   {
+    // Named for the show hanging in it, at the artist's own suggestion —
+    // "Chadrea Hall" read oddly beside the style-named halls.
     id: 'chadrea',
-    name: 'Chadrea Hall',
+    name: 'Beautiful Decay Hall',
+    slug: 'beautiful-decay-hall',
     floor: 4,
     artist: 'Chad Rea',
     blurb: 'board-formed concrete under an eight-metre soffit, lit by a slot of skylight and a cove recessed the whole length of the art wall, with a cantilevered stair up to a mezzanine and a rounded plaster arch through the pier into a daylit wing; the whole of his Beautiful Decay series is hanging there now — twenty paintings, flat on the concrete and unframed, on every wall the building has, out to the pool in the courtyard',
@@ -86,6 +108,7 @@ export const RESIDENCIES = [
   {
     id: 'decetise',
     name: 'Decetise Hall',
+    slug: 'decetise-hall',
     floor: 5,
     artist: 'Maria Decetise',
     blurb: 'one whole floor plate five storeys up — two walls of glass over the city, '
@@ -100,6 +123,7 @@ export const RESIDENCIES = [
   {
     id: 'brutalist',
     name: 'Brutalism Hall',
+    slug: 'brutalism-hall',
     floor: 6,
     closed: true,
     blurb: 'four storeys of board-formed concrete round one void — galleries ringing it at two levels, three cantilevered flights each against a different wall, and a foot of water lying on the glass at the top that you look down through, thirteen metres, to the floor; ten works hung flat on the concrete, unframed, and the pool runs out through the east wall to an edge with the city under it',

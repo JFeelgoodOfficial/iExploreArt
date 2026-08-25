@@ -1,7 +1,7 @@
 // ============================================================================
-// CHADREA HALL HANG — Chad Rea, "Beautiful Decay", floor 4.
+// BEAUTIFUL DECAY HALL HANG — Chad Rea, "Beautiful Decay", floor 4.
 //
-// The whole series, twenty works, plus a portrait of the artist. Hung from the
+// The whole series, twenty works. Hung from the
 // .webp files in assets/art/chadrea/. Array POSITION is the slot index in
 // js/world/chadrea/chadrea.js SLOTS[]; to reshuffle the hang, move entries
 // between positions rather than editing coordinates.
@@ -23,9 +23,8 @@
 //      recorded as 36 × 24 — INFERRED, not transcribed. Correct it if the
 //      artist says otherwise.
 //
-// `size` is what actually goes on the wall, in metres. It is the piece's true
-// size TIMES `SCALE` below — see the note there, because the label and the wall
-// deliberately disagree.
+// `size` is what actually goes on the wall, in metres — the piece's true
+// catalogue size (times `SCALE` below, which stands at 1: see the note there).
 //
 // `px` is the source file's TRUE pixel size, which js/art/load.js needs up
 // front to decode at the tier's cap instead of at full resolution. Change a
@@ -39,14 +38,12 @@ const ARTIST = 'Chad Rea';
 const SERIES = 'Beautiful Decay';
 
 // How much bigger than life the works hang. At 1 the hall shows them at their
-// true size — a 48-inch canvas as 1.22 m of concrete — which is honest and, in
-// a room with an 8.6 m soffit and 22 m walls, reads as stamps on a lot of grey.
-// At 2 the hang fills the architecture.
-//
-// The consequence, deliberately: `dims` on the label stays the catalogue size,
-// because that is a fact about the painting, so the label says 48 × 48 in while
-// the thing on the wall measures 2.44 m. Set this to 1 for a true-scale hang.
-const SCALE = 2;
+// true size — a 48-inch canvas as 1.22 m of concrete. The hall's walls dwarf
+// them, and that is the point: the work is shown at the size it exists, at the
+// artist's own request — if the goal is to sell a painting, the wall should
+// tell the truth about it. (At 2 the hang filled the architecture, and the
+// label and the wall disagreed.)
+const SCALE = 1;
 
 // The series statement, shown under every piece in the hall. One text for all
 // twenty: the works are a single practice, not twenty separate arguments.
@@ -56,18 +53,15 @@ const STATEMENT = 'Paintings over “finished” paintings. A practice of lettin
   + 'permanence than with the moment. An affirmation that nothing, including the '
   + 'self, is ever really done evolving.';
 
-// The artist's own card, under the statement on every one of his labels. The
-// handles are plain text and the sites are links (js/ui/UI.js): the list gives
-// a handle without naming a platform, and inventing an instagram.com/... URL
-// for it would be putting words in his mouth.
+// The artist's own card, under the statement on every one of his labels — his
+// name, his site, his handle, and nothing else, at his request. The handle is
+// plain text and the site is a link (js/ui/UI.js): the artist gives the handle
+// without naming a platform, and inventing an instagram.com/... URL for it
+// would be putting words in his mouth.
 const CONTACT = {
   name: ARTIST,
-  role: 'Artist & Cultural Provocateur | Brand Architect | Creative Advisor',
-  phone: '(310) 738-8886',
   links: [
-    { handle: '@chadrea', url: 'https://www.chadrea.com', label: 'www.chadrea.com' },
-    { handle: '@cult.of.happy', url: 'https://www.cultofhappy.com', label: 'www.cultofhappy.com' },
-    { handle: '@lockh.arthouse', url: 'https://www.lockharthousetx.com', label: 'www.lockharthousetx.com' },
+    { handle: '@chadrea', url: 'https://www.chadrea.com', label: 'ChadRea.com' },
   ],
 };
 
@@ -96,25 +90,16 @@ const work = (n, medium, h, w, px, file) => ({
   ...inches(h, w),
 });
 
-// The artist, on the pier wall by the arch — the first wall on your right as
-// you arrive, before the hall opens up. The label under it is his bio, the same
-// text the curator speaks downstairs (data/residencies.js), read from there
-// rather than copied.
-//
-// No `size` and no `dims`: a portrait is not one of the works, has no
-// catalogued dimensions, and SCALE has nothing to say about it. It contain-fits
-// into its slot's envelope the way the other halls size everything.
-export const CHAD_PORTRAIT = {
-  id: 'cr-portrait',
-  title: ARTIST,
-  // The name is the title here, so the artist line would print it twice. An
-  // empty string is a deliberate blank in js/ui/UI.js — it leaves the line out
-  // rather than falling back to the house artist — and `medium` says what the
-  // thing on the wall is instead.
-  artist: '',
-  year: '', medium: 'Portrait of the artist',
-  image: 'assets/art/chadrea/chadrea.webp',
-  px: [670, 771],
+// The show card — what the painted title wall by the arch opens when you press
+// E on it (js/world/chadrea/chadrea.js). Where the artist's photo used to hang
+// there is now a museum-style title wall: show name, artist, statement, painted
+// on the concrete. The statement is his bio, the same text the curator speaks
+// downstairs (data/residencies.js), read from there rather than copied.
+export const SHOW_CARD = {
+  id: 'cr-show-card',
+  title: SERIES,
+  artist: ARTIST,
+  year: '', medium: 'Artist statement',
   description: CHAD_REA_BIO,
   contact: CONTACT,
 };
@@ -141,7 +126,6 @@ export const CHAD_PORTRAIT = {
 //   15–16 the wing                        its east wall and its north end, the
 //                                         brightest light in the residency
 //   17–19 the courtyard                   out by the pool, under open sky
-//   20    the portrait
 export const CHADREA_HANG = [
   /*  0 W over console  */ work(5, 'Spray paint on canvas', 60, 40, [1365, 2048]),
   /*  1 W arrival       */ work(2, 'Spray paint, acrylic, paper, plant-based acid on canvas', 48, 32, [1365, 2048]),
@@ -163,7 +147,6 @@ export const CHADREA_HANG = [
   /* 17 courtyard W     */ work(12, 'Spray paint, acrylic, paper on birch', 36, 24, [1365, 2048]),
   /* 18 courtyard E     */ work(14, 'Spray paint, acrylic on canvas (framed)', 36, 24, [1365, 2048]),
   /* 19 courtyard far   */ work(20, 'Spray paint, acrylic on canvas (framed)', 60, 40, [1365, 2048], 'Beautiful Decay 20x'),
-  /* 20 the portrait    */ CHAD_PORTRAIT,
 ];
 
 // Nothing is left in the folder now except the source PDF. #16–#18 are not in
