@@ -3,8 +3,12 @@
 //
 // Two independent mute toggles (music + ambient sound) rendered as frosted
 // corner buttons that work on touch, plus M / N keyboard shortcuts for desktop
-// (where pointer-lock hides the cursor and makes the DOM buttons unclickable
-// while walking). It also owns the mobile audio unlock: browsers create the
+// (where pointer-lock hides the cursor and makes the corner buttons
+// unclickable while walking) and a second pair of the same toggles inside the
+// pause panel — the ones a desktop mouse can reach, since Esc raises the
+// panel over everything. Any [data-audio="music"|"sound"] button in the page
+// is wired up and kept in sync. It also owns the mobile audio unlock:
+// browsers create the
 // AudioContext suspended, so we resume it and play a one-sample silent buffer
 // inside a real gesture (the "Enter" tap), which iOS needs before any later
 // buffered sound will actually sound.
@@ -60,21 +64,25 @@ export function buildAudioControls({ music, fountain, camera }) {
   };
 
   // ── the buttons ──────────────────────────────────────────────────────────
+  // Every [data-audio] button in the page drives the same toggle: the frosted
+  // corner pair, plus the copies inside the pause panel — the ones a desktop
+  // mouse can actually reach, since pointer lock hides the cursor everywhere
+  // except behind an overlay. All copies stay in sync through apply().
   const wrap = document.getElementById('audio-controls');
-  const btnMusic = document.getElementById('btn-music');
-  const btnSound = document.getElementById('btn-sound');
-  if (btnMusic) btnMusic.innerHTML = NOTE_SVG;
-  if (btnSound) btnSound.innerHTML = SPEAKER_SVG;
+  const btns = {
+    music: [...document.querySelectorAll('[data-audio="music"]')],
+    sound: [...document.querySelectorAll('[data-audio="sound"]')],
+  };
+  for (const b of btns.music) b.innerHTML = NOTE_SVG;
+  for (const b of btns.sound) b.innerHTML = SPEAKER_SVG;
 
   function apply(kind) {
     const muted = state[kind];
     if (kind === 'music' && music) music.setVolume(muted ? 0 : onVol.music);
     if (kind === 'sound' && fountain) fountain.setVolume(muted ? 0 : onVol.sound);
-    const btn = kind === 'music' ? btnMusic : btnSound;
-    if (btn) {
+    for (const btn of btns[kind]) {
       btn.classList.toggle('muted', muted);
-      const label = kind === 'music' ? 'music' : 'sound';
-      btn.setAttribute('aria-label', `${muted ? 'Unmute' : 'Mute'} ${label}`);
+      btn.setAttribute('aria-label', `${muted ? 'Unmute' : 'Mute'} ${kind}`);
       btn.setAttribute('aria-pressed', String(muted));
     }
   }
@@ -85,8 +93,11 @@ export function buildAudioControls({ music, fountain, camera }) {
     apply(kind);
   }
 
-  if (btnMusic) btnMusic.addEventListener('click', () => { unlock(); toggle('music'); });
-  if (btnSound) btnSound.addEventListener('click', () => { unlock(); toggle('sound'); });
+  for (const kind of ['music', 'sound']) {
+    for (const btn of btns[kind]) {
+      btn.addEventListener('click', () => { unlock(); toggle(kind); });
+    }
+  }
 
   // Desktop keyboard toggles — pointer-lock hides the cursor, so the buttons
   // aren't clickable while walking; M / N always work. No text inputs exist.
