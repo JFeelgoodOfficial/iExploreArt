@@ -57,16 +57,16 @@ export const ERIN_CARLE_BIO = 'Erin Carle is a surrealist painter and curator wh
 
 export const RESIDENCIES = [
   {
-    // The hall the gallery was built around — the old reception room. Closed
-    // since the reception moved out to the foyer; the room is still defined in
-    // main.js, so reopening it is a matter of deleting this flag and giving
-    // visitors a way in.
+    // The hall the gallery was built around — the old reception room, minus
+    // the reception, which moved out to the foyer. Not on the foyer's door,
+    // but its share link (#hall-of-jfeelgood) walks straight in; you arrive
+    // standing in the old lift cabin, doors open. Floor 0 keeps it off the
+    // lift's own panel (js/world/ReceptionLift.js).
     id: 'gallery',
     name: 'Hall of JFeelgood',
     slug: 'hall-of-jfeelgood',
     floor: 0,
     artist: 'JFeelgood',
-    closed: true,
     blurb: 'the double-height hall the gallery was built around — nineteen of JFeelgood’s own works over two floors, a mezzanine, and a walled courtyard with a great tree',
   },
   {
@@ -95,11 +95,15 @@ export const RESIDENCIES = [
     bio: ERIN_CARLE_BIO,
   },
   {
-    // Named for the show hanging in it, at the artist's own suggestion —
-    // "Chadrea Hall" read oddly beside the style-named halls.
+    // Renamed twice at the artist's and the owner's direction: "Chadrea Hall"
+    // read oddly beside the style-named halls, and the board-formed concrete
+    // house earned the movement's name once the old Brutalism Hall upstairs
+    // became Castle Hall. `aliases` keeps the show's previously shared links
+    // working (js/main.js roomFromHash).
     id: 'chadrea',
-    name: 'Beautiful Decay Hall',
-    slug: 'beautiful-decay-hall',
+    name: 'Brutalism Hall',
+    slug: 'brutalism-hall',
+    aliases: ['beautiful-decay-hall'],
     floor: 4,
     artist: 'Chad Rea',
     blurb: 'board-formed concrete under an eight-metre soffit, lit by a slot of skylight and a cove recessed the whole length of the art wall, with a cantilevered stair up to a mezzanine and a rounded plaster arch through the pier into a daylit wing; the whole of his Beautiful Decay series is hanging there now — twenty paintings, flat on the concrete and unframed, on every wall the building has, out to the pool in the courtyard',
@@ -122,8 +126,8 @@ export const RESIDENCIES = [
   },
   {
     id: 'brutalist',
-    name: 'Brutalism Hall',
-    slug: 'brutalism-hall',
+    name: 'Castle Hall',
+    slug: 'castle-hall',
     floor: 6,
     closed: true,
     blurb: 'four storeys of board-formed concrete round one void — galleries ringing it at two levels, three cantilevered flights each against a different wall, and a foot of water lying on the glass at the top that you look down through, thirteen metres, to the floor; ten works hung flat on the concrete, unframed, and the pool runs out through the east wall to an edge with the city under it',
