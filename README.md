@@ -4,14 +4,20 @@ iexploreart.com is a first-person 3D art space built with [Three.js](https://thr
 Every visit begins in a small **reception foyer** (`js/world/foyer.js`), facing
 the desk and Mira, the curator. The signage above the desk names the currently
 featured artist, one of their works hangs beside the door, and the door itself
-opens straight into their hall. Nothing is for sale here: pressing **E** on a
-painting opens a wall label with its title and artist, and nothing else.
+opens straight into their hall — the hall is built during the loading screen,
+so stepping through reads as walking out of the matching door on the far side.
+The foyer's other two sides open over an infinity pool the visitor can only
+look at: a vibrant sunset over the water to the east, a twinkling night sky to
+the south, one city skyline standing round the whole of it. The gallery's
+music plays in the foyer only — step into a hall and it stops, step back out
+and it returns. Nothing is for sale here: pressing **E** on a painting opens a
+wall label with its title and artist, and nothing else.
 
 **One show opens onto the foyer at a time.** Which one is `data/featured.js` —
 a single config naming the hall, the show, and the piece hung in the foyer;
 swap the featured artist by editing that file and nothing else. The other
 halls stay built and each has a **share link**: visiting the page as
-`#its-slug` (e.g. `#beautiful-decay-hall`, `#rococo-hall` — slugs live in
+`#its-slug` (e.g. `#brutalism-hall`, `#rococo-hall` — slugs live in
 `data/residencies.js`) walks straight into that hall after the Enter click,
 whether or not it is featured. That is the link an artist hands out for their
 own show.
@@ -19,22 +25,23 @@ own show.
 The halls, listed in `data/residencies.js`: the Hall of JFeelgood on the
 ground floor (the double-height room the gallery was built around), an arcaded
 courtyard palazzo on floor 1, an Art Nouveau domed hall on 2, a Rococo gallery
-on 3, Beautiful Decay Hall — a concrete house of one long top-lit hall, a
-daylit wing and a walled pool courtyard — on 4, a whole glazed floor plate
-over the city with a French parterre round the lift core and an infinity pool
-off its west edge on 5, and a board-formed concrete hall built round a
-four-storey void on 6.
+on 3, Brutalism Hall — a concrete house of one long top-lit hall, a daylit
+wing and a walled pool courtyard — on 4, a whole glazed floor plate over the
+city with a French parterre round the lift core and an infinity pool off its
+west edge on 5, and Castle Hall, a board-formed concrete hall built round a
+four-storey void, on 6. A renamed hall can keep its old links alive through
+`aliases` on its residency entry (`#beautiful-decay-hall` still opens
+Brutalism Hall).
 
 An entry may carry `pending: true`, which means the floor is spoken for but the
 room is not built. Nothing is pending right now.
 
 An entry may also carry `closed: true` — built, but shut to visitors. Share
 links refuse it, while the curator still lists it, marked closed, so a visitor
-asking after it gets an answer. **Hall of JFeelgood (ground) and Brutalism
-Hall (floor 6) are closed.** Deleting the flag in `data/residencies.js`
-reopens one to the curator and to share links; the old reception lift (still
-wired, inside the Hall of JFeelgood) is how visitors would move between floors
-if that hall ever reopens as a hub.
+asking after it gets an answer. **Castle Hall (floor 6) is closed.** The Hall
+of JFeelgood is open through its own link, `#hall-of-jfeelgood` — you arrive
+standing in the old reception lift's cabin, and the lift still serves the
+upper floors from there.
 
 Everything is static files — no build step, no server. Open `index.html` from any
 static host (GitHub Pages, Netlify, etc.).
@@ -56,7 +63,7 @@ The Hall of JFeelgood holds JFeelgood's real work — 19 pieces, stored as
 is set to the photo's true aspect ratio so nothing is stretched. `year`,
 `medium`, and `description` are editable placeholders you can fill in per
 piece, though the info panel shows only `title` and the artist
-(`js/ui/UI.js`). The hall is closed to visitors at the moment.
+(`js/ui/UI.js`). The hall is reached by its share link, `#hall-of-jfeelgood`.
 
 To add or swap a piece:
 
@@ -78,14 +85,14 @@ Nouveau Hall; the asset folders keep their original `fall26` / `spring1` names.
 Her name is what the info panel prints under each title — a work's own `artist`
 wins over the house artist, and an empty `artist` prints nothing at all.
 
-Brutalism Hall on floor 6 hangs uncredited from
+Castle Hall on floor 6 hangs uncredited from
 **`data/brutalist-artworks.js`** — ten works, all still `image: null`, so
 `js/art/placeholder.js` generates a canvas for each and the hall reads as
 complete until the real files arrive. The hall is closed to visitors, so the
 lift does not stop there.
 
-Chad Rea holds **Beautiful Decay Hall** on floor 4 — named for the show
-hanging in it (`js/world/chadrea/chadrea.js`) — a concrete house rather than a
+Chad Rea holds **Brutalism Hall** on floor 4
+(`js/world/chadrea/chadrea.js`) — a concrete house rather than a
 gallery: one long board-formed hall under an 8.6 m soffit, a mezzanine reached
 by a single cantilevered flight, and a rounded plaster arch through the pier
 wall into a white, daylit wing that opens again onto a walled courtyard with a
@@ -113,7 +120,7 @@ terrace at the ends of the water. Its nine works hang from `DECETISE_HANG`, a
 manifest exported by the room's own file alongside `SLOTS[]` — six on the south
 art wall and three on the faces of the core itself, which are what you see as
 the doors open. Every entry is still `image: null`, so each slot carries a
-generated placeholder; unlike Chadrea Hall's, these do answer an **E** press,
+generated placeholder; they answer an **E** press,
 with the title and the resident's name. There is no return door on a wall: the
 way out is the cabin you arrived in — look back at its brass wall and press **E**.
 
@@ -159,7 +166,7 @@ css/gallery.css       brand-styled UI
 data/featured.js      ← which show the foyer opens onto (edit to swap)
 data/artworks.js      ← JFeelgood's collection manifest
 data/residency-artworks.js  ← what hangs in the Nouveau and Rococo halls
-data/brutalist-artworks.js  ← what hangs in Brutalism Hall
+data/brutalist-artworks.js  ← what hangs in Castle Hall
 data/chadrea-artworks.js    ← the Beautiful Decay hang (+ show card)
 data/dialogue.js      ← the curator's conversation tree
 data/residencies.js   ← every hall: names, artists, floors, slugs, closed flags
