@@ -39,6 +39,7 @@ import { buildWallFountain } from './world/WallFountain.js';
 import { buildDetails } from './world/Details.js';
 import { buildFoyerRoom, foyerGround, FY_CURATOR } from './world/foyer.js';
 import { FEATURED } from '../data/featured.js';
+import { LISTED_RESIDENCIES, findResidency } from '../data/residencies.js';
 import { buildLedEqualizer } from './world/led-equalizer.js';
 import { buildMusic } from './audio/Music.js';
 import { buildAudioControls } from './audio/AudioControls.js';
@@ -175,7 +176,7 @@ function arcSegments(cx, cz, r, a0, a1, steps = 10, level = 'all') {
 // the visitor arrived. Hub and spoke — you ride up, you walk back.
 function returnDoor(x, y, z, rotY) {
   const hit = doorHitbox(2.0, 2.3, x, y, z, rotY, 'door-to-reception');
-  hit.userData.door = { label: 'return to reception', onEnter: () => rooms.enter('foyer') };
+  hit.userData.door = { label: 'return to reception', onEnter: () => { rooms.enter('foyer'); reflectHash('foyer'); } };
   scene.add(hit);
   return hit;
 }
@@ -528,6 +529,7 @@ async function travelTo(id) {
     await new Promise((r) => setTimeout(r, 600));  // #veil's CSS fade is 0.5 s
     await ensureRoom(id);
     rooms.enter(id);
+    reflectHash(id);
     if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
   } catch (e) {
     console.error('[travel] failed', e);
@@ -536,6 +538,38 @@ async function travelTo(id) {
     travelling = false;
   }
 }
+
+// --- share links ------------------------------------------------------------
+// Every open hall has a slug (data/residencies.js), and visiting the page as
+// #that-slug walks straight into the hall once the visitor clicks Enter — the
+// link an artist hands out for their own show, whether or not it is the one
+// the foyer door opens onto. Unknown, closed, or unbuildable targets fall
+// through to the foyer. Raw room ids are accepted too.
+function roomFromHash() {
+  const h = decodeURIComponent(location.hash.replace(/^#/, '')).trim().toLowerCase();
+  if (!h) return null;
+  const r = LISTED_RESIDENCIES.find((x) => x.slug === h || x.id === h);
+  if (!r || r.closed) return null;
+  if (!rooms.has(r.id) && !ROOM_FACTORIES[r.id]) return null;
+  return r.id;
+}
+
+// Keep the address bar honest: arriving in a hall writes its slug, returning
+// to the foyer clears it. replaceState doesn't fire hashchange, so this never
+// echoes back into the listener below.
+function reflectHash(id) {
+  const r = findResidency(id);
+  const url = r && !r.closed
+    ? `#${r.slug || r.id}`
+    : location.pathname + location.search;
+  history.replaceState(null, '', url);
+}
+
+// A hash pasted or edited mid-visit travels there (or back to the foyer).
+window.addEventListener('hashchange', () => {
+  const dest = roomFromHash() || 'foyer';
+  if (dest !== rooms.current) travelTo(dest);
+});
 
 // --- register every room --------------------------------------------------
 // The old reception hall — Hall of JFeelgood now (data/residencies.js), closed
@@ -655,6 +689,9 @@ enterBtn.addEventListener('click', () => {
   audio.reveal();      // show the music / sound mute buttons
   ui.enter();
   controls.lock();
+  // A share link (#slug) skips the walk: ride the veil straight to the hall.
+  const dest = roomFromHash();
+  if (dest && dest !== rooms.current) travelTo(dest);
 });
 
 lighting.bake();
