@@ -414,7 +414,11 @@ const ROOM_FACTORIES = {
   },
 
   chadrea: () => {
-    const room = buildChadreaRoom(scene, { tier, ...artOpts, art: CHADREA_HANG });
+    const room = buildChadreaRoom(scene, {
+      tier, ...artOpts, art: CHADREA_HANG,
+      // the foyer door's twin in the hall's south wall — E walks back out
+      onExit: () => travelTo('foyer'),
+    });
     const lights = setupChadreaLighting(scene, renderer, tier);
     // The city over the courtyard's far wall — the only place in this
     // residency you see out. Yawed a half turn so the skyline lies along +Z,
@@ -427,16 +431,10 @@ const ROOM_FACTORIES = {
     // Read from a 1.65 m eye over a 4.6 m wall, so the near rooftops want to
     // sit above it rather than below the coping.
     city.group.position.y = 3.4;
-    // No return door on the south wall. Every other residency has one there,
-    // behind the spawn, but this hall also has a lift of its own through the
-    // arch — two ways out of one room, and the door was standing on the only
-    // large wall in the hall with nothing on it. The wall hangs work now
-    // (SLOTS CH-S1/CH-S2); the lift below is how you leave.
-    //
-    // The lift is in the wing's south wall. It rides the
-    // veil rather than switching outright, the way the nouveau stair hall's
-    // does — entering 'gallery' puts you inside the reception cabin with its
-    // doors open, so the trip reads as a lift rather than a cut.
+    // Two ways out of this hall: the foyer door in the south wall (built and
+    // wired inside buildChadreaRoom — the visitor arrives in front of it),
+    // and the lift in the wing's south wall below. Both ride the veil, so the
+    // trip reads as a passage rather than a cut.
     const liftDoor = doorHitbox(CH_LIFT.w + 0.2, CH_LIFT.h, CH_LIFT.x, CH_LIFT.h / 2,
       CH_LIFT.z - 0.16, Math.PI, 'chadrea-lift-to-reception');
     liftDoor.userData.door = {
@@ -508,13 +506,22 @@ const ROOM_FACTORIES = {
   },
 };
 
-async function ensureRoom(id) {
-  if (rooms.has(id) || !ROOM_FACTORIES[id]) return;
-  // Let the veil paint before the build takes the main thread for several seconds.
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  const { value, layer } = rooms.captureLayer(ROOM_FACTORIES[id]);
-  residencyRooms[id] = value.room;
-  rooms.define(id, { layer, ...value.def });
+// One build per room, ever — the boot preloads the featured hall while a deep
+// link may ask for the same id, and two concurrent builds of one room would
+// both pass a bare rooms.has() check.
+const roomBuilds = {};
+function ensureRoom(id) {
+  if (rooms.has(id) || !ROOM_FACTORIES[id]) return Promise.resolve();
+  if (!roomBuilds[id]) {
+    roomBuilds[id] = (async () => {
+      // Let the veil paint before the build takes the main thread for several seconds.
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const { value, layer } = rooms.captureLayer(ROOM_FACTORIES[id]);
+      residencyRooms[id] = value.room;
+      rooms.define(id, { layer, ...value.def });
+    })();
+  }
+  return roomBuilds[id];
 }
 
 // A veiled hop between rooms for doors and lifts that don't ride the reception
@@ -548,7 +555,11 @@ async function travelTo(id) {
 function roomFromHash() {
   const h = decodeURIComponent(location.hash.replace(/^#/, '')).trim().toLowerCase();
   if (!h) return null;
-  const r = LISTED_RESIDENCIES.find((x) => x.slug === h || x.id === h);
+  // `aliases` keeps links that were shared under a hall's earlier name working
+  // after a rename (data/residencies.js).
+  const r = LISTED_RESIDENCIES.find(
+    (x) => x.slug === h || x.id === h || x.aliases?.includes(h)
+  );
   if (!r || r.closed) return null;
   if (!rooms.has(r.id) && !ROOM_FACTORIES[r.id]) return null;
   return r.id;
@@ -619,13 +630,25 @@ rooms.define('foyer', {
   spawn: fy.spawn,
   segments: fy.colliders,
   ground: foyerGround,
-  background: new THREE.Color(0x2b241d),
+  // Deep dusk indigo: it is what shows past the sky arc's rim, so it has to
+  // read as zenith over both the sunset and the night side.
+  background: new THREE.Color(0x0d0b1a),
   bake: () => { renderer.shadowMap.needsUpdate = true; },
 });
+
+// The music belongs to the foyer: step into a hall and it stops, step back
+// out and whatever the visitor's mute buttons say comes back. onChange fires
+// on the start('foyer') below too, which seeds the initial state.
+rooms.onChange = (id) => audio.setMusicSuppressed(id !== 'foyer');
 
 // Collision.js seeds its active room at module load, so the start room's real
 // segments + ground only go live once this runs.
 rooms.start('foyer');
+
+// The featured hall is built during the loading screen rather than on the
+// first press of the foyer door, so stepping through reads as walking out of
+// a door instead of waiting out a build stall.
+ensureRoom(FEATURED.residencyId).catch((e) => console.warn('[featured] preload failed', e));
 
 // Reception lift: press E inside the cabin → pick a residency → it rides up and
 // arrives behind the veil.
@@ -758,6 +781,7 @@ renderer.setAnimationLoop(() => {
   city.update(t);
   cy.city.update(t);         // clouds + birds past the courtyard's west windows
   details.update(t);
+  if (rooms.current === 'foyer') fy.update?.(t);   // the night side's stars twinkle
   equalizer.update(t);
   fountain.update(t);
   courtyardRoom.update(t);   // foliage wind (cheap; harmless while hidden)

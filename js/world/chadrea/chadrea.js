@@ -256,9 +256,16 @@ export const SLOTS = [
 // the concrete the way a museum does it. The portraitLamp keeps lighting it.
 export const TITLE_WALL = { x: PIER.x - 0.095, y: 1.9, z: 9.4, w: 1.7, h: 2.3 };
 
-// Ground floor at the south end, facing north up the hall: the arch is on your
-// right, the flight and the skylight ahead. Yaw 0 looks along −z.
-export const SPAWN = { x: 0.6, z: 7.4, yaw: 0 };
+// The door from the reception foyer, in the south wall's west end — clear of
+// the pair hanging at the wall's centre (SLOTS CH-S1/CH-S2). The visitor
+// arrives standing in front of it, as if they had just stepped through, and
+// pressing E on it walks back out to the foyer.
+export const DOOR_S = { x0: -5.3, x1: -3.7, h: 2.4 };
+
+// Ground floor at the south end, just out of the foyer door, facing north up
+// the hall: the flight and the skylight ahead, the lit west wall on your
+// left, the pier and the title wall across on your right. Yaw 0 looks along −z.
+export const SPAWN = { x: -4.5, z: 9.2, yaw: 0 };
 export const SUN_POS = new THREE.Vector3(-7.5, 26, -21);
 
 // ---------------------------------------------------------------------------
@@ -663,6 +670,24 @@ export function buildChadreaRoom(scene, opts = {}) {
   for (const dz of [-1.9, 6.6]) {
     box(0.34, 2.62, 1.06, woodMat(true), HALL.x0 + 0.17, 1.31, dz);
     box(0.12, 2.9, 1.42, concrete(1.5, 3, { tint: 0x8f8880 }), HALL.x0 + 0.30, 1.45, dz);
+  }
+
+  // --- the door from the foyer, in the south wall (DOOR_S) -----------------
+  // The visitor spawns in front of it (SPAWN), so the arrival reads as having
+  // stepped through; its hitbox below walks back out. Same walnut language as
+  // the west reveals, with closed leaves — the passage itself rides the veil.
+  {
+    const dcx = (DOOR_S.x0 + DOOR_S.x1) / 2, z1 = HALL.z1;
+    box(2.1, 2.9, 0.12, concrete(2.2, 3, { tint: 0x8f8880 }), dcx, 1.45, z1 - 0.06);
+    box(1.74, 2.62, 0.2, woodMat(true), dcx, 1.31, z1 - 0.17);
+    const leafW = (DOOR_S.x1 - DOOR_S.x0 - 0.18) / 2;
+    for (const sgn of [-1, 1]) {
+      box(leafW, DOOR_S.h - 0.13, 0.06, woodMat(true),
+          dcx + sgn * (leafW / 2 + 0.01), (DOOR_S.h - 0.13) / 2, z1 - 0.3);
+      const pull = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.3, 8), steel);
+      pull.position.set(dcx + sgn * 0.12, 1.05, z1 - 0.34);
+      g.add(pull);
+    }
   }
 
   // --- pier wall with its rounded plaster archway --------------------------
@@ -1167,6 +1192,21 @@ export function buildChadreaRoom(scene, opts = {}) {
     plane.userData.artwork = SHOW_CARD;
     g.add(plane);
     interactables.push(plane);
+  }
+
+  // --- the way back out: the foyer door's hitbox (DOOR_S, visual above) ----
+  {
+    const dcx = (DOOR_S.x0 + DOOR_S.x1) / 2;
+    const exit = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.8, DOOR_S.h),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    exit.position.set(dcx, DOOR_S.h / 2, HALL.z1 - 0.6);
+    exit.rotation.y = Math.PI;
+    exit.name = 'chadrea-door-to-foyer';
+    exit.userData.door = { label: 'back to the reception foyer', onEnter: () => opts.onExit?.() };
+    g.add(exit);
+    interactables.push(exit);
   }
 
   // --- console: blackened steel carcass, reclaimed-wood top ----------------

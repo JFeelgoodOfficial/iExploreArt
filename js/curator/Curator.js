@@ -219,12 +219,12 @@ export class Curator {
           // featured hall gets the door beside the desk; the others she can
           // describe but not walk anyone into — each hall's own share link is
           // the way straight in.
-          const where = `the ${ordinal(r.floor)} floor`;
+          const where = r.floor > 0 ? `up on the ${ordinal(r.floor)} floor` : 'on the ground floor';
           const text = r.closed
             ? `${r.name} is closed to visitors just now. When it reopens: ${r.blurb}.`
             : r.id === FEATURED.residencyId
               ? `${r.artist ? r.artist + '’s show is what we have open — ' : ''}${r.blurb}. The door just there, beside my desk, takes you straight into ${r.name}.`
-              : `${r.artist ? `${r.artist} works in ${r.name}` : r.name}, up on ${where} — ${r.blurb}. We open one show onto the foyer at a time, so it isn’t walkable from here just now; the artist’s own link opens it directly.`;
+              : `${r.artist ? `${r.artist} works in ${r.name}` : r.name}, ${where} — ${r.blurb}. We open one show onto the foyer at a time, so it isn’t walkable from here just now; the hall’s own link opens it directly.`;
           this.ui.showDialogueNode(text, this._afterResidency(r), (c) => this._choose(c));
         }
         return;

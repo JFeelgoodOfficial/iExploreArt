@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { DOOR } from './layout.js';
 import { OPEN_RESIDENCIES, FLOOR_HEIGHT } from '../../data/residencies.js';
 
+// What the panel offers: every open residency on an upper floor. Floor 0 is
+// the Hall of JFeelgood itself — the room this lift stands in — so a button
+// for it would ride nowhere.
+const SERVED = OPEN_RESIDENCIES.filter((r) => r.floor > 0);
+
 // The lift beside the reception desk — the only way to an artist residency.
 //
 // The gallery's west wall (x = 0) used to carry a painted-on door. It's now a
@@ -249,8 +254,8 @@ export function buildReceptionLift(scene, mats) {
     colliders,
     // Where the gallery drops you: inside the cabin, facing out into the hall.
     spawn: { x: cx, z: CAB_CZ, yaw: -Math.PI / 2 },
-    labels: OPEN_RESIDENCIES.map((r) => `${r.name} — floor ${r.floor}`),
-    residencies: OPEN_RESIDENCIES,
+    labels: SERVED.map((r) => `${r.name} — floor ${r.floor}`),
+    residencies: SERVED,
     ride,
     update,
     reset,
@@ -296,12 +301,12 @@ function panelTex() {
   const yToCanvas = (worldY) => (1 - (worldY - (PANEL_Y - PANEL_H / 2)) / PANEL_H) * c.height;
   const BAND_TOP = 116;                              // clear of the header
   const BAND_BOT = Math.min(440, yToCanvas(EYE - MAX_DROP));
-  const n = OPEN_RESIDENCIES.length;
+  const n = SERVED.length;
   const gap = n > 1 ? Math.min(108, (BAND_BOT - BAND_TOP) / (n - 1)) : 0;
   const top = BAND_TOP + ((BAND_BOT - BAND_TOP) - gap * (n - 1)) / 2;
   const R = n > 1 ? Math.min(34, gap / 2 - 6) : 34;
 
-  const discs = OPEN_RESIDENCIES.map((r, i) => {
+  const discs = SERVED.map((r, i) => {
     const cy = top + i * gap;
     // a shallow recess for the disc to sit in, so the plate still reads as a
     // plate where the mesh doesn't cover it

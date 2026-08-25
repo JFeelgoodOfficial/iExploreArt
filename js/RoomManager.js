@@ -26,6 +26,7 @@ export function captureLayer(scene, build) {
 export function createRoomManager({ scene, player, interaction }) {
   const rooms = new Map();
   let current = null;
+  let onChange = null;
 
   function show(layer, visible) {
     for (const obj of layer) obj.visible = visible;
@@ -55,6 +56,7 @@ export function createRoomManager({ scene, player, interaction }) {
     next.onEnter?.();
     if (teleport) player.teleport(next.spawn.x, next.spawn.z, next.spawn.yaw);
     next.bake?.();
+    onChange?.(id);
   }
 
   return {
@@ -67,5 +69,9 @@ export function createRoomManager({ scene, player, interaction }) {
     // segments and ground function would never be installed.
     start(id) { apply(id, false); },
     get current() { return current; },
+    // One observer for every room switch (enter and start alike), called with
+    // the new id after the room is applied — main.js keys the foyer-only
+    // music off it.
+    set onChange(fn) { onChange = fn; },
   };
 }
