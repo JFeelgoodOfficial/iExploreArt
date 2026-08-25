@@ -3,18 +3,21 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Decetise Hall — residency five (room id `decetise`). Maria Decetise.
 //
-// One whole floor plate of a high rise. Glazed on three sides over the city —
-// north (−Z), east (+X), and west (−X) over an infinity pool that fills the
-// terrace edge to edge and spills off a weir at the lip of the slab. The
-// terrace is looked at, not walked on: the west wall is sealed glass, and the
-// collision plan has nothing out there at all. The south wall is the art wall.
+// One whole floor plate of a high rise. Glazed north (−Z) and east (+X) over
+// the city; the south wall is the art wall; and the west side has no wall at
+// all — the room opens straight onto an infinity pool that fills the terrace
+// edge to edge and spills off a weir at the lip of the slab, five storeys up.
+// No glass stands between the room and the water. What keeps you out of it is
+// the water: the collision plan stops you at the coping and has nothing at all
+// beyond it.
 //
 // The lift core stands in the MIDDLE of the plate,
 // which is where a visitor arrives, and the core sits in a courtyard — gravel
 // parterre, balustraded stone kerb, clipped hedges and topiary, a stone basin
 // with green park chairs, lamp posts — with five plane trees running up through
-// oculi cut in the ceiling. Two freestanding partitions and the core's own three
-// solid faces carry the rest of the hang. A French park met a top-floor suite.
+// oculi cut in the ceiling, and four more out on the terrace at the ends of the
+// water. The core's own three solid faces carry the rest of the hang — nine
+// pictures in all. A French park met a top-floor suite.
 //
 // Same shape as the other residencies (js/world/brutalism/brutalist.js,
 // js/world/chadrea/chadrea.js): this file owns the room and its lighting rig,
@@ -38,31 +41,39 @@ export const DX = {
   yard: 8,                                  // courtyard half-width (the parterre)
   yardEdge: 9.6,                            // where the solid ceiling slabs start
   holeR: 2.6,                               // ceiling panels dropped inside this radius
-  // The pool is the terrace: it runs from the plate's own edge (the weir hangs
-  // a hair past tx0, so the sheet falls off the building) east to within half a
-  // metre of the glass. There is no deck left to stand on beside it, which is
-  // the point — the west wall is sealed and the water is something you look at
-  // through it, not something you walk around.
-  pool: { x0: -23.8, x1: -17.5, z0: -8.4, z1: 8.4 },
+  // The pool IS the terrace. It runs from the plate's own edge — the weir hangs
+  // a hair past tx0, so the sheet falls off the building, five storeys up — to
+  // the room's floor edge at x0, where the coping is the room's own threshold.
+  // Nothing stands between the two: no glass, no walkway. You stop at the
+  // coping because the next step is water, which is also why the terrace needs
+  // no fence (decetiseSegments).
+  pool: { x0: -24, x1: -17, z0: -8.4, z1: 8.4 },
+  poolFloor: -1.15,                         // tiled bottom; you can see it
+  waterY: -0.14,                            // surface, a hand under the coping
+  weirY: -0.19,                             // west crest, under the surface
 };
 
 // You arrive in the cabin, facing out of it up the courtyard's north walk.
 export const SPAWN = { x: 0, z: 0.4, yaw: 0 };
 
-// Late afternoon, low and off the pool — the terrace is west.
-export const SUN_POS = new THREE.Vector3(-96, 42, 34);
+// Afternoon, west and high enough to stay out of your eyes. It used to sit at
+// 22° — genuinely late afternoon — which was fine while a glass wall stood in
+// front of it. With the west side open, a 22° sun is a disc in the room: from
+// anywhere in the western half you looked straight into it and the whole view
+// blew to white. At 40° the soffit over the opening holds it out of frame from
+// everywhere but the coping itself, and what reaches the room is the glare off
+// the water rather than the sun itself.
+export const SUN_POS = new THREE.Vector3(-96, 88, 34);
 
 const TREES = [[-6, -6], [6, -6], [-6, 6], [6, 6], [0, -7.2]];
+// Out on the terrace, two at each end of the water, clear of the coping.
+const ALLEE = [[-22.2, -9.8], [-19.4, -9.8], [-22.2, 9.8], [-19.4, 9.8]];
 const LAMPS = [[-7.4, -7.4], [7.4, -7.4], [-7.4, 7.4], [7.4, 7.4]];
 
-// The freestanding partitions. `face` is the side the picture hangs on: +1
-// looks back toward the courtyard. Only the north half carries them — a
-// partition standing off the art wall crowded the six pictures on it, so that
-// pair came out and the lift core took their work instead.
-const PARTITIONS = [
-  { x: -10.5, z: -9.2, w: 6.4, face: 1 },
-  { x: 11, z: -9.2, w: 6.4, face: 1 },
-];
+// There are no freestanding partitions. The plate had two standing off the
+// north half; they came out, and their two pictures with them. What is left is
+// one clear floor from the art wall to the open west edge, which is the whole
+// point of a floor plate with the core in the middle of it.
 
 // The three solid faces of the lift core hang too — the first pictures you see,
 // standing in the cabin doorway with your back to it.
@@ -72,9 +83,10 @@ const CORE_FACES = [
   { id: 'DX-C3', x: 1.97, z: 0, rotY: Math.PI / 2, w: 2.2, h: 1.9 },    // east face
 ];
 
-// Slot geometry, the way layout.js keeps the gallery's: ten places a picture can
-// go. Six on the art wall, one on each partition. `w`/`h` is the largest picture
-// that slot takes; a manifest entry's own aspect is fitted inside it.
+// Slot geometry, the way layout.js keeps the gallery's: nine places a picture
+// can go — six on the art wall, three on the faces of the lift core. `w`/`h` is
+// the largest picture that slot takes; a manifest entry's own aspect is fitted
+// inside it.
 export const SLOTS = [
   { id: 'DX-A1', x: -13.2, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 1.5, h: 2.05 },
   { id: 'DX-A2', x: -8.1, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 2.2, h: 1.5 },
@@ -82,12 +94,6 @@ export const SLOTS = [
   { id: 'DX-A4', x: 3.0, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 1.8, h: 1.8 },
   { id: 'DX-A5', x: 8.1, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 2.0, h: 1.4 },
   { id: 'DX-A6', x: 13.2, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 1.35, h: 1.9 },
-  ...PARTITIONS.map((p, i) => ({
-    id: `DX-P${i + 1}`,
-    x: p.x, y: 1.85, z: p.z + p.face * 0.16,
-    rotY: p.face > 0 ? 0 : Math.PI,
-    w: Math.min(p.w - 1.6, 2.0), h: 1.85,
-  })),
   ...CORE_FACES.map((c) => ({ id: c.id, x: c.x, y: 1.8, z: c.z, rotY: c.rotY, w: c.w, h: c.h })),
 ];
 
@@ -102,9 +108,6 @@ export const DECETISE_HANG = [
   { title: 'The Basin at Six', image: null },
   { title: 'Hedge, Clipped Twice', image: null },
   { title: 'Cornice and Cloud', image: null },
-  // partitions (DX-P1…P2)
-  { title: 'Study for a Green Chair', image: null },
-  { title: 'Water Held at the Edge', image: null },
   // the lift core (DX-C1…C3)
   { title: 'Plane Tree Through the Ceiling', image: null },
   { title: 'Gravel, Rain Coming', image: null },
@@ -124,7 +127,7 @@ function mulberry32(a) {
 }
 
 // ---------------------------------------------------------------------------
-// Lighting. Late afternoon: one low warm sun off the terrace, a cool bounce
+// Lighting. Afternoon: one warm sun in off the terrace, a cool bounce
 // through the east glazing so that half of the plate isn't a silhouette, and a
 // hemisphere for the sky. Shadows are baked on entry like every other room
 // (shadowMap.autoUpdate is off — js/world/Lighting.js).
@@ -196,14 +199,55 @@ export function buildDecetiseRoom(scene, opts = {}) {
       color: 0xe8f0ef, transparent: true, opacity: 0.16, roughness: 0.08,
       metalness: 0.2, depthWrite: false, side: THREE.DoubleSide,
     }),
+    // Water reads as water because you see the tile through it. At 0.86 the old
+    // surface was effectively paint: a flat teal rectangle with nothing under
+    // it. Low roughness keeps the sky and the sun on it, and `depthWrite` off
+    // stops the sheet at the weir sorting against it.
     water: new THREE.MeshStandardMaterial({
-      color: 0x2f6f73, roughness: 0.08, metalness: 0.25, transparent: true, opacity: 0.86,
+      color: 0x1a5f6e, roughness: 0.05, metalness: 0.1,
+      transparent: true, opacity: 0.62, depthWrite: false, side: THREE.DoubleSide,
+      envMapIntensity: 1.2,
     }),
-    sheet: new THREE.MeshBasicMaterial({ color: 0x9fd6d4, transparent: true, opacity: 0.4, side: THREE.DoubleSide }),
+    sheet: new THREE.MeshBasicMaterial({ color: 0xbfe6e4, transparent: true, opacity: 0.34, side: THREE.DoubleSide, depthWrite: false }),
     glow: new THREE.MeshStandardMaterial({ color: 0xfff0cf, emissive: 0xffd9a0, emissiveIntensity: 2.2, roughness: 0.5 }),
   };
 
   // --- procedural surfaces (canvas, the way js/utils/proctex.js does) ------
+  // Pool tile: 100 mm squares in three blue-greens with pale grout between, then
+  // a wash of larger mottling so the tank bottom doesn't read as graph paper
+  // once there is half a metre of water over it. The grout is what sells it —
+  // a plain blue box under water still looks like a plain blue box.
+  function poolTileTexture() {
+    const S = 512;
+    const cv = document.createElement('canvas'); cv.width = cv.height = S;
+    const g = cv.getContext('2d');
+    const grout = '#9dbcbc';
+    g.fillStyle = grout; g.fillRect(0, 0, S, S);
+    const tiles = [[46, 112, 124], [58, 132, 140], [34, 92, 108], [70, 148, 150]];
+    const N = 16, cell = S / N, gap = 2.2;
+    for (let ix = 0; ix < N; ix++) {
+      for (let iz = 0; iz < N; iz++) {
+        const c = tiles[Math.floor(rand() * tiles.length)];
+        const j = 0.88 + rand() * 0.24;
+        g.fillStyle = `rgb(${Math.min(255, c[0] * j) | 0},${Math.min(255, c[1] * j) | 0},${Math.min(255, c[2] * j) | 0})`;
+        g.fillRect(ix * cell + gap / 2, iz * cell + gap / 2, cell - gap, cell - gap);
+      }
+    }
+    // a soft mottle over the top, the way a wet tiled floor pools its own light
+    for (let i = 0; i < 90; i++) {
+      const r = 12 + rand() * 70;
+      const a = 0.03 + rand() * 0.07;
+      g.fillStyle = rand() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(20,60,70,${a})`;
+      g.beginPath(); g.arc(rand() * S, rand() * S, r, 0, 6.28); g.fill();
+    }
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(7, 17);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = anisotropy;
+    return t;
+  }
+
   function gravelTexture() {
     const cv = document.createElement('canvas'); cv.width = cv.height = 256;
     const g = cv.getContext('2d');
@@ -292,12 +336,30 @@ export function buildDecetiseRoom(scene, opts = {}) {
   }
 
   // --- the plate ----------------------------------------------------------
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(DX.x1 - DX.tx0, DX.z1 - DX.z0), floorMat);
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.set((DX.tx0 + DX.x1) / 2, 0, 0);
-  floor.receiveShadow = true;
-  add(floor);
-  box((DX.tx0 + DX.x1) / 2, -0.56, 0, DX.x1 - DX.tx0 + 1.2, 1.1, DX.z1 - DX.z0 + 1.2, M.limestone, false);
+  // The floor is laid in slabs AROUND the pool, not straight across it. One
+  // plane spanning the whole plate would run under the water at exactly the
+  // height of the basin's rim, and the two would fight over the depth buffer —
+  // which is what the bands of stripes across the old pool were.
+  function floorSlab(x0, z0, x1, z1) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), floorMat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set((x0 + x1) / 2, 0, (z0 + z1) / 2);
+    m.receiveShadow = true;
+    add(m);
+  }
+  floorSlab(DX.x0, DX.z0, DX.x1, DX.z1);                      // the room itself
+  floorSlab(DX.tx0, DX.z0, DX.x0, DX.pool.z0);                // deck, north of the water
+  floorSlab(DX.tx0, DX.pool.z1, DX.x0, DX.z1);                // deck, south of it
+  // …and nothing west of the water: the pool runs to the plate's own edge.
+  // The plate's own thickness, laid round the tank rather than straight across
+  // it — a solid slab here filled the pool in, and its top face was the flat
+  // teal rectangle the old water never showed through.
+  function baseSlab(x0, z0, x1, z1) {
+    box((x0 + x1) / 2, -0.56, (z0 + z1) / 2, x1 - x0, 1.1, z1 - z0, M.limestone, false);
+  }
+  baseSlab(DX.x0, DX.z0 - 0.6, DX.x1 + 0.6, DX.z1 + 0.6);            // under the room
+  baseSlab(DX.tx0 - 0.6, DX.z0 - 0.6, DX.x0, DX.pool.z0);            // under the north deck
+  baseSlab(DX.tx0 - 0.6, DX.pool.z1, DX.x0, DX.z1 + 0.6);            // under the south deck
 
   // Ceiling: four solid slabs round the courtyard, then an instanced grid of
   // panels over the courtyard itself with the oculi and the shaft left out. One
@@ -375,34 +437,82 @@ export function buildDecetiseRoom(scene, opts = {}) {
   // the water and the city under it — sealed, and closed in decetiseSegments()
   // to match. Restore the two split runs plus the posts and lintel if the
   // terrace is ever meant to be walked on again.
-  glazing('z', DX.x0 - 0.02, DX.z0, DX.z1, 2.5);         // west wall of glass
-  box(DX.x0 - 1.2, DX.ceil - 0.14, 0, 2.4, 0.28, DX.z1 - DX.z0);   // soffit out over the water
+  //
+  // WEST: nothing. No pane, no mullions, no sill. The room opens straight onto
+  // the water — the plate's whole west side is one opening under the soffit,
+  // and the pool's coping is the threshold you stand at. A glass wall here put
+  // a reflection between the room and the only thing worth looking at. What
+  // stops you walking out is the water, not a pane (decetiseSegments).
+  box(DX.x0 + 0.08, DX.ceil - 0.34, 0, 0.36, 0.68, DX.z1 - DX.z0);   // head beam over the opening
+  box(DX.x0 - 1.2, DX.ceil - 0.14, 0, 2.4, 0.28, DX.z1 - DX.z0);     // soffit out over the water
 
   // --- the terrace: an infinity pool, edge to edge -------------------------
-  // Seen, never stood on. The water runs from the plate's west edge — where it
-  // spills over a weir that hangs past the slab, five storeys up — back to
-  // within half a metre of the glass, the whole length between the two ends of
-  // the pleached allée. What used to be deck round three sides is water now.
+  // A real basin, not a coloured rectangle. What used to be here was a box
+  // whose top face sat at y = 0, exactly coplanar with the floor plane running
+  // the whole width of the plate — so the "pool" you saw was that lid, and the
+  // bands of stripes across it were the two surfaces fighting over the depth
+  // buffer. The water plane underneath was never visible at all.
+  //
+  // Now the floor and the plate's base are cut around the tank (above), and the
+  // tank is built the way one is: a tiled bottom a metre down, four inner faces
+  // standing on the pool's own boundary, and the water a separate transparent
+  // surface floating a hand below the coping. Seeing INTO it is the whole
+  // difference between water and paint.
   const P = DX.pool;
-  box((P.x0 + P.x1) / 2, -0.7, (P.z0 + P.z1) / 2, P.x1 - P.x0, 1.4, P.z1 - P.z0,
-    new THREE.MeshStandardMaterial({ color: 0x1d4a4e, roughness: 0.35 }), false);
+  const PB = DX.poolFloor;
+
+  const tileMat = new THREE.MeshStandardMaterial({
+    map: poolTileTexture(), roughness: 0.3, metalness: 0.02, side: THREE.DoubleSide,
+  });
+
+  // The tank, as planes on the boundary. Planes, not boxes: a box has a top
+  // face at the waterline for the floor to fight with, and that is the bug
+  // above. Nothing here has a horizontal face except the bottom.
+  const basinFloor = new THREE.Mesh(new THREE.PlaneGeometry(P.x1 - P.x0, P.z1 - P.z0), tileMat);
+  basinFloor.rotation.x = -Math.PI / 2;
+  basinFloor.position.set((P.x0 + P.x1) / 2, PB, (P.z0 + P.z1) / 2);
+  basinFloor.receiveShadow = true;
+  add(basinFloor);
+  const wallPlane = (w, h, x, y, z, rotY) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), tileMat);
+    m.position.set(x, y, z);
+    m.rotation.y = rotY;
+    m.receiveShadow = true;
+    add(m);
+  };
+  const deep = -PB;                                    // full wall, floor to rim
+  wallPlane(P.x1 - P.x0, deep, (P.x0 + P.x1) / 2, PB + deep / 2, P.z0, 0);            // north
+  wallPlane(P.x1 - P.x0, deep, (P.x0 + P.x1) / 2, PB + deep / 2, P.z1, Math.PI);      // south
+  wallPlane(P.z1 - P.z0, deep, P.x1, PB + deep / 2, 0, -Math.PI / 2);                 // east
+  // The west face stops short: its top edge IS the weir, set under the surface
+  // so the water runs over it and off the building.
+  const weirH = DX.weirY - PB;
+  wallPlane(P.z1 - P.z0, weirH, P.x0, PB + weirH / 2, 0, Math.PI / 2);                // west
+
+  // The water: one transparent sheet over the tile, with a waterline you can
+  // read against the coping. `waterBase` is the flat rest state the swell in
+  // update() is written back against.
   const water = new THREE.Mesh(new THREE.PlaneGeometry(P.x1 - P.x0, P.z1 - P.z0, 28, 28), M.water);
   water.rotation.x = -Math.PI / 2;
-  water.position.set((P.x0 + P.x1) / 2, -0.06, (P.z0 + P.z1) / 2);
+  water.position.set((P.x0 + P.x1) / 2, DX.waterY, (P.z0 + P.z1) / 2);
+  water.renderOrder = 1;
   add(water);
   const waterBase = water.geometry.attributes.position.array.slice();
-  // Coping on three sides; the west side is the infinity edge and stays open.
-  // The east strip is all that separates water from glass — half a metre, so the
-  // pane reads as standing in the pool rather than across a walkway from it.
-  const COPE = DX.x0 - P.x1;                       // glass line back to the water
-  const endW = DX.x0 - P.x0, endX = (P.x0 + DX.x0) / 2;   // weir across to the glass
-  box(endX, 0.02, P.z0 - 0.28, endW, 0.12, 0.56, M.stonePale);
-  box(endX, 0.02, P.z1 + 0.28, endW, 0.12, 0.56, M.stonePale);
-  box(P.x1 + COPE / 2, 0.02, 0, COPE, 0.12, P.z1 - P.z0 + 1.1, M.stonePale);
-  box(P.x0 - 0.25, -0.11, 0, 0.5, 0.1, P.z1 - P.z0, M.stonePale, false);      // the weir lip
-  const sheet = new THREE.Mesh(new THREE.PlaneGeometry(P.z1 - P.z0, 0.7), M.sheet);
+
+  // Coping on the three closed sides, overhanging the water by 30 mm the way
+  // real coping does — which also keeps its face off the tank's, so there is
+  // nothing coplanar left to flicker. The east run is the room's own threshold:
+  // the last stone under your feet, and then water. No glass in between.
+  const OVER = 0.03, CW = 0.42, CH = 0.16;
+  const cope = (x, z, w, d) => box(x, CH / 2 - 0.06, z, w, CH, d, M.stonePale);
+  cope((P.x0 + P.x1) / 2, P.z0 - CW / 2 + OVER, P.x1 - P.x0 + CW * 2, CW);
+  cope((P.x0 + P.x1) / 2, P.z1 + CW / 2 - OVER, P.x1 - P.x0 + CW * 2, CW);
+  cope(P.x1 + CW / 2 - OVER, 0, CW, P.z1 - P.z0 + CW * 2);
+
+  // The sheet going over the weir, and the fall down the face of the building.
+  const sheet = new THREE.Mesh(new THREE.PlaneGeometry(P.z1 - P.z0, 2.4), M.sheet);
   sheet.rotation.y = Math.PI / 2;
-  sheet.position.set(P.x0 - 0.5, -0.42, 0);
+  sheet.position.set(P.x0 - 0.02, DX.weirY - 1.2, 0);
   add(sheet);
 
   function balustrade(x0, z0, x1, z1) {
@@ -421,23 +531,9 @@ export function buildDecetiseRoom(scene, opts = {}) {
   balustrade(DX.tx0, DX.z0, DX.tx0, P.z0 - 0.6);
   balustrade(DX.tx0, P.z1 + 0.6, DX.tx0, DX.z1);
 
-  // pleached allée: clipped canopies on bare stems, flanking the pool
-  const swayers = [];
-  for (const z of [-9.6, 9.6]) {
-    for (const x of [-22.4, -19.9]) {
-      const g = new THREE.Group();
-      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 2.6, 8), M.bark);
-      stem.position.y = 1.3; stem.castShadow = true;
-      const canopy = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1.5, 1.1), M.hedge);
-      canopy.position.y = 3.35; canopy.castShadow = true;
-      const planter = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.45, 1.2), M.stonePale);
-      planter.position.y = 0.22;
-      g.add(stem, canopy, planter);
-      g.position.set(x, 0, z);
-      add(g);
-      swayers.push(g);
-    }
-  }
+  // The four terrace trees (ALLEE) are planted further down, by the same builder
+  // as the five that come up through the oculi — they need the bark, leaf and
+  // limb machinery, which is declared with the crowns.
 
   // No loungers. They stood on the deck the pool has since taken, which left
   // them standing in the water; and furniture on a terrace nobody can reach is
@@ -758,23 +854,34 @@ export function buildDecetiseRoom(scene, opts = {}) {
     }
   }
 
+  // One builder, two plantings: the five that come up through the oculi and the
+  // four out on the terrace. The terrace pair used to be a bare stem with a
+  // green box on top — a pleached hedge-on-a-stick, which reads at fifty metres
+  // and not at five. They are the same tree as the ones inside now, grown a
+  // size smaller and with no ceiling to keep clear of.
   const trees = [];
-  for (const [tx, tz] of TREES) {
+  function plantTree(tx, tz, o = {}) {
+    const {
+      trunkH = 3.3, rTop = 0.24, rBot = 0.4, limbLen = 1.9, limbRad = 0.2,
+      scale = 1, grate = true, clearY = null,
+    } = o;
     const g = new THREE.Group();
-    const TRUNK_H = 3.3;
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.4, TRUNK_H, 16, 3), barkMat);
-    trunk.position.y = TRUNK_H / 2;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, trunkH, 16, 3), barkMat);
+    trunk.position.y = trunkH / 2;
     trunk.castShadow = true; trunk.receiveShadow = true;
-    const flare = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.66, 0.5, 16), barkMat);
+    const flare = new THREE.Mesh(new THREE.CylinderGeometry(rBot, rBot * 1.65, 0.5, 16), barkMat);
     flare.position.y = 0.24; flare.castShadow = true;
-    const grate = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 1.05, 0.2, 24), M.stonePale);
-    grate.position.y = 0.1; grate.receiveShadow = true;
-    g.add(trunk, flare, grate);
+    g.add(trunk, flare);
+    if (grate) {
+      const gr = new THREE.Mesh(new THREE.CylinderGeometry(rBot * 2.4, rBot * 2.6, 0.2, 24), M.stonePale);
+      gr.position.y = 0.1; gr.receiveShadow = true;
+      g.add(gr);
+    }
 
     // the crown: one merged limb mesh + one instanced leaf field, both pivoted
     // at the top of the trunk so the wind can move them together
     const crown = new THREE.Group();
-    crown.position.y = TRUNK_H;
+    crown.position.y = trunkH;
     const geos = [];
     const anchors = [];
     // One more leader and one more level of forking than the crown used to
@@ -784,7 +891,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
     for (let i = 0; i < leaders; i++) {
       const a = (i / leaders) * Math.PI * 2 + rand();
       const d = new THREE.Vector3(Math.cos(a) * 0.42, 1, Math.sin(a) * 0.42).normalize();
-      limb(geos, anchors, new THREE.Vector3(0, 0, 0), d, 1.9 + rand() * 0.5, 0.2, lean ? 3 : 4);
+      limb(geos, anchors, new THREE.Vector3(0, 0, 0), d, limbLen + rand() * 0.5, limbRad, lean ? 3 : 4);
     }
     const limbs = new THREE.Mesh(mergeGeometries(geos), barkMat);
     limbs.castShadow = true;
@@ -794,7 +901,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
     // cards on each — a canopy of the same mass, drawn coarser, rather than a
     // visibly balder tree on a phone.
     const perAnchor = lean ? 3 : 4;
-    const SCALE = lean ? 1.5 : 1.15;
+    const SCALE = (lean ? 1.5 : 1.15) * scale;
     const leaves = new THREE.InstancedMesh(clusterGeo, leafMat, anchors.length * perAnchor);
     leaves.castShadow = true;
     leaves.receiveShadow = true;
@@ -812,16 +919,13 @@ export function buildDecetiseRoom(scene, opts = {}) {
       for (let k = 0; k < perAnchor; k++) {
         const sc = SCALE * (0.85 + rand() * 0.8 + out * 0.35);
         sv.set(sc, sc * (0.85 + rand() * 0.3), sc);
-        // Keep the whole card clear of the ceiling. Anchors sit well above it
-        // already, but the cards are big and jittered, and one dipping through
-        // the slab shows up as a sprig of foliage lying on the plaster — the
-        // canopy is meant to be seen through the oculi, not in the room.
-        const floorY = (DX.ceil - TRUNK_H) + sc * 0.6;   // crown-local
-        pv.set(
-          a.x + (rand() - 0.5) * 1.0,
-          Math.max(floorY, a.y + (rand() - 0.5) * 0.7 - out * 0.25),
-          a.z + (rand() - 0.5) * 1.0
-        );
+        // Keep the whole card clear of the ceiling, where there is one. Anchors
+        // sit well above it already, but the cards are big and jittered, and one
+        // dipping through the slab shows up as a sprig of foliage lying on the
+        // plaster. Out on the terrace there is open sky and no guard is wanted.
+        let y = a.y + (rand() - 0.5) * 0.7 - out * 0.25;
+        if (clearY !== null) y = Math.max((clearY - trunkH) + sc * 0.6, y);
+        pv.set(a.x + (rand() - 0.5) * 1.0, y, a.z + (rand() - 0.5) * 1.0);
         // Cards lean outward and droop; a canopy of upright rectangles is the
         // tell that gives a billboard tree away from underneath.
         e.set((rand() - 0.5) * 0.5 - out * 0.3, rand() * Math.PI * 2, (rand() - 0.5) * 0.6);
@@ -846,6 +950,14 @@ export function buildDecetiseRoom(scene, opts = {}) {
     trees.push({ crown, phase: rand() * 6.28 });
   }
 
+  // the five up through the ceiling, and the four out on the terrace
+  for (const [tx, tz] of TREES) plantTree(tx, tz, { clearY: DX.ceil });
+  for (const [tx, tz] of ALLEE) {
+    plantTree(tx, tz, {
+      trunkH: 2.5, rTop: 0.17, rBot: 0.28, limbLen: 1.5, limbRad: 0.15, scale: 0.8,
+    });
+  }
+
   // two stone benches facing the city on the north glass
   for (const bx of [-8, 8]) box(bx, 0.21, DX.z0 + 1.5, 3.2, 0.42, 0.62, M.stonePale);
 
@@ -853,20 +965,22 @@ export function buildDecetiseRoom(scene, opts = {}) {
   const interactables = [];
   SLOTS.forEach((slot, i) => {
     const entry = art[i] || { title: `Slot ${slot.id}`, image: null };
-    // The partitions themselves, before anything hangs on them.
-    if (slot.id.startsWith('DX-P')) {
-      const p = PARTITIONS[Number(slot.id.slice(4)) - 1];
-      box(p.x, 1.7, p.z, p.w, 3.4, 0.3);
-      box(p.x, 0.06, p.z, p.w + 0.3, 0.12, 0.5, M.stonePale, false);
-    }
     const tex = placeholderArt(1000 + i * 977 + entry.title.length, slot.w, slot.h);
-    box(slot.x, slot.y, slot.z, slot.w, slot.h, 0.05,
-      new THREE.MeshStandardMaterial({ color: 0x2a2521, roughness: 0.8 }));
+    // A dark backing panel behind each picture, so a canvas on a pale wall has
+    // an edge. The three on the lift core don't get one: the core is a free-
+    // standing pier read from every side, and a panel standing proud of it read
+    // as a slab bolted to the shaft rather than as a picture hung on it.
+    if (!slot.id.startsWith('DX-C')) {
+      box(slot.x, slot.y, slot.z, slot.w, slot.h, 0.05,
+        new THREE.MeshStandardMaterial({ color: 0x2a2521, roughness: 0.8 }));
+    }
     const face = new THREE.Mesh(
       new THREE.PlaneGeometry(slot.w, slot.h),
       new THREE.MeshStandardMaterial({ map: tex, roughness: 0.72 })
     );
-    face.position.set(slot.x + Math.sin(slot.rotY) * 0.031, slot.y, slot.z + Math.cos(slot.rotY) * 0.031);
+    // Off the panel where there is one, off the wall itself where there isn't.
+    const stand = slot.id.startsWith('DX-C') ? 0.012 : 0.031;
+    face.position.set(slot.x + Math.sin(slot.rotY) * stand, slot.y, slot.z + Math.cos(slot.rotY) * stand);
     face.rotation.y = slot.rotY;
     face.name = slot.id;
     // What the info panel reads (js/ui/UI.js prints title + artist).
@@ -920,7 +1034,6 @@ export function buildDecetiseRoom(scene, opts = {}) {
       tr.crown.rotation.z = Math.sin(t * 0.6 + tr.phase) * 0.014;
       tr.crown.rotation.x = Math.cos(t * 0.47 + tr.phase) * 0.011;
     }
-    for (const s of swayers) s.rotation.z = Math.sin(t * 0.7 + s.position.z) * 0.008;
     jet.scale.y = 1 + Math.sin(t * 3.1) * 0.04;
   }
 
@@ -955,12 +1068,15 @@ export function decetiseSegments() {
     seg(x0, z0, x1, z0), seg(x1, z0, x1, z1), seg(x1, z1, x0, z1), seg(x0, z1, x0, z0),
   ];
   return [
-    // Interior shell, closed on all four sides. The west wall used to open in
-    // the middle onto the terrace; it is glass the whole way now, so the room
-    // is a sealed box and the terrace is scenery. That also retires what used
-    // to follow here — a keep-in fence along the plate's edge and a ring round
-    // the pool, both of which existed to stop someone walking off the building
-    // or into the water. Nobody can get out there to do either.
+    // Interior shell. Three sides are wall or glass; the west is an open
+    // edge with the pool immediately beyond it, so the line below is the only
+    // thing between a visitor and the water. It sits a player-radius back from
+    // the coping, which is where you would stop anyway — the next step is a
+    // metre of water and then the side of the building.
+    //
+    // Nothing out on the terrace needs colliders any more. The keep-in fence
+    // along the plate's edge and the ring round the pool both existed for
+    // someone standing out there, and nobody can get out there.
     seg(DX.x0, DX.z0 + 0.25, DX.x1 - 0.25, DX.z0 + 0.25),
     seg(DX.x1 - 0.25, DX.z0 + 0.25, DX.x1 - 0.25, DX.z1 - 0.25),
     seg(DX.x1 - 0.25, DX.z1 - 0.25, DX.x0, DX.z1 - 0.25),
@@ -976,9 +1092,8 @@ export function decetiseSegments() {
     // through the brass. This one is only ever met from within: nothing outside
     // the core gets past the south line to reach it.
     seg(-DX.core, DX.core - 0.205, DX.core, DX.core - 0.205),
-    // the basin and the partitions
+    // the stone basin at the head of the south walk
     ...rect(-2.1, 4.5, 2.1, 8.7),
-    ...PARTITIONS.flatMap((p) => rect(p.x - p.w / 2 - 0.1, p.z - 0.3, p.x + p.w / 2 + 0.1, p.z + 0.3)),
     // the hedges, quadrant by quadrant
     ...[-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) => [
       ...rect(sx * 4.4 - 1.8, sz * 3.1 - 0.4, sx * 4.4 + 1.8, sz * 3.1 + 0.4),

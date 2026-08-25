@@ -84,20 +84,21 @@ there answers an **E** press. To hang real pieces it needs a
 does it; the hang loop in `brutalism/brutalist.js` is the pattern to copy.
 
 Maria Decetise holds **Decetise Hall** on floor 5 (`js/world/decetise.js`) —
-one whole floor plate of a high rise, glazed the length of its north, east and
-west sides — the west wall looks out over an infinity pool that fills the
-terrace edge to edge and spills off the lip of the slab, five storeys up. The
-terrace is scenery: there is no door onto it and nothing to stand on out there. The lift core stands in the middle of the plate rather
-than against a wall, and it stands in a French parterre: gravel, a balustraded
-stone kerb, clipped hedges, a basin, park chairs, and five plane trees growing
-up through oculi cut in the ceiling. Its eleven works hang from `DECETISE_HANG`,
-a manifest exported by the room's own file alongside `SLOTS[]` — six on the
-south art wall, one on each of the two freestanding partitions, and three on the
-faces of the core itself, which are what you see as the doors open. Every entry
-is still `image: null`, so each slot carries a generated placeholder; unlike
-Chadrea Hall's, these do answer an **E** press, with the title and the resident's
-name. There is no return door on a wall: the way out is the cabin you arrived in
-— look back at its brass wall and press **E**.
+one whole floor plate of a high rise, glazed the length of its north and east
+sides. The west has no wall at all: the room opens straight onto an infinity
+pool that fills the terrace edge to edge and spills off the lip of the slab,
+five storeys up. Nothing is out there to stand on — the coping is the
+threshold, and the next step is a metre of water. The lift core stands in the
+middle of the plate rather than against a wall, in a French parterre: gravel, a
+balustraded stone kerb, clipped hedges, a basin, park chairs, and five plane
+trees growing up through oculi cut in the ceiling, and four more out on the
+terrace at the ends of the water. Its nine works hang from `DECETISE_HANG`, a
+manifest exported by the room's own file alongside `SLOTS[]` — six on the south
+art wall and three on the faces of the core itself, which are what you see as
+the doors open. Every entry is still `image: null`, so each slot carries a
+generated placeholder; unlike Chadrea Hall's, these do answer an **E** press,
+with the title and the resident's name. There is no return door on a wall: the
+way out is the cabin you arrived in — look back at its brass wall and press **E**.
 
 It works differently from `data/artworks.js`, because these frames are carved
 geometry rather than four flat bars. Array position is the slot index in that
