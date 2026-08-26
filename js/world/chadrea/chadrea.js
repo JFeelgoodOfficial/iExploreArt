@@ -4,6 +4,7 @@ import { loadArtTexture } from '../../art/load.js';
 import { generatePainting } from '../../art/placeholder.js';
 import { mulberry32 } from '../../utils/proctex.js';
 import { SHOW_CARD } from '../../../data/chadrea-artworks.js';
+import { plaqueTexture } from '../Details.js';
 
 // ---------------------------------------------------------------------------
 // CHADREA HALL — residency four (room id `chadrea`).
@@ -550,45 +551,11 @@ function sizeFor(piece, slot) {
 // not dark — this pier is deliberately the dark mass of the room, and painted
 // lettering on it has to read the way lit vinyl does, light on dark.
 function titleWallTexture() {
-  const c = document.createElement('canvas');
-  c.width = 1024; c.height = 1386;   // TITLE_WALL's 1.7 × 2.3 aspect
-  const ctx = c.getContext('2d');
-  ctx.clearRect(0, 0, c.width, c.height);
-  const ink = '#eee5d6';
-  ctx.fillStyle = ink;
-  ctx.textAlign = 'left';
-  const M = 72;                       // margin
-  let y = 190;
-  ctx.font = '600 118px "Cormorant Garamond", Georgia, serif';
-  for (const word of SHOW_CARD.title.split(' ')) {   // one word a line, stacked
-    ctx.fillText(word, M, y);
-    y += 128;
-  }
-  y += 8;
-  ctx.font = '500 46px Inter, sans-serif';
-  ctx.fillStyle = '#c8bca8';
-  ctx.fillText(SHOW_CARD.artist, M, y);
-  y += 110;
-  // the statement, word-wrapped
-  ctx.font = '400 31px Inter, sans-serif';
-  ctx.fillStyle = ink;
-  const words = SHOW_CARD.description.split(' ');
-  let line = '';
-  for (const w of words) {
-    const probe = line ? `${line} ${w}` : w;
-    if (ctx.measureText(probe).width > c.width - M * 2 && line) {
-      ctx.fillText(line, M, y);
-      y += 48;
-      line = w;
-    } else {
-      line = probe;
-    }
-  }
-  if (line) ctx.fillText(line, M, y);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
-  return t;
+  return plaqueTexture({
+    title: SHOW_CARD.title, artist: SHOW_CARD.artist, body: SHOW_CARD.description,
+    width: 1024, height: 1386,        // TITLE_WALL's 1.7 × 2.3 aspect
+    ink: '#eee5d6', sub: '#c8bca8',
+  });
 }
 
 export function buildChadreaRoom(scene, opts = {}) {

@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { FEATURED, featuredResidency, featuredArtwork } from '../../data/featured.js';
-import { buildReceptionDesk, signTexture } from './Details.js';
+import { buildReceptionDesk, signTexture, plaqueTexture } from './Details.js';
 import { loadArtTexture } from '../art/load.js';
+import { SHOW_CARD, STATEMENT } from '../../data/chadrea-artworks.js';
 
 // The reception foyer — where every visit begins. A small lobby high in a
 // tower, not a gallery: the reception desk with Mira behind it, the house sign
@@ -159,6 +160,30 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
     }
   }
 
+  // --- the show's title wall, repeated where the visitor waits --------------
+  // West of the door, on the clear stretch of the north wall: the featured
+  // show's name, artist, and series statement, painted the way the hall's own
+  // title wall is (js/world/chadrea/chadrea.js) — so the foyer says what the
+  // door opens onto before anyone steps through. Dark ink here: this plaster
+  // is light where the chadrea pier is dark. Pressing E opens the show card.
+  // Read from the featured show's own data — the foyer is that show's lobby.
+  const PLAQUE = { x: FY.x0 + 1.5, y: 1.7, w: 1.5, h: 2.0 };
+  const plaque = new THREE.Mesh(
+    new THREE.PlaneGeometry(PLAQUE.w, PLAQUE.h),
+    new THREE.MeshStandardMaterial({
+      map: plaqueTexture({
+        title: SHOW_CARD.title, artist: SHOW_CARD.artist, body: STATEMENT,
+        width: 1024, height: 1365,     // the plane's 1.5 × 2.0 aspect
+      }),
+      transparent: true, roughness: 0.9, metalness: 0,
+    })
+  );
+  plaque.position.set(PLAQUE.x, PLAQUE.y, FY.z0 + 0.02);
+  plaque.name = 'foyer-show-plaque';
+  plaque.userData.artwork = SHOW_CARD;
+  g.add(plaque);
+  interactables.push(plaque);
+
   // --- the way in -----------------------------------------------------------
   // Invisible but raycastable, standing just proud of the reveal so the prompt
   // reads while the visitor walks up. Pressing E rides the veil to the hall.
@@ -195,6 +220,8 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
   spot(FY.x0 + 5.85, FY.h - 0.1, 1.7, FY.x0 + 5.85, 1.55, FY.z0, 9, 6, 0.5, 0.7);
   // the doorway and its lintel sign
   spot(DOOR_CX, FY.h - 0.1, 1.7, DOOR_CX, 1.6, FY.z0, 7, 6, 0.55, 0.8);
+  // the show plaque west of the door
+  spot(PLAQUE.x, FY.h - 0.1, 1.7, PLAQUE.x, PLAQUE.y, FY.z0, 7, 6, 0.5, 0.8);
 
   scene.add(g);
 

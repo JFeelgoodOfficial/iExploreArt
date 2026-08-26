@@ -47,7 +47,7 @@ const SCALE = 1;
 
 // The series statement, shown under every piece in the hall. One text for all
 // twenty: the works are a single practice, not twenty separate arguments.
-const STATEMENT = 'Paintings over “finished” paintings. A practice of letting go '
+export const STATEMENT = 'Paintings over “finished” paintings. A practice of letting go '
   + 'of what felt precious, to make room for what wants to grow next. Like anything '
   + 'that grows in a sidewalk crack only to fade, the work is less concerned with '
   + 'permanence than with the moment. An affirmation that nothing, including the '

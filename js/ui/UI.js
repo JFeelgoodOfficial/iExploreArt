@@ -62,9 +62,15 @@ export class UI {
 
   showPause(show) { this.el.pause.hidden = !show; }
 
-  // Full-screen wipe used by the lift between rooms. A pure CSS transition —
-  // the caller times the room switch, so nothing here waits on transitionend.
-  veil(on) { this.el.veil.classList.toggle('on', !!on); }
+  // Full-screen wipe used by the lift and door travels between rooms. A pure
+  // CSS transition — the caller times the room switch, so nothing here waits
+  // on transitionend. `message` shows the "being prepared" line (index.html)
+  // for hops that pause behind the veil to build a hall; its dots animate in
+  // CSS so they keep moving while the build holds the main thread.
+  veil(on, { message = false } = {}) {
+    this.el.veil.classList.toggle('on', !!on);
+    this.el.veil.classList.toggle('msg', !!on && !!message);
+  }
   _resume() { this.showPause(false); this.controls.lock(); }
 
   // true when a full-screen overlay (info/dialogue panel or the pause screen)

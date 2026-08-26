@@ -260,6 +260,31 @@ body.touch .desktop-hint { display: none; }
 }
 #veil.on { opacity: 1; }
 
+/* The travel message, shown while a hall is first built behind the veil. The
+   dots cycle ( . / .. / ... / blank ) on a pure CSS keyframe animation: the
+   room build holds the main thread for seconds, and a JS-timed ellipsis would
+   freeze with it — compositor-driven opacity keeps moving. */
+#veil .veil-msg {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.4s ease;
+}
+#veil.msg .veil-msg { opacity: 1; }
+#veil .veil-msg p {
+  margin: 0; padding: 0 2rem; text-align: center;
+  font-family: "Cormorant Garamond", serif; font-weight: 500;
+  font-size: clamp(1.15rem, 3vw, 1.5rem); letter-spacing: 0.12em;
+  color: rgba(253, 251, 247, 0.85);
+}
+#veil .dots { margin-left: 0.15em; }
+#veil .dots span { opacity: 0; will-change: opacity; }
+#veil .dots span:nth-child(1) { animation: veil-dot-1 1.5s steps(1, end) infinite; }
+#veil .dots span:nth-child(2) { animation: veil-dot-2 1.5s steps(1, end) infinite; }
+#veil .dots span:nth-child(3) { animation: veil-dot-3 1.5s steps(1, end) infinite; }
+@keyframes veil-dot-1 { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 1; } }
+@keyframes veil-dot-2 { 0% { opacity: 0; } 43% { opacity: 1; } 100% { opacity: 1; } }
+@keyframes veil-dot-3 { 0% { opacity: 0; } 76% { opacity: 1; } 100% { opacity: 1; } }
+
 /* ---------- touch controls ---------- */
 #joystick {
   position: fixed; z-index: 15; width: 118px; height: 118px; border-radius: 50%;
