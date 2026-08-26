@@ -3,21 +3,22 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Decetise Hall — residency five (room id `decetise`). Maria Decetise.
 //
-// One whole floor plate of a high rise. Glazed north (−Z) and east (+X) over
-// the city; the south wall is the art wall; and the west side has no wall at
+// One whole floor plate of a high rise. Glazed east (+X) over the city; the
+// south and north walls are both art walls; and the west side has no wall at
 // all — the room opens straight onto an infinity pool that fills the terrace
 // edge to edge and spills off a weir at the lip of the slab, five storeys up.
 // No glass stands between the room and the water. What keeps you out of it is
 // the water: the collision plan stops you at the coping and has nothing at all
 // beyond it.
 //
-// The lift core stands in the MIDDLE of the plate,
-// which is where a visitor arrives, and the core sits in a courtyard — gravel
-// parterre, balustraded stone kerb, clipped hedges and topiary, a stone basin
-// with green park chairs, lamp posts — with five plane trees running up through
-// oculi cut in the ceiling, and four more out on the terrace at the ends of the
-// water. The core's own three solid faces carry the rest of the hang — nine
-// pictures in all. A French park met a top-floor suite.
+// The lift core stands in the NORTH-EAST corner, where the east glass meets
+// the north art wall — which is where a visitor arrives, looking south down
+// the plate. The middle of the plate is a courtyard — gravel parterre round a
+// stone fountain, balustraded stone kerb, clipped hedges and topiary, green
+// park chairs, lamp posts — with five plane trees running up through oculi cut
+// in the ceiling, and four more out on the terrace at the ends of the water.
+// The core's one room-facing face carries a picture of its own — twelve in
+// all. A French park met a top-floor suite.
 //
 // Same shape as the other residencies (js/world/brutalism/brutalist.js,
 // js/world/chadrea/chadrea.js): this file owns the room and its lighting rig,
@@ -53,8 +54,12 @@ export const DX = {
   weirY: -0.19,                             // west crest, under the surface
 };
 
-// You arrive in the cabin, facing out of it up the courtyard's north walk.
-export const SPAWN = { x: 0, z: 0.4, yaw: 0 };
+// The lift core stands in the room's north-east corner, where the east glass
+// meets the north art wall. Its doorway opens south, into the room.
+export const CORE_POS = { x: 15.0, z: -11.0 };
+
+// You arrive in the cabin, facing out of it across the plate.
+export const SPAWN = { x: CORE_POS.x, z: CORE_POS.z - 0.4, yaw: Math.PI };
 
 // Afternoon, west and high enough to stay out of your eyes. It used to sit at
 // 22° — genuinely late afternoon — which was fine while a glass wall stood in
@@ -82,21 +87,21 @@ const LAMPS = [[-7.4, -7.4], [7.4, -7.4], [-7.4, 7.4], [7.4, 7.4]];
 
 // There are no freestanding partitions. The plate had two standing off the
 // north half; they came out, and their two pictures with them. What is left is
-// one clear floor from the art wall to the open west edge, which is the whole
-// point of a floor plate with the core in the middle of it.
+// one clear floor from art wall to art wall, and out to the open west edge —
+// the whole point of a floor plate with its core pushed to the corner.
 
-// The three solid faces of the lift core hang too — the first pictures you see,
-// standing in the cabin doorway with your back to it.
+// With the core tucked into the north-east corner, only its west face still
+// looks into walkable room — the north and east faces press against the wall
+// and the glass. That one face hangs; the pictures the other two carried have
+// rehomed to the north art wall (DX-B row).
 const CORE_FACES = [
-  { id: 'DX-C1', x: 0, z: 1.97, rotY: 0, w: 2.2, h: 1.9 },              // south face
-  { id: 'DX-C2', x: -1.97, z: 0, rotY: -Math.PI / 2, w: 2.2, h: 1.9 },  // west face
-  { id: 'DX-C3', x: 1.97, z: 0, rotY: Math.PI / 2, w: 2.2, h: 1.9 },    // east face
+  { id: 'DX-C1', x: 13.03, z: -11.0, rotY: -Math.PI / 2, w: 2.2, h: 1.9 },  // west face
 ];
 
-// Slot geometry, the way layout.js keeps the gallery's: nine places a picture
-// can go — six on the art wall, three on the faces of the lift core. `w`/`h` is
-// the largest picture that slot takes; a manifest entry's own aspect is fitted
-// inside it.
+// Slot geometry, the way layout.js keeps the gallery's: twelve places a
+// picture can go — six on the south art wall, five on the north art wall, one
+// on the room-facing side of the lift core. `w`/`h` is the largest picture
+// that slot takes; a manifest entry's own aspect is fitted inside it.
 export const SLOTS = [
   { id: 'DX-A1', x: -13.2, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 1.5, h: 2.05 },
   { id: 'DX-A2', x: -8.1, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 2.2, h: 1.5 },
@@ -104,6 +109,13 @@ export const SLOTS = [
   { id: 'DX-A4', x: 3.0, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 1.8, h: 1.8 },
   { id: 'DX-A5', x: 8.1, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 2.0, h: 1.4 },
   { id: 'DX-A6', x: 13.2, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 1.35, h: 1.9 },
+  // north wall: the run stops short of x ≈ 12 — the lift core stands against
+  // the wall's eastern end.
+  { id: 'DX-B1', x: -13.2, y: 1.95, z: DX.z0 + 0.12, rotY: 0, w: 1.5, h: 2.05 },
+  { id: 'DX-B2', x: -8.1, y: 1.95, z: DX.z0 + 0.12, rotY: 0, w: 2.2, h: 1.5 },
+  { id: 'DX-B3', x: -3.0, y: 1.95, z: DX.z0 + 0.12, rotY: 0, w: 1.4, h: 1.9 },
+  { id: 'DX-B4', x: 3.0, y: 1.95, z: DX.z0 + 0.12, rotY: 0, w: 1.8, h: 1.8 },
+  { id: 'DX-B5', x: 8.1, y: 1.95, z: DX.z0 + 0.12, rotY: 0, w: 2.0, h: 1.4 },
   ...CORE_FACES.map((c) => ({ id: c.id, x: c.x, y: 1.8, z: c.z, rotY: c.rotY, w: c.w, h: c.h })),
 ];
 
@@ -111,17 +123,21 @@ export const SLOTS = [
 // until the real files land: give one an `image` and a `px` and it hangs instead.
 // Same convention as data/brutalist-artworks.js.
 export const DECETISE_HANG = [
-  // art wall (DX-A1…A6)
+  // south art wall (DX-A1…A6)
   { title: 'Parterre, Late Light', image: null },
   { title: 'Twelve Storeys of Weather', image: null },
   { title: 'Allée', image: null },
   { title: 'The Basin at Six', image: null },
   { title: 'Hedge, Clipped Twice', image: null },
   { title: 'Cornice and Cloud', image: null },
-  // the lift core (DX-C1…C3)
-  { title: 'Plane Tree Through the Ceiling', image: null },
+  // north art wall (DX-B1…B5)
   { title: 'Gravel, Rain Coming', image: null },
   { title: 'The Doors Open Inward', image: null },
+  { title: 'North Light, No Weather', image: null },
+  { title: 'The Kerb at Dusk', image: null },
+  { title: 'Two Benches, Facing', image: null },
+  // the lift core (DX-C1)
+  { title: 'Plane Tree Through the Ceiling', image: null },
 ];
 
 const ARTIST = 'Maria Decetise';
@@ -163,7 +179,7 @@ export function setupDecetiseLighting(scene, renderer, tier = {}) {
   const lamp = new THREE.PointLight(0xffd9a0, 4, 9, 2);
   lamp.position.set(-7.4, 3.1, 7.4);
   const cabin = new THREE.PointLight(0xffe2b4, 6, 7, 2);
-  cabin.position.set(0, 2.45, 0);
+  cabin.position.set(CORE_POS.x, 2.45, CORE_POS.z);
 
   scene.add(sun, sun.target, hemi, ambient, bounce, lamp, cabin);
 
@@ -372,7 +388,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
   baseSlab(DX.tx0 - 0.6, DX.pool.z1, DX.x0, DX.z1 + 0.6);            // under the south deck
 
   // Ceiling: four solid slabs round the courtyard, then an instanced grid of
-  // panels over the courtyard itself with the oculi and the shaft left out. One
+  // panels over the courtyard itself with the oculi left out. One
   // ShapeGeometry with six holes is the obvious way and the wrong one — that
   // triangulation is unbounded on this plan.
   function ceilSlab(x0, z0, x1, z1) {
@@ -391,7 +407,6 @@ export function buildDecetiseRoom(scene, opts = {}) {
     const panels = [];
     for (let x = -YE + cell / 2; x < YE; x += cell) {
       for (let z = -YE + cell / 2; z < YE; z += cell) {
-        if (Math.abs(x) < DX.core + 0.4 && Math.abs(z) < DX.core + 0.4) continue;
         if (TREES.some(([tx, tz]) => Math.hypot(x - tx, z - tz) < DX.holeR)) continue;
         panels.push([x, z]);
       }
@@ -414,8 +429,10 @@ export function buildDecetiseRoom(scene, opts = {}) {
     add(collar);
   }
 
-  // south art wall — the only solid face of the plate
+  // the two art walls — south, and its twin across the plate on the north,
+  // where a wall of glass used to stand
   box((DX.x0 + DX.x1) / 2, DX.ceil / 2, DX.z1 + 0.15, DX.x1 - DX.x0 + 0.6, DX.ceil, 0.3);
+  box((DX.x0 + DX.x1) / 2, DX.ceil / 2, DX.z0 - 0.15, DX.x1 - DX.x0 + 0.6, DX.ceil, 0.3);
 
   // glazing: a pane, mullions at a bay's spacing, head and sill rails
   function glazing(axis, fixed, from, to, step) {
@@ -439,7 +456,6 @@ export function buildDecetiseRoom(scene, opts = {}) {
       add(rail);
     }
   }
-  glazing('x', DX.z0 - 0.05, DX.x0, DX.x1, 2.83);        // north wall of glass
   glazing('z', DX.x1 + 0.05, DX.z0, DX.z1, 2.6);         // east wall of glass
   // West: one unbroken run, not two flanking a doorway. The terrace used to
   // slide open in the middle; it doesn't any more. The pool now reaches the
@@ -549,25 +565,40 @@ export function buildDecetiseRoom(scene, opts = {}) {
   // them standing in the water; and furniture on a terrace nobody can reach is
   // set for guests who will never arrive. The water runs out clean to the weir.
 
-  // --- the lift core, in the middle of the plate --------------------------
+  // --- the lift core, in the plate's north-east corner --------------------
+  // Built in the core's own local frame — the doorway on local -z, the back
+  // wall on local +z — then the whole group is turned π and parked in the
+  // corner, so the back wall sits against the north art wall and the doorway
+  // opens south into the room.
   const C = DX.core;
-  box(0, DX.ceil / 2 + 0.9, C, C * 2 + 0.3, DX.ceil + 1.8, 0.3, M.limestone);
-  box(-C, DX.ceil / 2 + 0.9, 0, 0.3, DX.ceil + 1.8, C * 2, M.limestone);
-  box(C, DX.ceil / 2 + 0.9, 0, 0.3, DX.ceil + 1.8, C * 2, M.limestone);
-  box(0, 0.03, 0, C * 2, 0.06, C * 2, M.marble, false);            // cabin floor
-  box(0, 1.3, C - 0.18, C * 2 - 0.1, 2.6, 0.05, M.brass, false);   // cabin back
-  box(0, 2.62, 0, C * 2, 0.08, C * 2, M.brass, false);             // cabin ceiling
-  for (const dx of [-C + 0.12, C - 0.12]) box(dx, 1.35, -C, 0.24, 2.7, 0.3, M.brass, false);
-  const plate = box(C - 0.4, 1.25, C - 0.24, 0.34, 0.9, 0.04, M.steel, false);
+  const liftCore = new THREE.Group();
+  add(liftCore);
+  liftCore.position.set(CORE_POS.x, 0, CORE_POS.z);
+  liftCore.rotation.y = Math.PI;
+  function cbox(x, y, z, w, h, d, mat = M.plaster, shadows = true) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    if (shadows) { m.castShadow = true; m.receiveShadow = true; }
+    liftCore.add(m);
+    return m;
+  }
+  cbox(0, DX.ceil / 2 + 0.9, C, C * 2 + 0.3, DX.ceil + 1.8, 0.3, M.limestone);
+  cbox(-C, DX.ceil / 2 + 0.9, 0, 0.3, DX.ceil + 1.8, C * 2, M.limestone);
+  cbox(C, DX.ceil / 2 + 0.9, 0, 0.3, DX.ceil + 1.8, C * 2, M.limestone);
+  cbox(0, 0.03, 0, C * 2, 0.06, C * 2, M.marble, false);            // cabin floor
+  cbox(0, 1.3, C - 0.18, C * 2 - 0.1, 2.6, 0.05, M.brass, false);   // cabin back
+  cbox(0, 2.62, 0, C * 2, 0.08, C * 2, M.brass, false);             // cabin ceiling
+  for (const dx of [-C + 0.12, C - 0.12]) cbox(dx, 1.35, -C, 0.24, 2.7, 0.3, M.brass, false);
+  const plate = cbox(C - 0.4, 1.25, C - 0.24, 0.34, 0.9, 0.04, M.steel, false);
   plate.name = 'decetise-lift-plate';
   for (let i = 0; i < 3; i++) {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 14), M.brass);
     b.rotation.x = Math.PI / 2;
     b.position.set(C - 0.4, 1.5 - i * 0.22, C - 0.27);
-    add(b);
+    liftCore.add(b);
   }
 
-  // --- the courtyard: a parterre round the core ---------------------------
+  // --- the courtyard: a parterre round the basin --------------------------
   const gravel = new THREE.Mesh(new THREE.PlaneGeometry(DX.yard * 2, DX.yard * 2), gravelMat);
   gravel.rotation.x = -Math.PI / 2;
   gravel.position.y = 0.015;
@@ -616,7 +647,8 @@ export function buildDecetiseRoom(scene, opts = {}) {
     }
   }
 
-  // the stone basin, on the courtyard's south walk
+  // the stone basin, at the centre of the parterre — where the lift core
+  // stood before it moved to the corner
   const fountain = new THREE.Group();
   const basin = new THREE.Mesh(new THREE.CylinderGeometry(1.95, 2.1, 0.52, 40), M.stonePale);
   basin.position.y = 0.26; basin.castShadow = true; basin.receiveShadow = true;
@@ -631,7 +663,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
   const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.12, 1.1, 10, 1, true), M.sheet);
   jet.position.y = 2.05;
   fountain.add(basin, rim, dish, pedestal, upper, jet);
-  fountain.position.set(0, 0, 6.6);
+  fountain.position.set(0, 0, 0);
   add(fountain);
 
   // green metal park chairs, drawn up round the basin
@@ -655,9 +687,9 @@ export function buildDecetiseRoom(scene, opts = {}) {
     g.position.set(x, 0, z); g.rotation.y = rot;
     add(g);
   }
-  parkChair(-2.5, 6.1, 0.6);
-  parkChair(2.6, 6.9, -1.0);
-  parkChair(-1.4, 8.6, 2.5);
+  parkChair(-2.5, -0.5, 0.6);
+  parkChair(2.6, 0.3, -1.0);
+  parkChair(-1.4, 2.0, 2.5);
 
   // park lamps at the corners of the parterre
   for (const [lx, lz] of LAMPS) {
@@ -978,7 +1010,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
     });
   }
 
-  // two stone benches facing the city on the north glass
+  // two stone benches facing the pictures on the north art wall
   for (const bx of [-8, 8]) box(bx, 0.21, DX.z0 + 1.5, 3.2, 0.42, 0.62, M.stonePale);
 
   // --- the hang ----------------------------------------------------------
@@ -987,9 +1019,9 @@ export function buildDecetiseRoom(scene, opts = {}) {
     const entry = art[i] || { title: `Slot ${slot.id}`, image: null };
     const tex = placeholderArt(1000 + i * 977 + entry.title.length, slot.w, slot.h);
     // A dark backing panel behind each picture, so a canvas on a pale wall has
-    // an edge. The three on the lift core don't get one: the core is a free-
-    // standing pier read from every side, and a panel standing proud of it read
-    // as a slab bolted to the shaft rather than as a picture hung on it.
+    // an edge. The one on the lift core doesn't get one: the core is a stone
+    // pier, and a panel standing proud of it read as a slab bolted to the
+    // shaft rather than as a picture hung on it.
     if (!slot.id.startsWith('DX-C')) {
       box(slot.x, slot.y, slot.z, slot.w, slot.h, 0.05,
         new THREE.MeshStandardMaterial({ color: 0x2a2521, roughness: 0.8 }));
@@ -1077,8 +1109,9 @@ export function buildDecetiseRoom(scene, opts = {}) {
 
 // ---------------------------------------------------------------------------
 // Collision. One flat floor, so `ground` is constant; the segments are the
-// shell, the core, the hedges, the basin and the partitions. Nothing for the
-// terrace or the pool — the west wall is glass now and neither is reachable.
+// shell, the corner core, the hedges and the basin. Nothing for the terrace
+// or the pool — the keep-in line along the open west edge is the only thing
+// between a visitor and the water.
 // Same format as js/world/Collision.js expects.
 export function decetiseGround() { return 0; }
 
@@ -1101,19 +1134,18 @@ export function decetiseSegments() {
     seg(DX.x1 - 0.25, DX.z0 + 0.25, DX.x1 - 0.25, DX.z1 - 0.25),
     seg(DX.x1 - 0.25, DX.z1 - 0.25, DX.x0, DX.z1 - 0.25),
     seg(DX.x0 + 0.1, DX.z0 + 0.25, DX.x0 + 0.1, DX.z1 - 0.25),
-    // the lift core, open to the north where the cabin doors are
-    seg(-DX.core - 0.2, DX.core + 0.2, DX.core + 0.2, DX.core + 0.2),
-    seg(-DX.core - 0.2, -DX.core - 0.2, -DX.core - 0.2, DX.core + 0.2),
-    seg(DX.core + 0.2, -DX.core - 0.2, DX.core + 0.2, DX.core + 0.2),
+    // The lift core, in the north-east corner. Its north and east faces stand
+    // behind the shell's own lines, so the only face a visitor can reach is
+    // the west one — held 0.2 off the stone so nobody pushes into the picture
+    // hung there (DX-C1). The doorway side, south, stays open.
+    seg(13.0, -13.0, 13.0, -9.0),
     // …plus the cabin's own back wall, a panel's thickness inside the core's
-    // south line. That line stands off the OUTSIDE face of the core, far enough
-    // out that nobody walking round it can push into the picture hung there
-    // (DX-C1) — which from inside the cabin left the visitor half a body
-    // through the brass. This one is only ever met from within: nothing outside
-    // the core gets past the south line to reach it.
-    seg(-DX.core, DX.core - 0.205, DX.core, DX.core - 0.205),
-    // the stone basin at the head of the south walk
-    ...rect(-2.1, 4.5, 2.1, 8.7),
+    // north line. Only ever met from within the cabin — it stops the visitor
+    // a hand short of the brass, which keeps the lift door hitbox in front of
+    // the eye rather than behind it.
+    seg(13.2, -12.595, 16.8, -12.595),
+    // the stone basin at the centre of the parterre
+    ...rect(-2.1, -2.1, 2.1, 2.1),
     // the hedges, quadrant by quadrant
     ...[-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) => [
       ...rect(sx * 4.4 - 1.8, sz * 3.1 - 0.4, sx * 4.4 + 1.8, sz * 3.1 + 0.4),

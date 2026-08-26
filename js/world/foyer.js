@@ -319,9 +319,15 @@ function buildPoolCorner(g, mats, tier) {
   const paving = new THREE.MeshStandardMaterial({
     color: 0x494440, roughness: 0.9, metalness: 0, envMapIntensity: 0.12,
   });
-  slab(FY.x1 + 0.3, DECK.z0, POOL_E.x0, POOL_S.z0, paving);        // east patio
-  slab(DECK.x0, FY.z1 + 0.3, POOL_E.x0, POOL_S.z0, paving);        // south patio
-  slab(DECK.x0, POOL_S.z0, POOL_S.x0, DECK.z1, paving);            // west margin
+  // Each slab stops at the pool wall's outer face (a wall's thickness short of
+  // the water), never at the waterline itself: a slab ending flush with a tile
+  // wall shares that wall's plane, and the pool's sides flicker between paving
+  // and tile. The tile walls own the basin's faces; the paving never touches
+  // them. (WT is the pool-wall thickness, declared with the basin below.)
+  const PWT = 0.16;
+  slab(FY.x1 + 0.3, DECK.z0, POOL_E.x0 - PWT, POOL_S.z0 - PWT, paving);   // east patio
+  slab(DECK.x0, FY.z1 + 0.3, POOL_E.x0 - PWT, POOL_S.z0 - PWT, paving);   // south patio
+  slab(DECK.x0, POOL_S.z0 - PWT, POOL_S.x0 - PWT, DECK.z1, paving);       // west margin
 
   // --- the pool ------------------------------------------------------------
   // One L of water round the building's corner — a single surface, so there is
@@ -371,13 +377,17 @@ function buildPoolCorner(g, mats, tier) {
   const coping = new THREE.MeshStandardMaterial({
     color: 0x6f675e, roughness: 0.82, metalness: 0, envMapIntensity: 0.14,
   });
+  // The coping rides 4 cm proud of the paving and noses 1 cm out over the
+  // water — a real pool's lip does both, and a stone lip whose top sat exactly
+  // at deck level (or whose face sat exactly on the tile's plane) shared that
+  // surface's plane and shimmered against it.
   const CW = 0.3;
-  pane(CW, 0.06, POOL_S.z0 - POOL_E.z0, coping,
-       POOL_E.x0 - CW / 2, -0.03, (POOL_E.z0 + POOL_S.z0) / 2);
-  pane(POOL_E.x0 - POOL_S.x0, 0.06, CW, coping,
-       (POOL_S.x0 + POOL_E.x0) / 2, -0.03, POOL_S.z0 - CW / 2);
+  pane(CW, 0.06, POOL_S.z0 - POOL_E.z0 + 0.01, coping,
+       POOL_E.x0 - CW / 2 + 0.01, 0.01, (POOL_E.z0 + POOL_S.z0) / 2 + 0.005);
+  pane(POOL_E.x0 - POOL_S.x0 + 0.01, 0.06, CW, coping,
+       (POOL_S.x0 + POOL_E.x0) / 2 + 0.005, 0.01, POOL_S.z0 - CW / 2 + 0.01);
   pane(CW, 0.06, POOL_S.z1 - POOL_S.z0, coping,
-       POOL_S.x0 - CW / 2, -0.03, (POOL_S.z0 + POOL_S.z1) / 2);
+       POOL_S.x0 - CW / 2 + 0.01, 0.01, (POOL_S.z0 + POOL_S.z1) / 2);
 
   // The water: the same L, one surface. Two ripple normals crossing and
   // scrolling past each other (the trick the courtyard pool downstairs uses —
