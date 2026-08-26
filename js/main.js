@@ -7,6 +7,7 @@ import { Player } from './Player.js';
 import { DesktopControls } from './controls/DesktopControls.js';
 import { TouchControls } from './controls/TouchControls.js';
 import { createAssetPipeline } from './utils/assets.js';
+import { track } from './utils/analytics.js';
 import { createEffects } from './Effects.js';
 import { buildArtworks } from './art/Artworks.js';
 import { buildCityView } from './world/CityView.js';
@@ -520,9 +521,10 @@ function ensureRoom(id) {
 // cabin: fade to black, switch (building the destination if this is its first
 // visit), fade back. `travelling` gates re-entrant presses and freezes walking.
 let travelling = false;
-async function travelTo(id) {
+async function travelTo(id, via = 'door') {
   if (travelling) return;
   travelling = true;
+  arrivedVia = via;             // read once by rooms.onChange, after rooms.enter
   try {
     // The message only when the destination still has to be built — an
     // already-built hop is over before there is time to read it.
@@ -573,7 +575,7 @@ function reflectHash(id) {
 // A hash pasted or edited mid-visit travels there (or back to the foyer).
 window.addEventListener('hashchange', () => {
   const dest = roomFromHash() || 'foyer';
-  if (dest !== rooms.current) travelTo(dest);
+  if (dest !== rooms.current) travelTo(dest, 'share-link');
 });
 
 // --- register every room --------------------------------------------------
@@ -630,10 +632,40 @@ rooms.define('foyer', {
   bake: () => { renderer.shadowMap.needsUpdate = true; },
 });
 
+// --- hall tracking ----------------------------------------------------------
+// How the visitor reached the room they are arriving in, and the one they just
+// left. Both are read by the onChange below and are set by whatever moved them.
+//
+// `entered` lives here rather than beside readyToEnter further down: the
+// rooms.start('foyer') a few lines below fires onChange synchronously, and
+// reading a `let` declared later in the module would hit its temporal dead zone.
+let entered = false;
+let arrivedVia = 'boot';
+let previousRoom = null;
+
 // The music belongs to the foyer: step into a hall and it stops, step back
 // out and whatever the visitor's mute buttons say comes back. onChange fires
 // on the start('foyer') below too, which seeds the initial state.
-rooms.onChange = (id) => audio.setMusicSuppressed(id !== 'foyer');
+rooms.onChange = (id) => {
+  audio.setMusicSuppressed(id !== 'foyer');
+
+  // Every way into a hall lands here — the foyer door, both lifts, a #slug
+  // share link — so this is the one place a room switch has to be reported
+  // from. Skipped until the visitor has actually clicked Enter, which drops
+  // the rooms.start('foyer') that runs while the loading screen is still up.
+  if (entered) {
+    const r = findResidency(id);
+    track('Hall Entered', {
+      room: id,
+      hall: r?.name || (id === 'foyer' ? 'Reception foyer' : id),
+      artist: r?.artist || null,   // halls credited to a resident; null for the rest
+      via: arrivedVia,             // door | reception-lift | courtyard-lift | share-link
+      from: previousRoom,          // the room they walked out of, so paths are readable
+    });
+  }
+  previousRoom = id;
+  arrivedVia = 'door';             // the common case, for anything that doesn't say
+};
 
 // Collision.js seeds its active room at module load, so the start room's real
 // segments + ground only go live once this runs.
@@ -653,6 +685,7 @@ ensureRoom(FEATURED.residencyId).catch((e) => console.warn('[featured] preload f
 lift.onVeil = (on, id) => ui.veil(on, { message: !!id && !rooms.has(id) });
 lift.onArrive = async (id) => {
   await ensureRoom(id);              // first visit: build it behind the veil
+  arrivedVia = 'reception-lift';
   rooms.enter(id);
   // Recompile with the destination's lights visible while the veil is still up
   // (renderer.compile gathers lights from visible objects only).
@@ -678,11 +711,10 @@ cyLift.panel.userData.lift = {
   open: () => ui.openLift(
     ['★ Reception', ...cyLift.labels],
     cyLift.currentIndex() + 1,
-    (i) => (i === 0 ? travelTo('foyer') : cyLift.selectFloor(i - 1))
+    (i) => (i === 0 ? travelTo('foyer', 'courtyard-lift') : cyLift.selectFloor(i - 1))
   ),
 };
 
-let entered = false;
 let ready = false;
 function readyToEnter() {
   if (ready) return;
@@ -703,7 +735,7 @@ assets.done
 setTimeout(readyToEnter, 12000); // never gate entry on a stuck download
 
 enterBtn.addEventListener('click', () => {
-  if (enterBtn.disabled) return;
+  if (enterBtn.disabled || entered) return;   // `entered` also blocks a second keyboard press
   entered = true;
   loadingEl.classList.add('fade-out');
   audio.unlock();      // resume + prime the AudioContext inside this gesture (mobile)
@@ -712,7 +744,16 @@ enterBtn.addEventListener('click', () => {
   controls.lock();
   // A share link (#slug) skips the walk: ride the veil straight to the hall.
   const dest = roomFromHash();
-  if (dest && dest !== rooms.current) travelTo(dest);
+  // Report the entry to Vercel Web Analytics. Fired once per visit, from the
+  // click itself rather than from page load, so the dashboard counts people who
+  // actually walked in — not everyone who watched the loading bar and left.
+  track('Gallery Entered', {
+    room: dest || rooms.current,          // where they land: the foyer, or a shared hall
+    via: dest ? 'share-link' : 'foyer',   // a #slug deep link vs. the normal front door
+    device: IS_TOUCH ? 'touch' : 'desktop',
+    waited: Math.round(performance.now() / 1000), // seconds on the loading screen
+  });
+  if (dest && dest !== rooms.current) travelTo(dest, 'share-link');
 });
 
 lighting.bake();
