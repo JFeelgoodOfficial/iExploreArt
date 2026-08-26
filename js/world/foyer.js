@@ -319,9 +319,16 @@ function buildPoolCorner(g, mats, tier) {
   const paving = new THREE.MeshStandardMaterial({
     color: 0x494440, roughness: 0.9, metalness: 0, envMapIntensity: 0.12,
   });
-  slab(FY.x1 + 0.3, DECK.z0, POOL_E.x0, POOL_S.z0, paving);        // east patio
-  slab(DECK.x0, FY.z1 + 0.3, POOL_E.x0, POOL_S.z0, paving);        // south patio
-  slab(DECK.x0, POOL_S.z0, POOL_S.x0, DECK.z1, paving);            // west margin
+  // The thickness of the basin's own walls, declared here because the paving
+  // has to stop short of them: each slab ends at the pool wall's outer face,
+  // never at the waterline. A slab carried all the way to the water shares its
+  // end plane with the tile wall standing there, and the pool's sides flicker
+  // between paving and tile. The tile owns the basin's faces; the paving never
+  // reaches them.
+  const WT = 0.16;
+  slab(FY.x1 + 0.3, DECK.z0, POOL_E.x0 - WT, POOL_S.z0 - WT, paving);   // east patio
+  slab(DECK.x0, FY.z1 + 0.3, POOL_E.x0 - WT, POOL_S.z0 - WT, paving);   // south patio
+  slab(DECK.x0, POOL_S.z0 - WT, POOL_S.x0 - WT, DECK.z1, paving);       // west margin
 
   // --- the pool ------------------------------------------------------------
   // One L of water round the building's corner — a single surface, so there is
@@ -351,9 +358,8 @@ function buildPoolCorner(g, mats, tier) {
   basinFloor.position.y = WATER_Y - DEPTH;
   basinFloor.receiveShadow = true;
   add(basinFloor);
-  // the basin's sides, one per side of the L. The two outer ones stop at the
-  // waterline: that lip is what the sheet runs over.
-  const WT = 0.16;
+  // the basin's sides, one per side of the L (WT, with the paving above). The
+  // two outer ones stop at the waterline: that lip is what the sheet runs over.
   const wall = (x0, z0, x1, z1, top) => {
     const h = top - (WATER_Y - DEPTH);
     pane(Math.max(x1 - x0, WT), h, Math.max(z1 - z0, WT), tileMat,
@@ -371,13 +377,17 @@ function buildPoolCorner(g, mats, tier) {
   const coping = new THREE.MeshStandardMaterial({
     color: 0x6f675e, roughness: 0.82, metalness: 0, envMapIntensity: 0.14,
   });
+  // The coping rides 4 cm proud of the paving and noses 1 cm out over the
+  // water — a real pool's lip does both, and a stone lip whose top sat exactly
+  // at deck level (or whose face sat exactly on the tile's plane) shared that
+  // surface's plane and shimmered against it.
   const CW = 0.3;
-  pane(CW, 0.06, POOL_S.z0 - POOL_E.z0, coping,
-       POOL_E.x0 - CW / 2, -0.03, (POOL_E.z0 + POOL_S.z0) / 2);
-  pane(POOL_E.x0 - POOL_S.x0, 0.06, CW, coping,
-       (POOL_S.x0 + POOL_E.x0) / 2, -0.03, POOL_S.z0 - CW / 2);
+  pane(CW, 0.06, POOL_S.z0 - POOL_E.z0 + 0.01, coping,
+       POOL_E.x0 - CW / 2 + 0.01, 0.01, (POOL_E.z0 + POOL_S.z0) / 2 + 0.005);
+  pane(POOL_E.x0 - POOL_S.x0 + 0.01, 0.06, CW, coping,
+       (POOL_S.x0 + POOL_E.x0) / 2 + 0.005, 0.01, POOL_S.z0 - CW / 2 + 0.01);
   pane(CW, 0.06, POOL_S.z1 - POOL_S.z0, coping,
-       POOL_S.x0 - CW / 2, -0.03, (POOL_S.z0 + POOL_S.z1) / 2);
+       POOL_S.x0 - CW / 2 + 0.01, 0.01, (POOL_S.z0 + POOL_S.z1) / 2);
 
   // The water: the same L, one surface. Two ripple normals crossing and
   // scrolling past each other (the trick the courtyard pool downstairs uses —

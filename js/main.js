@@ -26,7 +26,7 @@ import {
 import {
   buildDecetiseRoom, setupDecetiseLighting,
   decetiseGround, decetiseSegments, DECETISE_HANG,
-  DX, SPAWN as DX_SPAWN, SUN_POS as DX_SUN,
+  DX, SPAWN as DX_SPAWN, SUN_POS as DX_SUN, CORE_POS as DX_CORE,
 } from './world/decetise.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
 import { BRUTALIST_HANG } from '../data/brutalist-artworks.js';
@@ -450,12 +450,12 @@ const ROOM_FACTORIES = {
   decetise: () => {
     const room = buildDecetiseRoom(scene, { tier, ...artOpts, art: DECETISE_HANG });
     const lights = setupDecetiseLighting(scene, renderer, tier);
-    // A whole floor plate five storeys up, glazed on three of its four sides —
-    // north, east, and the west wall over the pool. Every other room in the
-    // building looks out of one wall, so the default city is a wedge aimed at
-    // it; here a wedge leaves two windows showing bare sky whichever way it is
-    // yawed. `surround` rings the building with the same towers instead, so the
-    // city is there out of every window and over the pool's weir. `fog` is
+    // A whole floor plate five storeys up, open to the city on the east glass
+    // and over the pool's open west edge. Every other room in the building
+    // looks out of one wall, so the default city is a wedge aimed at it; here
+    // a wedge leaves one of the two openings showing bare sky whichever way it
+    // is yawed. `surround` rings the building with the same towers instead, so
+    // the city is there out of the glass and over the pool's weir. `fog` is
     // global and the gallery already set it; the sun matches
     // setupDecetiseLighting's, or the daylight arrives from two quarters at once.
     const city = buildCityView(scene, renderer, {
@@ -477,8 +477,8 @@ const ROOM_FACTORIES = {
     // wall stops you a player-radius short of it (decetiseSegments), and a
     // plane flush with the brass would sit behind the eye at exactly the moment
     // someone is nose to the wall looking for the way out.
-    const liftDoor = doorHitbox(DX.core * 2 - 0.2, 2.4, 0, 1.25, DX.core - 0.28,
-      Math.PI, 'decetise-lift-to-reception');
+    const liftDoor = doorHitbox(DX.core * 2 - 0.2, 2.4, DX_CORE.x, 1.25,
+      DX_CORE.z - (DX.core - 0.28), 0, 'decetise-lift-to-reception');
     liftDoor.userData.door = {
       label: 'ride the lift to reception',
       onEnter: () => travelTo('foyer'),
@@ -646,7 +646,11 @@ ensureRoom(FEATURED.residencyId).catch((e) => console.warn('[featured] preload f
 
 // Reception lift: press E inside the cabin → pick a residency → it rides up and
 // arrives behind the veil.
-lift.onVeil = (on) => ui.veil(on);
+// The message rides up with it on a first visit — the build behind the veil
+// takes seconds, and a wipe with nothing on it reads as a stall. A hall that
+// is already built (the featured one is preloaded) arrives too fast to read,
+// so that hop keeps the bare veil, same rule as travelTo's.
+lift.onVeil = (on, id) => ui.veil(on, { message: !!id && !rooms.has(id) });
 lift.onArrive = async (id) => {
   await ensureRoom(id);              // first visit: build it behind the veil
   rooms.enter(id);

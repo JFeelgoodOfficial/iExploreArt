@@ -115,14 +115,15 @@ export const RESIDENCIES = [
     slug: 'decetise-hall',
     floor: 5,
     artist: 'Maria Decetise',
-    blurb: 'one whole floor plate five storeys up — two walls of glass over the city, '
-      + 'and on the third no wall at all: the room opens straight onto an infinity pool '
+    blurb: 'one whole floor plate five storeys up — a wall of glass over the city, '
+      + 'and on the west no wall at all: the room opens straight onto an infinity pool '
       + 'that fills the terrace and runs off the edge of the building. The lift stands '
-      + 'in the middle of a French parterre, gravel and clipped hedges and green park '
-      + 'chairs, with five plane trees growing up through oculi cut in the ceiling and '
-      + 'four more out at the ends of the water; nine works hang there — six on the art '
-      + 'wall, and three on the faces of the lift core itself, which are the first '
-      + 'pictures you see as the doors open',
+      + 'in the corner where the glass meets the north wall, and at the centre of a '
+      + 'French parterre — gravel and clipped hedges and green park chairs — a stone '
+      + 'fountain plays under five plane trees growing up through oculi cut in the '
+      + 'ceiling, with four more out at the ends of the water; twelve works hang there '
+      + '— six on the south art wall, five on the north, and one on the room-facing '
+      + 'flank of the lift core itself',
   },
   {
     id: 'brutalist',
