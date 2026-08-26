@@ -191,6 +191,56 @@ export function signTexture(title, subtitle) {
   return t;
 }
 
+// A painted title wall: the show's name stacked one word a line, the artist
+// under it, then a word-wrapped statement — all on a transparent ground so the
+// wall's own material reads through the letters. The ink is the caller's:
+// pale on the chadrea pier's dark concrete (js/world/chadrea/chadrea.js),
+// dark — the signTexture palette above — on the foyer's light plaster.
+export function plaqueTexture({
+  title, artist, body,
+  width = 1024, height = 1386,
+  ink = '#2a2521', sub = '#6f675f',
+}) {
+  const c = document.createElement('canvas');
+  c.width = width; c.height = height;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = ink;
+  ctx.textAlign = 'left';
+  const M = 72;                       // margin
+  let y = 190;
+  ctx.font = '600 118px "Cormorant Garamond", Georgia, serif';
+  for (const word of title.split(' ')) {   // one word a line, stacked
+    ctx.fillText(word, M, y);
+    y += 128;
+  }
+  y += 8;
+  ctx.font = '500 46px Inter, sans-serif';
+  ctx.fillStyle = sub;
+  ctx.fillText(artist, M, y);
+  y += 110;
+  // the statement, word-wrapped
+  ctx.font = '400 31px Inter, sans-serif';
+  ctx.fillStyle = ink;
+  const words = body.split(' ');
+  let line = '';
+  for (const w of words) {
+    const probe = line ? `${line} ${w}` : w;
+    if (ctx.measureText(probe).width > width - M * 2 && line) {
+      ctx.fillText(line, M, y);
+      y += 48;
+      line = w;
+    } else {
+      line = probe;
+    }
+  }
+  if (line) ctx.fillText(line, M, y);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+
 function moteTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 32;

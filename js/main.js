@@ -524,7 +524,9 @@ async function travelTo(id) {
   if (travelling) return;
   travelling = true;
   try {
-    ui.veil(true);
+    // The message only when the destination still has to be built — an
+    // already-built hop is over before there is time to read it.
+    ui.veil(true, { message: !rooms.has(id) });
     await new Promise((r) => setTimeout(r, 600));  // #veil's CSS fade is 0.5 s
     await ensureRoom(id);
     rooms.enter(id);

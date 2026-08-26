@@ -103,8 +103,11 @@
     </div>
   </div>
 
-  <!-- Ride veil: the opaque wipe the lift arrives behind -->
-  <div id="veil" aria-hidden="true"></div>
+  <!-- Ride veil: the opaque wipe the lift arrives behind. The message inside
+       shows only on door travels that build a hall behind it (UI.veil). -->
+  <div id="veil" aria-hidden="true">
+    <div class="veil-msg"><p>YOUR experience is being prepared<span class="dots"><span>.</span><span>.</span><span>.</span></span></p></div>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>
