@@ -7,6 +7,7 @@ import { Player } from './Player.js';
 import { DesktopControls } from './controls/DesktopControls.js';
 import { TouchControls } from './controls/TouchControls.js';
 import { createAssetPipeline } from './utils/assets.js';
+import { track } from './utils/analytics.js';
 import { createEffects } from './Effects.js';
 import { buildArtworks } from './art/Artworks.js';
 import { buildCityView } from './world/CityView.js';
@@ -703,7 +704,7 @@ assets.done
 setTimeout(readyToEnter, 12000); // never gate entry on a stuck download
 
 enterBtn.addEventListener('click', () => {
-  if (enterBtn.disabled) return;
+  if (enterBtn.disabled || entered) return;   // `entered` also blocks a second keyboard press
   entered = true;
   loadingEl.classList.add('fade-out');
   audio.unlock();      // resume + prime the AudioContext inside this gesture (mobile)
@@ -712,6 +713,15 @@ enterBtn.addEventListener('click', () => {
   controls.lock();
   // A share link (#slug) skips the walk: ride the veil straight to the hall.
   const dest = roomFromHash();
+  // Report the entry to Vercel Web Analytics. Fired once per visit, from the
+  // click itself rather than from page load, so the dashboard counts people who
+  // actually walked in — not everyone who watched the loading bar and left.
+  track('Gallery Entered', {
+    room: dest || rooms.current,          // where they land: the foyer, or a shared hall
+    via: dest ? 'share-link' : 'foyer',   // a #slug deep link vs. the normal front door
+    device: IS_TOUCH ? 'touch' : 'desktop',
+    waited: Math.round(performance.now() / 1000), // seconds on the loading screen
+  });
   if (dest && dest !== rooms.current) travelTo(dest);
 });
 
