@@ -198,7 +198,10 @@ export function buildReceptionLift(scene, mats) {
       if (y >= targetY - 1e-4) {
         y = targetY; car.position.y = y;
         phase = 'arriving'; t = 0;
-        onVeil?.(true);
+        // The destination goes out with the veil: the caller decides from it
+        // whether this arrival has a hall to build behind the wipe, and so
+        // whether the "being prepared" line belongs on it.
+        onVeil?.(true, dest.id);
       }
       return;
     }

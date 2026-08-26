@@ -646,7 +646,11 @@ ensureRoom(FEATURED.residencyId).catch((e) => console.warn('[featured] preload f
 
 // Reception lift: press E inside the cabin → pick a residency → it rides up and
 // arrives behind the veil.
-lift.onVeil = (on) => ui.veil(on);
+// The message rides up with it on a first visit — the build behind the veil
+// takes seconds, and a wipe with nothing on it reads as a stall. A hall that
+// is already built (the featured one is preloaded) arrives too fast to read,
+// so that hop keeps the bare veil, same rule as travelTo's.
+lift.onVeil = (on, id) => ui.veil(on, { message: !!id && !rooms.has(id) });
 lift.onArrive = async (id) => {
   await ensureRoom(id);              // first visit: build it behind the veil
   rooms.enter(id);
