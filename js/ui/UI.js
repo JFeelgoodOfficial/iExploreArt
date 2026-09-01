@@ -1,5 +1,6 @@
 import { IS_TOUCH } from '../config.js';
 import { GALLERY_INFO } from '../../data/artworks.js';
+import { track } from '../utils/analytics.js';
 
 // All DOM overlay state: HUD prompt, artwork panel, curator dialogue,
 // pause screen, and the pointer-lock handshakes between them.
@@ -9,6 +10,11 @@ export class UI {
     this.controls = controls;
     this.activePanel = null;   // 'info' | 'dialogue' | null
     this.curator = null;       // injected by Curator module
+    // Which room the visitor is standing in, so an enquiry reports the hall it
+    // was made in as well as the piece. Set by main.js on every room change.
+    this.room = null;
+    this.hall = null;
+    this.art = null;           // the piece the info panel is currently showing
 
     this.el = {
       hud: document.getElementById('hud'),
@@ -21,6 +27,7 @@ export class UI {
       infoSpec: document.getElementById('info-spec'),
       infoSeries: document.getElementById('info-series'),
       infoDesc: document.getElementById('info-desc'),
+      enquire: document.getElementById('enquire-btn'),
       infoContact: document.getElementById('info-contact'),
       dialogue: document.getElementById('dialogue'),
       dialogueText: document.getElementById('dialogue-text'),
@@ -34,6 +41,7 @@ export class UI {
 
     document.getElementById('resume-btn').addEventListener('click', () => this._resume());
     this.el.info.querySelector('[data-close]').addEventListener('click', () => this.closePanel());
+    this.el.enquire.addEventListener('click', () => this._enquire());
 
     controls.onLockChange = (locked) => {
       if (!locked && !this.activePanel && this.entered) this.showPause(true);
@@ -48,6 +56,9 @@ export class UI {
   }
 
   enter() { this.entered = true; this.el.hud.hidden = false; }
+
+  // Where the visitor is. Only used to say which hall an enquiry was made in.
+  setRoom(id, name) { this.room = id || null; this.hall = name || null; }
 
   prompt(html) {
     if (html) {
@@ -96,8 +107,37 @@ export class UI {
     setLine(this.el.infoSpec, [art.year, art.medium, art.dims].filter(Boolean).join(' · '));
     setLine(this.el.infoSeries, art.series);
     setLine(this.el.infoDesc, art.description);
+    // The artist's details are built now but stay covered: a visitor who wants
+    // them presses the enquiry button, which is the moment worth counting.
+    // A piece with no contact on it shows neither, exactly as before.
+    this.art = art;
     setContact(this.el.infoContact, art.contact);
+    const hasContact = !this.el.infoContact.hidden;
+    this.el.infoContact.hidden = true;
+    this.el.enquire.hidden = !hasContact;
     this.el.info.hidden = false;
+  }
+
+  // The enquiry button: it stands down, the contact details take its place, and
+  // Vercel Web Analytics is told which work was asked after. Fired from the
+  // click rather than from the panel opening, so the dashboard counts intent
+  // to buy and not everyone who read a wall label.
+  _enquire() {
+    const art = this.art;
+    this.el.enquire.hidden = true;
+    this.el.infoContact.hidden = !this.el.infoContact.childElementCount;
+    track('Enquiry Opened', {
+      work: art?.title || null,
+      workId: art?.id || null,
+      // the same name the label shows: the piece's own, or the house artist —
+      // and null rather than '' for an uncredited hang, so the dashboard's
+      // column stays readable
+      artist: (art?.artist ?? GALLERY_INFO.artist) || null,
+      series: art?.series || null,
+      room: this.room,
+      hall: this.hall,
+      device: IS_TOUCH ? 'touch' : 'desktop',
+    });
   }
 
   openDialogue() {
@@ -143,6 +183,7 @@ export class UI {
 
   closePanel() {
     this.el.info.hidden = true;
+    this.art = null;
     this.el.dialogue.hidden = true;
     this.el.lift.hidden = true;
     this.activePanel = null;

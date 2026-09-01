@@ -649,15 +649,21 @@ let previousRoom = null;
 rooms.onChange = (id) => {
   audio.setMusicSuppressed(id !== 'foyer');
 
+  const r = findResidency(id);
+  const hall = r?.name || (id === 'foyer' ? 'Reception foyer' : id);
+
+  // The info panel labels its enquiries with the hall they were made in, so it
+  // is told where the visitor is standing on every switch, entered or not.
+  ui.setRoom(id, hall);
+
   // Every way into a hall lands here — the foyer door, both lifts, a #slug
   // share link — so this is the one place a room switch has to be reported
   // from. Skipped until the visitor has actually clicked Enter, which drops
   // the rooms.start('foyer') that runs while the loading screen is still up.
   if (entered) {
-    const r = findResidency(id);
     track('Hall Entered', {
       room: id,
-      hall: r?.name || (id === 'foyer' ? 'Reception foyer' : id),
+      hall,
       artist: r?.artist || null,   // halls credited to a resident; null for the rest
       via: arrivedVia,             // door | reception-lift | courtyard-lift | share-link
       from: previousRoom,          // the room they walked out of, so paths are readable

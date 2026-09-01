@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { FEATURED, featuredResidency, featuredArtwork } from '../../data/featured.js';
 import { buildReceptionDesk, signTexture, plaqueTexture } from './Details.js';
 import { loadArtTexture } from '../art/load.js';
-import { SHOW_CARD, STATEMENT } from '../../data/chadrea-artworks.js';
+import { SHOW_CARD } from '../../data/chadrea-artworks.js';
 
 // The reception foyer — where every visit begins. A small lobby high in a
 // tower, not a gallery: the reception desk with Mira behind it, the house sign
@@ -162,9 +162,11 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
 
   // --- the show's title wall, repeated where the visitor waits --------------
   // West of the door, on the clear stretch of the north wall: the featured
-  // show's name, artist, and series statement, painted the way the hall's own
-  // title wall is (js/world/chadrea/chadrea.js) — so the foyer says what the
-  // door opens onto before anyone steps through. Dark ink here: this plaster
+  // show's name, artist, and the artist's bio, painted the way the hall's own
+  // title wall is (js/world/chadrea/chadrea.js) — the same text on both walls
+  // and in the card either one opens, read from SHOW_CARD rather than copied,
+  // so the two can never drift, and the foyer says who the door opens onto
+  // before anyone steps through. Dark ink here: this plaster
   // is light where the chadrea pier is dark. Pressing E opens the show card.
   // Read from the featured show's own data — the foyer is that show's lobby.
   const PLAQUE = { x: FY.x0 + 1.5, y: 1.7, w: 1.5, h: 2.0 };
@@ -172,7 +174,7 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
     new THREE.PlaneGeometry(PLAQUE.w, PLAQUE.h),
     new THREE.MeshStandardMaterial({
       map: plaqueTexture({
-        title: SHOW_CARD.title, artist: SHOW_CARD.artist, body: STATEMENT,
+        title: SHOW_CARD.title, artist: SHOW_CARD.artist, body: SHOW_CARD.description,
         width: 1024, height: 1365,     // the plane's 1.5 × 2.0 aspect
       }),
       transparent: true, roughness: 0.9, metalness: 0,
