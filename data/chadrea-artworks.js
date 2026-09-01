@@ -92,14 +92,16 @@ const work = (n, medium, h, w, px, file) => ({
 
 // The show card — what the painted title wall by the arch opens when you press
 // E on it (js/world/chadrea/chadrea.js). Where the artist's photo used to hang
-// there is now a museum-style title wall: show name, artist, statement, painted
-// on the concrete. The statement is his bio, the same text the curator speaks
-// downstairs (data/residencies.js), read from there rather than copied.
+// there is now a museum-style title wall: show name, artist, bio, painted on
+// the concrete. `description` is the one text both the wall and this card are
+// lettered with — his bio, the same words the curator speaks downstairs
+// (data/residencies.js), read from there rather than copied, and read again by
+// the foyer's repeat of the wall (js/world/foyer.js).
 export const SHOW_CARD = {
   id: 'cr-show-card',
   title: SERIES,
   artist: ARTIST,
-  year: '', medium: 'Artist statement',
+  year: '', medium: 'About the artist',
   description: CHAD_REA_BIO,
   contact: CONTACT,
 };

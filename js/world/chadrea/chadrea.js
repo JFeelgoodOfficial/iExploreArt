@@ -546,8 +546,9 @@ function sizeFor(piece, slot) {
   return [w * k, h * k];
 }
 
-// The title wall's lettering (see TITLE_WALL): show name, artist, statement,
-// drawn on a transparent ground so the concrete reads through. Pale warm ink,
+// The title wall's lettering (see TITLE_WALL): show name, artist, and the
+// artist's bio — the same text the card opens with and the foyer's repeat of
+// this wall carries (js/world/foyer.js) — drawn on a transparent ground so the concrete reads through. Pale warm ink,
 // not dark — this pier is deliberately the dark mass of the room, and painted
 // lettering on it has to read the way lit vinyl does, light on dark.
 function titleWallTexture() {
@@ -1090,7 +1091,7 @@ export function buildChadreaRoom(scene, opts = {}) {
 
   // --- the show's title wall -----------------------------------------------
   // Where the artist's portrait used to hang: the show's name, the artist, and
-  // his statement, lettered straight onto the concrete the way a museum paints
+  // his bio, lettered straight onto the concrete the way a museum paints
   // a title wall. A transparent canvas texture on a Standard material, so the
   // board-marks show between the letters and the portraitLamp lights it like
   // paint rather than a lightbox. Pressing E on it opens the show card
