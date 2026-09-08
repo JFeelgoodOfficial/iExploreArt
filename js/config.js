@@ -34,7 +34,8 @@ export const TIERS = {
     motes: 300,
     flowers: 320,
     anisotropy: 8,
-    artMaxEdge: 2048,        // longest edge a hung photograph is decoded at
+    artMaxEdge: 2048,        // longest edge a hung photograph is decoded at;
+                             // a ceiling, not a target — assets/art ships at 1600
   },
   low: {
     name: 'low',
@@ -46,7 +47,7 @@ export const TIERS = {
     motes: 120,
     flowers: 160,
     anisotropy: 4,
-    artMaxEdge: 1280,        // a 2.45 m canvas fills ~900 px — 2048 is memory, not detail
+    artMaxEdge: 1280,        // a 2.45 m canvas fills ~900 px — 1600 is memory, not detail
   },
 };
 

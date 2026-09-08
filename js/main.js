@@ -10,6 +10,7 @@ import { createAssetPipeline } from './utils/assets.js';
 import { track } from './utils/analytics.js';
 import { createEffects } from './Effects.js';
 import { buildArtworks } from './art/Artworks.js';
+import { withDeferredArt } from './art/load.js';
 import { buildCityView } from './world/CityView.js';
 import { buildCourtyard } from './world/Courtyard.js';
 import { buildCourtyardRoom, setupCourtyardLighting, CR } from './world/CourtyardRoom.js';
@@ -89,8 +90,34 @@ const enterBtn = document.getElementById('enter-btn');
 const progressBar = document.getElementById('progress-bar');
 const bootUI = { progress: (f) => { progressBar.style.width = `${Math.round(f * 100)}%`; } };
 
+// A hall built before anyone asks for it keeps its photographs on hold. The
+// geometry is what the preload is for — it is the part that stalls the main
+// thread for seconds — while the hang is a dozen megabytes over the wire that a
+// visitor who never opens that door has no use for. releaseArt(id) lets them go.
+//
+// Only preloaded halls have a gate at all: every hall reached by a door or the
+// lift is built on arrival, so its art was already being fetched at the right
+// moment and releaseArt is a no-op there.
+const artGates = {};      // id -> resolve fn for the hall's held-back photographs
+function holdArt(id) {
+  return new Promise((resolve) => { artGates[id] = resolve; });
+}
+function releaseArt(id) {
+  const open = artGates[id];
+  if (!open) return;
+  delete artGates[id];
+  open();
+}
+
 const assets = createAssetPipeline(renderer, scene, materials, tier, bootUI);
-const artworks = buildArtworks(scene, materials, assets.manager, renderer, tier);
+// Hall of JFeelgood hangs nineteen works, and nothing but its share link
+// (#hall-of-jfeelgood) leads there — it is off the foyer door and off the lift
+// panel. Its geometry and hit targets are built here as before; the photographs
+// wait for someone to actually follow that link. `undefined` rather than
+// assets.manager for the same reason: held-back downloads have no business
+// holding the Enter button shut.
+const artworks = withDeferredArt(holdArt('gallery'),
+  () => buildArtworks(scene, materials, undefined, renderer, tier));
 interaction.register(artworks.interactables);
 const city = buildCityView(scene, renderer);
 const courtyard = buildCourtyard(scene, materials, tier);
@@ -503,13 +530,14 @@ const ROOM_FACTORIES = {
 // link may ask for the same id, and two concurrent builds of one room would
 // both pass a bare rooms.has() check.
 const roomBuilds = {};
-function ensureRoom(id) {
+function ensureRoom(id, { deferArt = false } = {}) {
   if (rooms.has(id) || !ROOM_FACTORIES[id]) return Promise.resolve();
   if (!roomBuilds[id]) {
     roomBuilds[id] = (async () => {
       // Let the veil paint before the build takes the main thread for several seconds.
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      const { value, layer } = rooms.captureLayer(ROOM_FACTORIES[id]);
+      const build = () => rooms.captureLayer(ROOM_FACTORIES[id]);
+      const { value, layer } = deferArt ? withDeferredArt(holdArt(id), build) : build();
       residencyRooms[id] = value.room;
       rooms.define(id, { layer, ...value.def });
     })();
@@ -529,6 +557,7 @@ async function travelTo(id, via = 'door') {
     // The message only when the destination still has to be built — an
     // already-built hop is over before there is time to read it.
     ui.veil(true, { message: !rooms.has(id) });
+    releaseArt(id);   // a preloaded hall fetches its hang now, under the veil
     await new Promise((r) => setTimeout(r, 600));  // #veil's CSS fade is 0.5 s
     await ensureRoom(id);
     rooms.enter(id);
@@ -680,7 +709,11 @@ rooms.start('foyer');
 // The featured hall is built during the loading screen rather than on the
 // first press of the foyer door, so stepping through reads as walking out of
 // a door instead of waiting out a build stall.
-ensureRoom(FEATURED.residencyId).catch((e) => console.warn('[featured] preload failed', e));
+// `deferArt` is what keeps that preload cheap: the build runs, but the hall's
+// twenty photographs are held until travelTo or the lift releases them, so a
+// visitor who reads the foyer and leaves never downloads a hall they didn't see.
+ensureRoom(FEATURED.residencyId, { deferArt: true })
+  .catch((e) => console.warn('[featured] preload failed', e));
 
 // Reception lift: press E inside the cabin → pick a residency → it rides up and
 // arrives behind the veil.
@@ -690,6 +723,7 @@ ensureRoom(FEATURED.residencyId).catch((e) => console.warn('[featured] preload f
 // so that hop keeps the bare veil, same rule as travelTo's.
 lift.onVeil = (on, id) => ui.veil(on, { message: !!id && !rooms.has(id) });
 lift.onArrive = async (id) => {
+  releaseArt(id);                    // preloaded hall: its hang starts downloading now
   await ensureRoom(id);              // first visit: build it behind the veil
   arrivedVia = 'reception-lift';
   rooms.enter(id);
