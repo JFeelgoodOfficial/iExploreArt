@@ -80,6 +80,28 @@ The artwork keeps its manifest width; height adapts to the photo's aspect ratio
 automatically. Slot positions (`G-…` ground floor, `M-…` mezzanine, `C-…`
 courtyard wall) are defined in `js/world/layout.js`.
 
+### What a visit costs to serve
+
+Everything in `assets/art/` ships at 1600 px on its longest edge. That is the
+size the halls are built around: a 2.45 m canvas fills roughly 900 screen
+pixels, and the decode caps in `js/config.js` cut it again on phones. Save a
+new piece at 1600 px too. A 4000 px upload is not sharper on the wall, it is
+just four times the download — `js/art/load.js` resizes during decode, which
+saves texture memory and not one byte of transfer.
+
+A hall's photographs are fetched when someone walks into that hall, never at
+boot. The foyer preloads the featured hall's *geometry* while the loading
+screen is up, because that build stalls the main thread for seconds, but its
+hang stays on hold until a door or the lift actually opens on it
+(`withDeferredArt` / `releaseArt`). The Hall of JFeelgood, reachable only by
+its share link, works the same way. So a visitor who reads the foyer and
+leaves downloads about 5 MB rather than 21 MB.
+
+`vercel.json` sets the cache windows: a year on `vendor/` (a pinned three.js
+build), thirty days on the textures, environment map, and audio, and one day on
+`assets/art/`. Swapping a picture in place therefore takes up to a day to reach
+someone who has already seen it. Rename the file if you need it sooner.
+
 ### The residency halls
 
 The upper residencies hang visiting artists from their own manifests. Erin Carle

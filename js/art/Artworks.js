@@ -5,6 +5,7 @@ import { SLOTS } from '../world/layout.js';
 import { generatePainting } from './placeholder.js';
 import { bboxOf } from './fit.js';
 import { queueUpload } from '../utils/texqueue.js';
+import { onArtRelease } from './load.js';
 
 // Hangs the collection: frame + canvas + brass placard per manifest entry.
 // All frames merge into one mesh; each canvas is its own mesh (unique
@@ -72,15 +73,19 @@ export function buildArtworks(scene, mats, manager, renderer, tier) {
         queueUpload(t); // paced GPU upload, not on first draw
       };
       const onError = () => { canvasMat.map = generatePainting(art.seed, art.palette, w / h); canvasMat.needsUpdate = true; };
-      if (bmpLoader) {
-        bmpLoader.load(art.image, (bitmap) => {
-          const t = new THREE.Texture(bitmap);
-          t.flipY = false; // bitmap is already flipped via imageOrientation
-          applyTexture(t, bitmap.width, bitmap.height);
-        }, undefined, onError);
-      } else {
-        texLoader.load(art.image, (t) => applyTexture(t, t.image.width, t.image.height), undefined, onError);
-      }
+      // Held back when this hall is built ahead of its first visit; a
+      // straight-through call otherwise (js/art/load.js).
+      onArtRelease(() => {
+        if (bmpLoader) {
+          bmpLoader.load(art.image, (bitmap) => {
+            const t = new THREE.Texture(bitmap);
+            t.flipY = false; // bitmap is already flipped via imageOrientation
+            applyTexture(t, bitmap.width, bitmap.height);
+          }, undefined, onError);
+        } else {
+          texLoader.load(art.image, (t) => applyTexture(t, t.image.width, t.image.height), undefined, onError);
+        }
+      });
     } else {
       canvasMat.map = generatePainting(art.seed, art.palette, w / h);
     }

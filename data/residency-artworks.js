@@ -83,7 +83,7 @@ export const ERIN_PORTRAIT = {
   artist: '',
   year: '', medium: 'Portrait of the artist',
   image: 'assets/art/erin-carle/erincarle.webp',
-  px: [1365, 2048],
+  px: [1066, 1600],
   description: ERIN_CARLE_BIO,
   contact: CONTACT,
 };
@@ -102,16 +102,16 @@ export const ERIN_PORTRAIT = {
 // (PLAYER.interactDistance is 3.6 m); those four are inspected from the gallery
 // deck, which is what the hall's own lift is for.
 export const ROCOCO_HANG = [
-  /* 0 W lower */ fall('ec-normal-rhythm-2', 'Normal Rhythm 2', 'Normal Rhythm 2.webp', [2009, 2048]),
-  /* 1 W lower */ fall('ec-normal-rhythm-1', 'Normal Rhythm 1', 'Normal Rhythm 1.webp', [1576, 2048]),
-  /* 2 W upper */ fall('ec-two-for-one', 'Two for One', 'Two for One.webp', [1626, 2048]),
-  /* 3 W upper */ fall('ec-self-portait', 'Self Portait', 'Self Portait.webp', [1498, 2048]),
-  /* 4 E lower */ fall('ec-you-should-eat-a-burger', 'You Should Eat a Burger', 'You Should Eat a Burger.webp', [2048, 2044]),
-  /* 5 E lower */ fall('ec-ash-tray', 'Ash Tray', 'Ash Tray.webp', [1638, 2048]),
-  /* 6 E upper */ fall('ec-for-consumption', 'For Consumption', 'For Consumption.webp', [1521, 2048]),
-  /* 7 E upper */ fall('ec-stale', 'Stale', 'Stale.webp', [1365, 2048]),
-  /* 8 end wall */ fall('ec-stills', 'Stills from 2 video projects 2', 'Stills from 2 video projects 2.webp', [2048, 1330]),
-  /* 9 end wall */ fall('ec-american-layers', 'American Layers', 'American Layers.webp', [2048, 1755]),
+  /* 0 W lower */ fall('ec-normal-rhythm-2', 'Normal Rhythm 2', 'Normal Rhythm 2.webp', [1570, 1600]),
+  /* 1 W lower */ fall('ec-normal-rhythm-1', 'Normal Rhythm 1', 'Normal Rhythm 1.webp', [1231, 1600]),
+  /* 2 W upper */ fall('ec-two-for-one', 'Two for One', 'Two for One.webp', [1270, 1600]),
+  /* 3 W upper */ fall('ec-self-portait', 'Self Portait', 'Self Portait.webp', [1170, 1600]),
+  /* 4 E lower */ fall('ec-you-should-eat-a-burger', 'You Should Eat a Burger', 'You Should Eat a Burger.webp', [1600, 1597]),
+  /* 5 E lower */ fall('ec-ash-tray', 'Ash Tray', 'Ash Tray.webp', [1280, 1600]),
+  /* 6 E upper */ fall('ec-for-consumption', 'For Consumption', 'For Consumption.webp', [1188, 1600]),
+  /* 7 E upper */ fall('ec-stale', 'Stale', 'Stale.webp', [1066, 1600]),
+  /* 8 end wall */ fall('ec-stills', 'Stills from 2 video projects 2', 'Stills from 2 video projects 2.webp', [1600, 1039]),
+  /* 9 end wall */ fall('ec-american-layers', 'American Layers', 'American Layers.webp', [1600, 1371]),
 ];
 
 // --- Nouveau Hall: seven of the Spring Series, and the artist ---------------
@@ -135,13 +135,13 @@ export const ROCOCO_HANG = [
 // it out of this list.
 export const NOUVEAU_HANG = [
   /* 0 bay 1 */ ERIN_PORTRAIT,
-  /* 1 bay 2 */ spring('ec-i-saw-this', 'I Saw This', 'I Saw This.webp', [1557, 1975]),
+  /* 1 bay 2 */ spring('ec-i-saw-this', 'I Saw This', 'I Saw This.webp', [1261, 1600]),
   /* 2 bay 3 */ spring('ec-in-a-dream', 'In a Dream', 'In a Dream.webp', [1476, 1493]),
   /* 3 bay 4 */ spring('ec-autonomy-1', 'Autonomy 1', 'Autonomy 1.webp', [1146, 1174]),
-  /* 4 bay 5 */ spring('ec-dance-of-the-willis-3', 'Dance of the Willis 3', 'Dance of the Willis 3.webp', [2048, 1152], { wide: true }),
-  /* 5 bay 6 */ spring('ec-morphogenesis', 'Morphogenesis', 'Morphogenesis.webp', [1792, 2048]),
-  /* 6 bay 7 */ spring('ec-as-the-world-was-falling-apart', 'As the World was Falling Apart', 'As the World was Falling Apart.webp', [1618, 2048]),
-  /* 7 bay 8 */ spring('ec-when-i-was-young', 'When I was Young', 'When I was Young.webp', [1566, 2024]),
+  /* 4 bay 5 */ spring('ec-dance-of-the-willis-3', 'Dance of the Willis 3', 'Dance of the Willis 3.webp', [1600, 900], { wide: true }),
+  /* 5 bay 6 */ spring('ec-morphogenesis', 'Morphogenesis', 'Morphogenesis.webp', [1400, 1600]),
+  /* 6 bay 7 */ spring('ec-as-the-world-was-falling-apart', 'As the World was Falling Apart', 'As the World was Falling Apart.webp', [1264, 1600]),
+  /* 7 bay 8 */ spring('ec-when-i-was-young', 'When I was Young', 'When I was Young.webp', [1238, 1600]),
 ];
 
 // --- Rococo Hall, the table -------------------------------------------------
@@ -178,7 +178,7 @@ const INTO_BLOOM_OUTLINE = [
 ];
 
 export const INTO_BLOOM = spring(
-  'ec-into-bloom', 'Into Bloom', 'Into Bloom.webp', [1583, 2048],
+  'ec-into-bloom', 'Into Bloom', 'Into Bloom.webp', [1237, 1600],
   {
     outline: INTO_BLOOM_OUTLINE,
     description: `From Erin Carle's ${SPRING}, laid flat on the table at the centre of the Rococo Hall.`,
