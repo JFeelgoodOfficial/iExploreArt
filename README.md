@@ -102,6 +102,18 @@ build), thirty days on the textures, environment map, and audio, and one day on
 `assets/art/`. Swapping a picture in place therefore takes up to a day to reach
 someone who has already seen it. Rename the file if you need it sooner.
 
+Only the encoded `.webp` is committed. `.gitignore` refuses `.jpg`, `.jpeg` and
+`.png` under `assets/art/` on purpose: a set of raw originals once put 70 MB
+into the tree for an afternoon, and every Vercel deployment made while they
+were there still weighs that much. `.vercelignore` keeps this README and the
+series PDF out of the deployment; they are never fetched by a visitor.
+
+Vercel keeps every deployment it makes, one per push on every branch, until
+told otherwise. The site is 16 MB, so the storage figure on the Usage page is
+almost entirely the number of old previews still held. Project settings →
+Deployment Retention (a day for previews, a week for production) is what keeps
+that number small; nothing in this repo can.
+
 ### The residency halls
 
 The upper residencies hang visiting artists from their own manifests. Erin Carle
