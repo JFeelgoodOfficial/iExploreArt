@@ -11,13 +11,13 @@ import { queueUpload } from '../utils/texqueue.js';
 // original stylized primitive figure (with head-tracking) stays in as a
 // fallback.
 
-// receptionist.png: 341x1052 alpha cutout — a full-body standing portrait,
+// receptionist.webp: 341x1052 alpha cutout — a full-body standing portrait,
 // feet at floor level. She stands in the nook behind the reception desk, so
 // the desk naturally occludes her lower legs from the visitor's viewpoint.
 const ORDINALS = ['ground', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth'];
 function ordinal(n) { return ORDINALS[n] || `${n}th`; }
 
-const PORTRAIT_URL = 'assets/image/receptionist.png';
+const PORTRAIT_URL = 'assets/image/receptionist.webp';
 const PORTRAIT_ASPECT = 341 / 1052;
 const PORTRAIT_H = 1.70;   // meters; full standing height, head top ≈1.70m
 const PORTRAIT_Y0 = 0.0;   // feet on the floor

@@ -1,0 +1,5 @@
+# Raw originals never ship: only the encoded .webp is committed (see README,
+# "What a visit costs to serve"). Scoped to assets/art so assets/image stays trackable.
+assets/art/**/*.jpg
+assets/art/**/*.jpeg
+assets/art/**/*.png
