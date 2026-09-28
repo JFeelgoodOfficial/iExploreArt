@@ -1,43 +1,41 @@
-// Vercel Web Analytics — custom events.
+// Custom events, sent to Google Analytics 4.
 //
-// index.html seeds `window.va` with the queue stub and defers the real script
-// from cdn.vercel-insights.com, so events fired before that script lands are
-// replayed once it does. Nothing here is allowed to throw: a blocked beacon,
-// an ad blocker eating the stub, or a malformed payload must never stop
-// someone walking into the gallery.
+// index.html loads gtag.js and defines `gtag`, which pushes onto
+// `window.dataLayer`; gtag.js drains that queue when it arrives, so events
+// fired before the script lands still count. Nothing here is allowed to throw:
+// a blocked beacon, an ad blocker eating the tag, or a malformed payload must
+// never stop someone walking into the gallery.
 
 /**
- * Send a custom event to Vercel Web Analytics.
+ * Send a custom event to Google Analytics 4.
  *
- * @param {string} name  Event name as it appears in the Vercel dashboard.
+ * @param {string} name  Readable event name ("Enquiry Opened"). GA4 gets the
+ *        snake_case form ("enquiry_opened"), its own naming rule.
  * @param {Object<string, string|number|boolean|null>} [data]
- *        Optional properties. Vercel only accepts flat string / number /
- *        boolean / null values, so nested objects are dropped below.
+ *        Optional properties. Only flat primitive values are kept; keys are
+ *        sent in snake_case too (workId → work_id).
  */
 export function track(name, data) {
   try {
-    if (typeof window.va !== 'function' || !name) return;
-    const payload = { name };
-    const clean = flatten(data);
-    if (clean) payload.data = clean;
-    window.va('event', payload);
+    if (typeof window.gtag !== 'function' || !name) return;
+    const params = {};
+    for (const [k, v] of Object.entries(data || {})) {
+      const t = typeof v;
+      // GA4 treats a null parameter as absent anyway; leaving it out keeps
+      // "(not set)" from filling the report.
+      if (t === 'string' || t === 'number' || t === 'boolean') params[snake(k)] = v;
+    }
+    window.gtag('event', snake(name), params);
   } catch {
     /* analytics is never worth a broken gallery */
   }
 }
 
-// Keep only the primitive values Vercel accepts, and return undefined rather
-// than an empty object so events without properties stay clean.
-function flatten(data) {
-  if (!data || typeof data !== 'object') return undefined;
-  const out = {};
-  let n = 0;
-  for (const [k, v] of Object.entries(data)) {
-    const t = typeof v;
-    if (v === null || t === 'string' || t === 'number' || t === 'boolean') {
-      out[k] = v;
-      n++;
-    }
-  }
-  return n ? out : undefined;
+// "Enquiry Opened" → "enquiry_opened", "workId" → "work_id".
+function snake(s) {
+  return String(s)
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
 }
