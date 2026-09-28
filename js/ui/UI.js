@@ -150,7 +150,7 @@ export class UI {
   }
 
   // The enquiry button: it stands down, the contact details take its place, and
-  // Vercel and Google Analytics are told which work was asked after. Fired from the
+  // Google Analytics is told which work was asked after. Fired from the
   // click rather than from the panel opening, so the dashboard counts intent
   // to buy and not everyone who read a wall label.
   _enquire() {
