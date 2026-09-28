@@ -1,8 +1,10 @@
 import * as THREE from 'three';
-import { FEATURED, featuredResidency, featuredArtwork } from '../../data/featured.js';
+import {
+  FEATURED, UPCOMING, featuredResidency, featuredArtwork, artworkById,
+} from '../../data/featured.js';
+import { findResidency } from '../../data/residencies.js';
 import { buildReceptionDesk, signTexture, plaqueTexture } from './Details.js';
 import { loadArtTexture } from '../art/load.js';
-import { SHOW_CARD } from '../../data/chadrea-artworks.js';
 
 // The reception foyer — where every visit begins. A small lobby high in a
 // tower, not a gallery: the reception desk with Mira behind it, the house sign
@@ -133,12 +135,15 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
   g.add(lintelSign);
 
   // --- the featured work, beside the door -----------------------------------
-  // Hung the way its own hall hangs it (js/world/chadrea/chadrea.js): an
-  // unframed box canvas at true size, interactable, photograph loaded in.
+  // An unframed box canvas, interactable, photograph loaded in. A piece with a
+  // catalogue `size` hangs at it (the Beautiful Decay works, at true size);
+  // one without — the Fall Series, hung by pixel size in gilt frames upstairs —
+  // hangs 1.2 m tall at its photograph's own aspect.
   const interactables = [];
   const piece = featuredArtwork();
   if (piece) {
-    const [w, h] = piece.size || [1.2, 1.2];
+    const [w, h] = piece.size
+      || (piece.px ? [+(1.2 * piece.px[0] / piece.px[1]).toFixed(3), 1.2] : [1.2, 1.2]);
     const edge = () => new THREE.MeshStandardMaterial({ color: 0x8a8177, roughness: 0.92 });
     const face = new THREE.MeshStandardMaterial({ color: 0x2e2823, roughness: 0.66, metalness: 0 });
     const canvas = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.045), [
@@ -162,19 +167,19 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
 
   // --- the show's title wall, repeated where the visitor waits --------------
   // West of the door, on the clear stretch of the north wall: the featured
-  // show's name, artist, and the artist's bio, painted the way the hall's own
-  // title wall is (js/world/chadrea/chadrea.js) — the same text on both walls
-  // and in the card either one opens, read from SHOW_CARD rather than copied,
-  // so the two can never drift, and the foyer says who the door opens onto
-  // before anyone steps through. Dark ink here: this plaster
-  // is light where the chadrea pier is dark. Pressing E opens the show card.
+  // show's name, artist, and the artist's bio, painted the way Brutalism
+  // Hall's own title wall is (js/world/chadrea/chadrea.js) — the same text on
+  // the wall and in the card it opens, read from the show's card rather than
+  // copied, so the two can never drift, and the foyer says who the door opens
+  // onto before anyone steps through. Pressing E opens the show card.
   // Read from the featured show's own data — the foyer is that show's lobby.
+  const card = FEATURED.card;
   const PLAQUE = { x: FY.x0 + 1.5, y: 1.7, w: 1.5, h: 2.0 };
   const plaque = new THREE.Mesh(
     new THREE.PlaneGeometry(PLAQUE.w, PLAQUE.h),
     new THREE.MeshStandardMaterial({
       map: plaqueTexture({
-        title: SHOW_CARD.title, artist: SHOW_CARD.artist, body: SHOW_CARD.description,
+        title: card.title, artist: card.artist, body: card.description,
         width: 1024, height: 1365,     // the plane's 1.5 × 2.0 aspect
       }),
       transparent: true, roughness: 0.9, metalness: 0,
@@ -182,9 +187,22 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
   );
   plaque.position.set(PLAQUE.x, PLAQUE.y, FY.z0 + 0.02);
   plaque.name = 'foyer-show-plaque';
-  plaque.userData.artwork = SHOW_CARD;
+  plaque.userData.artwork = card;
   g.add(plaque);
   interactables.push(plaque);
+
+  // --- the poster for the next show -----------------------------------------
+  // Only while one is booked (data/featured.js UPCOMING): on the west wall's
+  // clear stretch south of the desk, so it sits in the first view a visitor
+  // gets, beside Mira and the house sign. Once that show takes the foyer it is
+  // the featured one, and the poster simply isn't built. E opens its card.
+  const poster = UPCOMING && buildPoster(UPCOMING);
+  if (poster) {
+    poster.position.set(FY.x0 + 0.02, 1.6, 5.0);
+    poster.rotation.y = Math.PI / 2;
+    g.add(poster);
+    interactables.push(poster);
+  }
 
   // --- the way in -----------------------------------------------------------
   // Invisible but raycastable, standing just proud of the reveal so the prompt
@@ -224,6 +242,8 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
   spot(DOOR_CX, FY.h - 0.1, 1.7, DOOR_CX, 1.6, FY.z0, 7, 6, 0.55, 0.8);
   // the show plaque west of the door
   spot(PLAQUE.x, FY.h - 0.1, 1.7, PLAQUE.x, PLAQUE.y, FY.z0, 7, 6, 0.5, 0.8);
+  // the poster
+  if (poster) spot(FY.x0 + 1.6, FY.h - 0.1, 5.0, FY.x0, 1.6, 5.0, 7, 6, 0.5, 0.8);
 
   scene.add(g);
 
@@ -235,6 +255,78 @@ export function buildFoyerRoom(scene, mats, opts = {}) {
     spawn: SPAWN,
     update,               // the night side's stars twinkle
   };
+}
+
+// ---------------------------------------------------------------------------
+// The poster: a printed sheet on the plaster announcing the next show — one of
+// its works over the artist's name, the show, the opening date, and the hall.
+// Drawn on a canvas; the work is painted in once its photograph arrives, and
+// until then (or if it never does) the sheet reads as text alone.
+const POSTER = { w: 0.9, h: 1.3, cw: 900, ch: 1300 };
+
+function buildPoster(show) {
+  const r = findResidency(show.residencyId);
+  const art = artworkById(show.artworkId);
+  const c = document.createElement('canvas');
+  c.width = POSTER.cw; c.height = POSTER.ch;
+  const ctx = c.getContext('2d');
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+
+  const M = 60;                                  // margin
+  const IMG = { x: M, y: 110, w: POSTER.cw - M * 2, h: 640 };
+  const center = (text, y, font, color, maxW = POSTER.cw - M * 2) => {
+    ctx.font = font;
+    const w = ctx.measureText(text).width;
+    if (w > maxW) ctx.font = font.replace(/(\d+)px/, (_, n) => `${Math.floor(n * maxW / w)}px`);
+    ctx.fillStyle = color;
+    ctx.fillText(text, POSTER.cw / 2, y);
+  };
+  const spaced = (t) => t.toUpperCase().split('').join(' ');
+
+  const draw = (img) => {
+    // a warm autumn ground, a hairline border inside the margin
+    ctx.fillStyle = '#6e2f1c';
+    ctx.fillRect(0, 0, POSTER.cw, POSTER.ch);
+    ctx.strokeStyle = 'rgba(244,226,198,0.55)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(24, 24, POSTER.cw - 48, POSTER.ch - 48);
+    ctx.textAlign = 'center';
+    center(spaced('iExploreArt presents'), 78, '500 24px Inter, sans-serif', '#e9cfa8');
+    if (img) {
+      // contain-fit inside the image box, centred
+      const s = Math.min(IMG.w / img.width, IMG.h / img.height);
+      const w = img.width * s, h = img.height * s;
+      ctx.drawImage(img, IMG.x + (IMG.w - w) / 2, IMG.y + (IMG.h - h) / 2, w, h);
+    } else {
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(IMG.x, IMG.y, IMG.w, IMG.h);
+    }
+    center(r?.artist || '', 880, '600 108px "Cormorant Garamond", Georgia, serif', '#fbf1e2');
+    center(spaced(show.series), 950, '500 34px Inter, sans-serif', '#e9cfa8');
+    ctx.fillStyle = 'rgba(244,226,198,0.55)';
+    ctx.fillRect(POSTER.cw / 2 - 60, 995, 120, 2);
+    center(`Opens ${show.opens}`, 1090, 'italic 600 76px "Cormorant Garamond", Georgia, serif', '#fbf1e2');
+    center(spaced(r ? `${r.name} · floor ${r.floor}` : ''), 1170, '500 26px Inter, sans-serif', '#e9cfa8');
+    tex.needsUpdate = true;
+  };
+  draw(null);
+  if (art?.image) {
+    const img = new Image();
+    img.onload = () => draw(img);
+    img.onerror = () => console.warn(`[foyer] poster image unavailable: ${art.image}`);
+    img.src = encodeURI(art.image);
+  }
+
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(POSTER.w, POSTER.h),
+    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0 })
+  );
+  mesh.name = 'foyer-poster';
+  mesh.receiveShadow = true;
+  if (show.card) mesh.userData.artwork = show.card;
+  return mesh;
 }
 
 // ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CURATOR_POS } from '../world/layout.js';
 import { DIALOGUE } from '../../data/dialogue.js';
 import { LISTED_RESIDENCIES, findResidency } from '../../data/residencies.js';
-import { FEATURED } from '../../data/featured.js';
+import { FEATURED, PAST_SHOWS } from '../../data/featured.js';
 import { queueUpload } from '../utils/texqueue.js';
 
 // Mira, the curator: a photographic billboard behind the reception desk that
@@ -210,6 +210,62 @@ export class Curator {
           choices,
           (c) => this._choose(c)
         );
+        return;
+      }
+      // The shows the foyer has opened onto before this one. Each is still
+      // hanging in its own hall, so she describes it and hands over its link.
+      if (a.type === 'pastShows') {
+        const choices = PAST_SHOWS.map((s) => {
+          const r = findResidency(s.residencyId);
+          return {
+            label: `${r?.artist ? r.artist + ' — ' : ''}${s.series}`,
+            action: { type: 'pastShow', id: s.residencyId },
+          };
+        });
+        choices.push({ label: 'Back.', next: 'start' });
+        this.ui.showDialogueNode(
+          PAST_SHOWS.length === 1
+            ? 'Before this, the foyer opened onto one other show. It’s still hanging:'
+            : 'The foyer has opened onto these before. They’re all still hanging:',
+          choices,
+          (c) => this._choose(c)
+        );
+        return;
+      }
+      if (a.type === 'pastShow') {
+        const s = PAST_SHOWS.find((x) => x.residencyId === a.id);
+        const r = findResidency(a.id);
+        if (s && r) {
+          const slug = r.slug || r.id;
+          const who = r.artist ? `${r.artist}’s ${s.series}` : s.series;
+          const text = r.closed
+            ? `Before this show, the foyer opened onto ${who}, in ${r.name}. The hall is closed to visitors just now.`
+            : `Before this show, the foyer opened onto ${who}. It’s still up in ${r.name} — ${r.blurb}. It has its own link, and it walks you straight in:`;
+          const choices = [];
+          if (!r.closed) {
+            choices.push({ label: `Take me to ${r.name}.`, action: { type: 'visit', slug } });
+          }
+          if (r.artist && r.bio) {
+            choices.push({ label: `Tell me about ${r.artist}.`, action: { type: 'artist', id: r.id } });
+          }
+          choices.push({ label: 'What else have you shown?', action: { type: 'pastShows' } });
+          choices.push({ label: 'Thank you.', next: 'start' });
+          // The link is the hall's share URL — the one to copy and send on.
+          // Followed here, it's a same-page #slug, which main.js's hashchange
+          // listener turns into the walk.
+          const link = r.closed ? null : {
+            href: `#${slug}`,
+            label: `${location.host || 'iexploreart.com'}${location.pathname.replace(/\/$/, '')}/#${slug}`,
+          };
+          this.ui.showDialogueNode(text, choices, (c) => this._choose(c), link);
+        }
+        return;
+      }
+      // Walks the visitor into a hall by its share link, the same way a pasted
+      // #slug does (js/main.js).
+      if (a.type === 'visit') {
+        this.ui.closePanel();
+        location.hash = a.slug;
         return;
       }
       if (a.type === 'residency') {

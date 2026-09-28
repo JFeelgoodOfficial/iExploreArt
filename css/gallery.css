@@ -244,6 +244,10 @@ body.touch .desktop-hint { display: none; }
      flex item shrink below its content and actually scroll */
   overflow-y: auto; min-height: 0;
 }
+#dialogue-text .dialogue-link {
+  font: 500 0.9rem "Inter", sans-serif; color: var(--accent);
+  word-break: break-all;
+}
 #dialogue-choices { display: flex; flex-direction: column; gap: 0.45rem; flex-shrink: 0; }
 #dialogue-choices button {
   font: 500 0.9rem "Inter", sans-serif; text-align: left;
