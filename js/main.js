@@ -784,7 +784,7 @@ enterBtn.addEventListener('click', () => {
   controls.lock();
   // A share link (#slug) skips the walk: ride the veil straight to the hall.
   const dest = roomFromHash();
-  // Report the entry to Vercel Web Analytics. Fired once per visit, from the
+  // Report the entry to Vercel and Google Analytics. Fired once per visit, from the
   // click itself rather than from page load, so the dashboard counts people who
   // actually walked in — not everyone who watched the loading bar and left.
   track('Gallery Entered', {

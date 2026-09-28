@@ -18,6 +18,15 @@
     }
   }
   </script>
+  <!-- Google Analytics 4. js/utils/analytics.js sends the gallery's custom
+       events (artwork views, enquiries) here as well as to Vercel. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y2NVPMCFXB"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-Y2NVPMCFXB');
+  </script>
   <!-- Vercel Web Analytics -->
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
@@ -94,7 +103,7 @@
     <p id="info-desc" hidden></p>
     <!-- The artist's details sit behind an enquiry button: press it and the
          button gives way to the contact block underneath (js/ui/UI.js), which
-         is also what reports the enquiry to Vercel Web Analytics. -->
+         is also what reports the enquiry to Vercel and Google Analytics. -->
     <button id="enquire-btn" type="button" hidden>Enquire about this work</button>
     <div id="info-contact" hidden></div>
   </aside>

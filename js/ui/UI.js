@@ -42,6 +42,16 @@ export class UI {
     document.getElementById('resume-btn').addEventListener('click', () => this._resume());
     this.el.info.querySelector('[data-close]').addEventListener('click', () => this.closePanel());
     this.el.enquire.addEventListener('click', () => this._enquire());
+    // Which of the artist's links a visitor actually follows once the enquiry
+    // has opened: the portfolio, a handle's site, the phone number.
+    this.el.infoContact.addEventListener('click', (e) => {
+      const a = e.target.closest('a');
+      if (!a) return;
+      track('Contact Link Clicked', {
+        ...this._artData(),
+        link: a.href.startsWith('tel:') ? 'phone' : a.href,
+      });
+    });
 
     controls.onLockChange = (locked) => {
       if (!locked && !this.activePanel && this.entered) this.showPause(true);
@@ -116,17 +126,16 @@ export class UI {
     this.el.infoContact.hidden = true;
     this.el.enquire.hidden = !hasContact;
     this.el.info.hidden = false;
+    // Every label opened, enquirable or not, so the reports can set interest
+    // (views) against intent (enquiries) painting by painting.
+    track('Artwork Viewed', { ...this._artData(), enquirable: hasContact });
   }
 
-  // The enquiry button: it stands down, the contact details take its place, and
-  // Vercel Web Analytics is told which work was asked after. Fired from the
-  // click rather than from the panel opening, so the dashboard counts intent
-  // to buy and not everyone who read a wall label.
-  _enquire() {
+  // The painting the panel is showing, as event properties: the same fields
+  // on every artwork event, so views, enquiries and link clicks line up.
+  _artData() {
     const art = this.art;
-    this.el.enquire.hidden = true;
-    this.el.infoContact.hidden = !this.el.infoContact.childElementCount;
-    track('Enquiry Opened', {
+    return {
       work: art?.title || null,
       workId: art?.id || null,
       // the same name the label shows: the piece's own, or the house artist —
@@ -137,7 +146,17 @@ export class UI {
       room: this.room,
       hall: this.hall,
       device: IS_TOUCH ? 'touch' : 'desktop',
-    });
+    };
+  }
+
+  // The enquiry button: it stands down, the contact details take its place, and
+  // Vercel and Google Analytics are told which work was asked after. Fired from the
+  // click rather than from the panel opening, so the dashboard counts intent
+  // to buy and not everyone who read a wall label.
+  _enquire() {
+    this.el.enquire.hidden = true;
+    this.el.infoContact.hidden = !this.el.infoContact.childElementCount;
+    track('Enquiry Opened', this._artData());
   }
 
   openDialogue() {
