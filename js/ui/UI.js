@@ -170,8 +170,19 @@ export class UI {
   }
 
   // called by the curator's dialogue runner for each node
-  showDialogueNode(text, choices, onChoose) {
+  // `link`, when given, is { href, label }: a same-page link printed under the
+  // text — a hall's share link, which the curator hands out. It stays in this
+  // tab (a #slug travels, via main.js's hashchange), so the panel closes first.
+  showDialogueNode(text, choices, onChoose, link) {
     this.el.dialogueText.textContent = text;
+    if (link) {
+      const a = document.createElement('a');
+      a.href = link.href;
+      a.textContent = link.label || link.href;
+      a.className = 'dialogue-link';
+      a.addEventListener('click', () => this.closePanel());
+      this.el.dialogueText.append(document.createElement('br'), a);
+    }
     this.el.dialogueChoices.innerHTML = '';
     for (const c of choices) {
       const btn = document.createElement('button');

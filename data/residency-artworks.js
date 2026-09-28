@@ -33,11 +33,12 @@ const ARTIST = 'Erin Carle';
 const FALL = 'Fall Series';
 const SPRING = 'Spring Series';
 
-// Shown under the statement on every one of her labels (js/ui/UI.js). Same
-// shape as Chad Rea's card in data/chadrea-artworks.js, which carries a name, a
-// role and a phone number as well — every field is optional, and hers is the
-// portfolio alone.
+// Shown under the statement on every one of her labels (js/ui/UI.js), behind
+// the enquiry button until it is pressed. Same shape as Chad Rea's card in
+// data/chadrea-artworks.js — her name over her portfolio, as his is his name
+// over his site.
 const CONTACT = {
+  name: ARTIST,
   links: [
     { url: 'https://erincarleart.myportfolio.com/', label: 'erincarleart.myportfolio.com' },
   ],
@@ -84,6 +85,20 @@ export const ERIN_PORTRAIT = {
   year: '', medium: 'Portrait of the artist',
   image: 'assets/art/erin-carle/erincarle.webp',
   px: [1066, 1600],
+  description: ERIN_CARLE_BIO,
+  contact: CONTACT,
+};
+
+// --- The Fall Series show card ---------------------------------------------
+// What the foyer's title wall is lettered with, and opens on E, while the Fall
+// Series is the featured show — and what the poster announcing it opens before
+// then (data/featured.js, js/world/foyer.js). Same shape as Chad Rea's
+// SHOW_CARD: the show's name, her name, her bio, her contact.
+export const FALL_CARD = {
+  id: 'ec-fall-card',
+  title: FALL,
+  artist: ARTIST,
+  year: '', medium: 'About the artist',
   description: ERIN_CARLE_BIO,
   contact: CONTACT,
 };

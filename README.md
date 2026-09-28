@@ -18,8 +18,16 @@ and it returns. Nothing is for sale here: pressing **E** on a painting opens a
 wall label with its title and artist, and nothing else.
 
 **One show opens onto the foyer at a time.** Which one is `data/featured.js` —
-a single config naming the hall, the show, and the piece hung in the foyer;
-swap the featured artist by editing that file and nothing else. The other
+a dated schedule, `SHOWS`, each entry naming the hall, the show, the piece hung
+in the foyer, the card its title wall opens, and the UTC moment it takes the
+foyer (`from`). Every page load takes the latest show whose `from` has passed,
+by the visitor's clock, so a changeover needs no deploy at midnight. Chad Rea's
+*Beautiful Decay* holds the foyer until 2026-10-01 00:00 UTC, when Erin Carle's
+*Fall Series* (Rococo Hall) takes it. While a show is booked but not yet open,
+a poster for it hangs on the west wall beside the desk and Mira mentions it;
+once a show has come and gone, she offers it under "What have you shown
+before?" with its hall's share link. Append `?now=2026-10-01T00:00:01Z` (any
+ISO time) to the URL to preview the foyer at another moment. The other
 halls stay built and each has a **share link**: visiting the page as
 `#its-slug` (e.g. `#brutalism-hall`, `#rococo-hall` — slugs live in
 `data/residencies.js`) walks straight into that hall after the Enter click,
