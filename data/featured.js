@@ -16,16 +16,27 @@
 //                 <artist> — ". Spelled out per show because "the whole of the
 //                 Fall Series series" is what a template would say.
 //   artworkId   : the one piece hung in the foyer beside the door, by id from
-//                 the hall's own hang (searched in HANGS below).
+//                 the hall's own hang (searched in HANGS below). Null hangs
+//                 nothing there.
 //   card        : what the foyer's title wall is lettered with and opens on E.
 //   from        : ISO time, UTC, the show takes the foyer. Null for the first.
 //   opens       : the opening date as the poster prints it, while the show is
 //                 still upcoming (js/world/foyer.js). Not necessarily `from`'s
 //                 day: the door can open before the official opening.
 
-import { findResidency } from './residencies.js';
+import { findResidency, MARIA_DECETISE_BIO } from './residencies.js';
 import { CHADREA_HANG, SHOW_CARD as BEAUTIFUL_DECAY_CARD } from './chadrea-artworks.js';
 import { ROCOCO_HANG, FALL_CARD } from './residency-artworks.js';
+
+// Maria Decetise has no artworks file of her own yet, so her show card lives
+// here. Same shape as the others; no contact block until she gives one.
+const DECETISE_CARD = {
+  id: 'md-show-card',
+  title: 'Paintings',
+  artist: 'Maria Decetise',
+  year: '', medium: 'About the artist',
+  description: MARIA_DECETISE_BIO,
+};
 
 export const SHOWS = [
   {
@@ -44,6 +55,18 @@ export const SHOWS = [
     card: FALL_CARD,
     from: '2026-10-01T00:00:00Z',
     opens: 'October 2',
+  },
+  {
+    // Decetise Hall's hang is still placeholders (DECETISE_HANG in
+    // js/world/decetise.js, every image null), so nothing hangs beside the door
+    // yet. Give the piece an id here once her photographs land. "Paintings"
+    // stands in for the show's title until she names it.
+    residencyId: 'decetise',
+    series: 'Paintings',
+    welcome: 'her paintings',
+    artworkId: null,
+    card: DECETISE_CARD,
+    from: '2026-10-29T00:00:00Z',
   },
 ];
 

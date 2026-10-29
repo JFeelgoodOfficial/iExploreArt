@@ -22,8 +22,10 @@ a dated schedule, `SHOWS`, each entry naming the hall, the show, the piece hung
 in the foyer, the card its title wall opens, and the UTC moment it takes the
 foyer (`from`). Every page load takes the latest show whose `from` has passed,
 by the visitor's clock, so a changeover needs no deploy at midnight. Chad Rea's
-*Beautiful Decay* holds the foyer until 2026-10-01 00:00 UTC, when Erin Carle's
-*Fall Series* (Rococo Hall) takes it. While a show is booked but not yet open,
+*Beautiful Decay* held the foyer until 2026-10-01 00:00 UTC, Erin Carle's
+*Fall Series* (Rococo Hall) until 2026-10-29 00:00 UTC, and Maria Decetise
+(Decetise Hall) holds it now. Her hang is still placeholders, so no piece hangs
+beside the foyer door yet, and "Paintings" stands in for a show title. While a show is booked but not yet open,
 a poster for it hangs on the west wall beside the desk and Mira mentions it;
 once a show has come and gone, she offers it under "What have you shown
 before?" with its hall's share link. Append `?now=2026-10-01T00:00:01Z` (any
