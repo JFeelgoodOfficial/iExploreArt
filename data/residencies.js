@@ -55,6 +55,21 @@ export const ERIN_CARLE_BIO = 'Erin Carle is a surrealist painter and curator wh
   + 'State Galleries in San Marcos, Texas; and other regional and international '
   + 'exhibitions.';
 
+// Written from her own statement, turned into the third person to sit beside
+// the others. The foyer's title wall carries it while her show is featured
+// (data/featured.js).
+export const MARIA_DECETISE_BIO = 'Maria Decetise paints women in surreal, playful '
+  + 'worlds populated by dinosaurs, prehistoric beasts, and pixelated or loosely '
+  + 'rendered forms. Within a single image she combines different visual languages, '
+  + 'moving between realism, graphic marks, and digital imagery, and these shifts '
+  + 'create layered spaces that feel as though they belong to several realities at '
+  + 'once. She is drawn to combinations that seem slightly out of place: beautiful, '
+  + 'strange, humorous, and sometimes awkward. Creatures traditionally imagined as '
+  + 'frightening become colorful, silly, or unexpectedly gentle. Her work explores '
+  + 'the tension between beauty and absurdity, danger and play, and her paintings '
+  + 'hover between fantasy and nostalgia, transforming familiar imagery into scenes '
+  + 'that feel both ancient and contemporary.';
+
 export const RESIDENCIES = [
   {
     // The hall the gallery was built around — the old reception room, minus
@@ -121,9 +136,10 @@ export const RESIDENCIES = [
       + 'in the corner where the glass meets the north wall, and at the centre of a '
       + 'French parterre — gravel and clipped hedges and green park chairs — a stone '
       + 'fountain plays under five plane trees growing up through oculi cut in the '
-      + 'ceiling, with four more out at the ends of the water; twelve works hang there '
-      + '— six on the south art wall, five on the north, and one on the room-facing '
-      + 'flank of the lift core itself',
+      + 'ceiling, with four more out at the ends of the water; seven of her paintings '
+      + 'hang there — six along the south art wall, the one you face stepping out of '
+      + 'the lift, and one on the lift core beside the cabin doors',
+    bio: MARIA_DECETISE_BIO,
   },
   {
     id: 'brutalist',

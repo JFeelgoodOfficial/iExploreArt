@@ -16,7 +16,8 @@
 //                 <artist> — ". Spelled out per show because "the whole of the
 //                 Fall Series series" is what a template would say.
 //   artworkId   : the one piece hung in the foyer beside the door, by id from
-//                 the hall's own hang (searched in HANGS below).
+//                 the hall's own hang (searched in HANGS below). Null hangs
+//                 nothing there.
 //   card        : what the foyer's title wall is lettered with and opens on E.
 //   from        : ISO time, UTC, the show takes the foyer. Null for the first.
 //   opens       : the opening date as the poster prints it, while the show is
@@ -26,6 +27,7 @@
 import { findResidency } from './residencies.js';
 import { CHADREA_HANG, SHOW_CARD as BEAUTIFUL_DECAY_CARD } from './chadrea-artworks.js';
 import { ROCOCO_HANG, FALL_CARD } from './residency-artworks.js';
+import { DECETISE_HANG, DECETISE_CARD } from './decetise-artworks.js';
 
 export const SHOWS = [
   {
@@ -45,9 +47,18 @@ export const SHOWS = [
     from: '2026-10-01T00:00:00Z',
     opens: 'October 2',
   },
+  {
+    // "Paintings" stands in for the show's title until she names it.
+    residencyId: 'decetise',
+    series: 'Paintings',
+    welcome: 'her paintings',
+    artworkId: 'md-4',
+    card: DECETISE_CARD,
+    from: '2026-10-29T00:00:00Z',
+  },
 ];
 
-const HANGS = [...CHADREA_HANG, ...ROCOCO_HANG];
+const HANGS = [...CHADREA_HANG, ...ROCOCO_HANG, ...DECETISE_HANG];
 
 // The moment the schedule is read against. `?now=<ISO time>` stands in for the
 // clock, so the changeover can be previewed before it happens; anything that

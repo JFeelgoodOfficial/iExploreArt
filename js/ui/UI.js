@@ -113,8 +113,10 @@ export class UI {
     this.el.infoTitle.textContent = art.title;
     this.el.infoMeta.textContent = art.artist ?? GALLERY_INFO.artist;
     // Year, medium and size on one line, in that order, separated the way a
-    // printed label does it. Any of the three may be missing.
-    setLine(this.el.infoSpec, [art.year, art.medium, art.dims].filter(Boolean).join(' · '));
+    // printed label does it, then "Sold" where the artist marks a piece so.
+    // Any of them may be missing.
+    setLine(this.el.infoSpec,
+      [art.year, art.medium, art.dims, art.sold && 'Sold'].filter(Boolean).join(' · '));
     setLine(this.el.infoSeries, art.series);
     setLine(this.el.infoDesc, art.description);
     // The artist's details are built now but stay covered: a visitor who wants

@@ -27,10 +27,11 @@ import {
 } from './world/chadrea/chadrea.js';
 import {
   buildDecetiseRoom, setupDecetiseLighting,
-  decetiseGround, decetiseSegments, DECETISE_HANG,
+  decetiseGround, decetiseSegments,
   DX, SPAWN as DX_SPAWN, SUN_POS as DX_SUN, CORE_POS as DX_CORE,
 } from './world/decetise.js';
 import { ROCOCO_HANG, NOUVEAU_HANG, INTO_BLOOM } from '../data/residency-artworks.js';
+import { DECETISE_HANG } from '../data/decetise-artworks.js';
 import { BRUTALIST_HANG } from '../data/brutalist-artworks.js';
 import { CHADREA_HANG } from '../data/chadrea-artworks.js';
 import { PLINTH } from './world/rococo-plinth.js';

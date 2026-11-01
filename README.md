@@ -22,8 +22,10 @@ a dated schedule, `SHOWS`, each entry naming the hall, the show, the piece hung
 in the foyer, the card its title wall opens, and the UTC moment it takes the
 foyer (`from`). Every page load takes the latest show whose `from` has passed,
 by the visitor's clock, so a changeover needs no deploy at midnight. Chad Rea's
-*Beautiful Decay* holds the foyer until 2026-10-01 00:00 UTC, when Erin Carle's
-*Fall Series* (Rococo Hall) takes it. While a show is booked but not yet open,
+*Beautiful Decay* held the foyer until 2026-10-01 00:00 UTC, Erin Carle's
+*Fall Series* (Rococo Hall) until 2026-10-29 00:00 UTC, and Maria Decetise
+(Decetise Hall) holds it now, with *Dino Dreams* (`md-4`) beside
+the foyer door; "Paintings" stands in for a show title. While a show is booked but not yet open,
 a poster for it hangs on the west wall beside the desk and Mira mentions it;
 once a show has come and gone, she offers it under "What have you shown
 before?" with its hall's share link. Append `?now=2026-10-01T00:00:01Z` (any
@@ -162,12 +164,18 @@ threshold, and the next step is a metre of water. The lift core stands in the
 middle of the plate rather than against a wall, in a French parterre: gravel, a
 balustraded stone kerb, clipped hedges, a basin, park chairs, and five plane
 trees growing up through oculi cut in the ceiling, and four more out on the
-terrace at the ends of the water. Its nine works hang from `DECETISE_HANG`, a
-manifest exported by the room's own file alongside `SLOTS[]` — six on the south
-art wall and three on the faces of the core itself, which are what you see as
-the doors open. Every entry is still `image: null`, so each slot carries a
-generated placeholder; they answer an **E** press,
-with the title and the resident's name. There is no return door on a wall: the
+terrace at the ends of the water. Seven of her paintings hang there: six along
+the south art wall, the one you face stepping out of the lift, and one on the
+lift core's west face beside the cabin doors, from `DECETISE_HANG` in
+**`data/decetise-artworks.js`** (slot order is `SLOTS[]` in the room's file;
+a slot with no entry is left bare). Titles, years, sizes and descriptions are
+her own, where she has published them; the panther painting has none yet and
+hangs as "Untitled". All seven hang at twice their size (`SCALE`
+in that file), centred at 1.55 m: the long edge is her stated size, the short edge follows the photograph.
+Three have no published size and hang at a guessed long edge (`guessIn` in that
+file) that never reaches the label.
+**E** opens a label with the title, her name and her description, and
+the enquiry button gives her Instagram, @mdecetiseart. There is no return door on a wall: the
 way out is the cabin you arrived in — look back at its brass wall and press **E**.
 
 It works differently from `data/artworks.js`, because these frames are carved
