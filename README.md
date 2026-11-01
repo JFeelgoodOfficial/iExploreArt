@@ -24,7 +24,7 @@ foyer (`from`). Every page load takes the latest show whose `from` has passed,
 by the visitor's clock, so a changeover needs no deploy at midnight. Chad Rea's
 *Beautiful Decay* held the foyer until 2026-10-01 00:00 UTC, Erin Carle's
 *Fall Series* (Rococo Hall) until 2026-10-29 00:00 UTC, and Maria Decetise
-(Decetise Hall) holds it now, with the pixel-dinosaur painting (`md-4`) beside
+(Decetise Hall) holds it now, with *Dino Dreams* (`md-4`) beside
 the foyer door; "Paintings" stands in for a show title. While a show is booked but not yet open,
 a poster for it hangs on the west wall beside the desk and Mira mentions it;
 once a show has come and gone, she offers it under "What have you shown
@@ -168,9 +168,11 @@ terrace at the ends of the water. Seven of her paintings hang there: six along
 the south art wall, the one you face stepping out of the lift, and one on the
 lift core's west face beside the cabin doors, from `DECETISE_HANG` in
 **`data/decetise-artworks.js`** (slot order is `SLOTS[]` in the room's file;
-a slot with no entry is left bare). No titles or sizes came with the
-photographs, so each is "Untitled" and hangs at its photograph's aspect inside
-a common 2.1 × 1.6 m box. **E** opens a label with the title and her name, and
+a slot with no entry is left bare). Titles, years, sizes and descriptions are
+her own, where she has published them; the panther painting has none yet and
+hangs as "Untitled". Three pieces have no size, so all seven hang at their
+photographs' aspect inside a common 2.1 × 1.6 m box rather than at true size.
+**E** opens a label with the title, her name and her description, and
 the enquiry button gives her Instagram, @mdecetiseart. There is no return door on a wall: the
 way out is the cabin you arrived in — look back at its brass wall and press **E**.
 
