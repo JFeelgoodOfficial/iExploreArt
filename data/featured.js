@@ -76,8 +76,10 @@ const current = SHOWS.reduce(
 export const FEATURED = SHOWS[current];
 
 // Shows that have had the foyer before this one, most recent first — the
-// curator's past exhibits.
-export const PAST_SHOWS = SHOWS.slice(0, current).reverse();
+// curator's past exhibits. A show whose hall is `quiet` (data/residencies.js)
+// is left off: she doesn't mention it.
+export const PAST_SHOWS = SHOWS.slice(0, current).reverse()
+  .filter((s) => !findResidency(s.residencyId)?.quiet);
 
 // The next show booked, if any — the foyer poster advertises it.
 export const UPCOMING = SHOWS[current + 1] || null;

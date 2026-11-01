@@ -28,7 +28,10 @@ by the visitor's clock, so a changeover needs no deploy at midnight. Chad Rea's
 the foyer door; "Paintings" stands in for a show title. While a show is booked but not yet open,
 a poster for it hangs on the west wall beside the desk and Mira mentions it;
 once a show has come and gone, she offers it under "What have you shown
-before?" with its hall's share link. Append `?now=2026-10-01T00:00:01Z` (any
+before?" with its hall's share link. A hall marked `quiet` in
+`data/residencies.js` is one she never mentions, on that list or her list of
+halls; Erin Carle's two (Nouveau and Rococo) are quiet, and still open by
+their share links and the lift. Append `?now=2026-10-01T00:00:01Z` (any
 ISO time) to the URL to preview the foyer at another moment. The other
 halls stay built and each has a **share link**: visiting the page as
 `#its-slug` (e.g. `#brutalism-hall`, `#rococo-hall` — slugs live in

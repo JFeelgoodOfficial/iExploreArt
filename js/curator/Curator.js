@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CURATOR_POS } from '../world/layout.js';
 import { DIALOGUE } from '../../data/dialogue.js';
-import { LISTED_RESIDENCIES, findResidency } from '../../data/residencies.js';
+import { SPOKEN_RESIDENCIES, findResidency } from '../../data/residencies.js';
 import { FEATURED, PAST_SHOWS } from '../../data/featured.js';
 import { queueUpload } from '../utils/texqueue.js';
 
@@ -200,7 +200,8 @@ export class Curator {
         // Every room that exists, closed ones marked as such — she shouldn't
         // pretend a hall isn't there, and she shouldn't send anyone up to one
         // the lift won't stop at (data/residencies.js, `closed` / `pending`).
-        const choices = LISTED_RESIDENCIES.map(r => ({
+        // A `quiet` hall is left off altogether.
+        const choices = SPOKEN_RESIDENCIES.map(r => ({
           label: r.closed ? `${r.name} — closed` : r.artist ? `${r.artist} — ${r.name}` : r.name,
           action: { type: 'residency', id: r.id },
         }));

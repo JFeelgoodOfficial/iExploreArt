@@ -27,6 +27,10 @@
 //   closed : optional. The room is built but shut to visitors. The lift won't
 //            stop there; the curator still lists it, marked closed, so a
 //            visitor asking after it gets an answer. Delete the flag to reopen.
+//   quiet  : optional. Open, on the lift, and reached by its share link, but
+//            the curator never mentions it: it is off her list of halls, and
+//            a show it held is off her past shows (data/featured.js). Delete
+//            the flag and she talks about it again.
 
 // The residents' own words about their work. Exported, because they are read in
 // two places that must not drift apart: the curator speaks them when asked
@@ -97,6 +101,7 @@ export const RESIDENCIES = [
     slug: 'nouveau-hall',
     floor: 2,
     artist: 'Erin Carle',
+    quiet: true,                    // at the owner's direction: Mira doesn't mention Erin Carle
     blurb: 'a domed hall in leaded glass and mahogany, with a stair hall beyond the portal — seven pieces from her Spring Series are hanging there now',
     bio: ERIN_CARLE_BIO,
   },
@@ -106,6 +111,7 @@ export const RESIDENCIES = [
     slug: 'rococo-hall',
     floor: 3,
     artist: 'Erin Carle',
+    quiet: true,                    // as Nouveau Hall
     blurb: 'gilt boiserie under a painted ceiling, with a gallery running on three sides — she has hung the whole of the Fall Series across it, ten pieces',
     bio: ERIN_CARLE_BIO,
   },
@@ -159,6 +165,9 @@ export const LISTED_RESIDENCIES = RESIDENCIES.filter((r) => !r.pending);
 // The ones you can actually ride to — built and open. `findResidency` still
 // searches them all, so a closed or coming room can still be described.
 export const OPEN_RESIDENCIES = LISTED_RESIDENCIES.filter((r) => !r.closed);
+
+// The ones the curator will mention: listed, and not `quiet`.
+export const SPOKEN_RESIDENCIES = LISTED_RESIDENCIES.filter((r) => !r.quiet);
 
 // Metres per floor, so `floor` reads as a storey rather than a raw height.
 export const FLOOR_HEIGHT = 4.4;
