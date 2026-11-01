@@ -31,6 +31,12 @@ import { mulberry32 } from '../utils/proctex.js';
 //   nearProps    rooftop clutter (parapets, AC boxes, tanks). Off on the low
 //                tier for a second instance — it is the fiddliest geometry here
 //                and the least legible at distance.
+//   traffic      with `surround`: two avenues crossing under the building, one
+//                along each axis, with cars driving them. Every window then
+//                looks straight down a street. The near blocks already sit
+//                between the compass points; towers that would stand in a
+//                carriageway are pushed to its kerb. A number caps the cars
+//                (true = 96).
 //
 // Everything is parented to `group`, INCLUDING the sky, so a caller wrapping
 // this in RoomManager.captureLayer gets a city that hides with its room.
@@ -41,8 +47,20 @@ export function buildCityView(scene, renderer, opts = {}) {
   const {
     name = 'city', seed = 4242, yaw = 0, fog = true, sky: wantSky = true,
     sunPosition = new THREE.Vector3(-21, 30, 21), nearProps: wantNearProps = true,
-    surround = false,
+    surround = false, traffic = false,
   } = opts;
+  // Half the width of each avenue's corridor, kerb to kerb plus pavement, in
+  // the group's own frame. Zero when there is no traffic: nothing is moved.
+  const ROAD_HALF = surround && traffic ? 11 : 0;
+  // Push a block standing in either corridor out to the kerb. Deterministic,
+  // so the random stream the skyline draws from is untouched.
+  const clearRoads = (x, z, half) => {
+    if (!ROAD_HALF) return [x, z];
+    const keep = ROAD_HALF + half + 1;
+    if (Math.abs(z) < keep) z = Math.sign(z || 1) * keep;
+    if (Math.abs(x) < keep) x = Math.sign(x || 1) * keep;
+    return [x, z];
+  };
 
   // Rotate a point about Y, the same sense as group.rotation.y. Everything
   // `surround` does is this, applied to positions that were authored along −Z.
@@ -132,7 +150,8 @@ export function buildCityView(scene, renderer, opts = {}) {
       ? spin(def.x * NEAR_OUT, def.z * NEAR_OUT,
         (i / nearDefs.length) * Math.PI * 2 + Math.PI / nearDefs.length)
       : [def.x, def.z];
-    const b = { ...def, x: bx, z: bz };
+    const [cx, cz] = clearRoads(bx, bz, Math.max(def.w, def.d) / 2);
+    const b = { ...def, x: cx, z: cz };
     const h = b.top + 45; // extend well below the visible horizon
     const g = new THREE.BoxGeometry(b.w, h, b.d);
     g.translate(b.x, b.top - h / 2, b.z);
@@ -162,14 +181,14 @@ export function buildCityView(scene, renderer, opts = {}) {
   if (nearProps.length) group.add(new THREE.Mesh(mergeGeometries(nearProps), rooftopMat));
 
   // --- mid + far rings: instanced towers -----------------------------------
-  group.add(instancedRing(facadeMat, rand, 80, 75, 190, 10, 45, 12, false, surround));
-  group.add(instancedRing(facadeMat, rand, 130, 190, 400, 25, 95, 18, false, surround));
+  group.add(instancedRing(facadeMat, rand, 80, 75, 190, 10, 45, 12, false, surround, clearRoads));
+  group.add(instancedRing(facadeMat, rand, 130, 190, 400, 25, 95, 18, false, surround, clearRoads));
 
   // dark curtain-wall towers catching the sky in their glass
   const glassTowerMat = new THREE.MeshStandardMaterial({
     color: 0x2e3944, metalness: 0.85, roughness: 0.28,
   });
-  group.add(instancedRing(glassTowerMat, rand, 26, 90, 360, 40, 120, 15, true, surround));
+  group.add(instancedRing(glassTowerMat, rand, 26, 90, 360, 40, 120, 15, true, surround, clearRoads));
 
   // --- ground far below (fills gaps between blocks) ------------------------
   // Surrounded, the street below has to run out under every window, so the
@@ -181,6 +200,9 @@ export function buildCityView(scene, renderer, opts = {}) {
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(surround ? 0 : 12, -42, surround ? 0 : -300);
   group.add(ground);
+
+  // --- streets and traffic ----------------------------------------------------
+  const cars = ROAD_HALF ? buildTraffic(group, typeof traffic === 'number' ? traffic : 96, rand) : null;
 
   // --- drifting clouds ------------------------------------------------------
   // Surrounded, a cloud parked out along −Z would be edge-on from the windows
@@ -250,6 +272,7 @@ export function buildCityView(scene, renderer, opts = {}) {
   function update(t) {
     if (!seen) return;
     seen = false;
+    if (cars) cars(t);
     for (const c of clouds) {
       c.position.x += c.userData.speed * 0.016;
       if (c.position.x > 420) c.position.x = -420;
@@ -265,6 +288,97 @@ export function buildCityView(scene, renderer, opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Two avenues crossing under the building, along the group's x and z axes, on
+// the ground plane at y = −42. Each carries four lanes, two each way, and the
+// cars are one InstancedMesh written back every frame: positions come straight
+// from `t`, so a city that went unseen for a while picks up where the clock
+// says rather than where it stopped. Returns the per-frame writer.
+function buildTraffic(group, count, rand) {
+  const Y = -42;
+  const LEN = 900;                  // each avenue runs ±450 m, well into the fog
+  const ROAD_W = 16;                // four 3.5 m lanes plus a median
+  const LANES = [-5.6, -2.0, 2.0, 5.6];   // offsets from the centre line; sign = direction
+
+  const asphalt = new THREE.MeshLambertMaterial({ color: 0x2f3033 });
+  const paveMat = new THREE.MeshLambertMaterial({ color: 0x8d8a84 });
+  const paint = new THREE.MeshBasicMaterial({ color: 0xd9d4c4 });
+  const roadParts = [];
+  const paveParts = [];
+  const paintParts = [];
+  // Lifts over the ground are generous: with the camera's near plane at 8 cm,
+  // depth precision 400 m out is around 10 cm, and anything closer than that
+  // to the plane under it flickers. The z avenue sits a hair above the x one
+  // so the crossing doesn't fight either.
+  for (const axis of ['x', 'z']) {
+    const lift = axis === 'z' ? 0.03 : 0;
+    const flat = (w, d, x, y, z, into) => {
+      const g = new THREE.PlaneGeometry(axis === 'x' ? d : w, axis === 'x' ? w : d);
+      g.rotateX(-Math.PI / 2);
+      g.translate(axis === 'x' ? z : x, y, axis === 'x' ? x : z);
+      into.push(g);
+    };
+    // carriageway, then a pavement each side, all a hair over the ground
+    flat(ROAD_W, LEN, 0, Y + 0.4 + lift, 0, roadParts);
+    for (const s of [-1, 1]) flat(3, LEN, s * (ROAD_W / 2 + 1.5), Y + 0.55, 0, paveParts);
+    // a solid median line and dashed lane lines
+    flat(0.3, LEN, 0, Y + 0.48 + lift, 0, paintParts);
+    for (const off of [-3.8, 3.8]) {
+      for (let p = -LEN / 2; p < LEN / 2; p += 12) flat(0.18, 5, off, Y + 0.48 + lift, p + 2.5, paintParts);
+    }
+  }
+  group.add(new THREE.Mesh(mergeGeometries(roadParts), asphalt));
+  group.add(new THREE.Mesh(mergeGeometries(paveParts), paveMat));
+  group.add(new THREE.Mesh(mergeGeometries(paintParts), paint));
+
+  // One car: a body and a glasshouse, merged, long axis on x.
+  const body = new THREE.BoxGeometry(4.4, 0.85, 1.85);
+  body.translate(0, 0.6, 0);
+  const cabin = new THREE.BoxGeometry(2.3, 0.65, 1.6);
+  cabin.translate(-0.25, 1.33, 0);
+  const carGeo = mergeGeometries([body, cabin]);
+  const mesh = new THREE.InstancedMesh(carGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }), count);
+  const PAINT = [0xf2f2f0, 0x1c1d20, 0x8a8f96, 0xb3221d, 0x24406e, 0xc9c5bc, 0x3c4a3a, 0xd9a521];
+  const lanes = [];
+  for (let i = 0; i < count; i++) {
+    const axis = i % 2 ? 'z' : 'x';
+    const lane = LANES[Math.floor(rand() * LANES.length)];
+    lanes.push({
+      axis, lane,
+      // Right-hand traffic: heading +x the kerb on your right is +z, heading +z
+      // it is −x, so the sign flips between the two avenues.
+      dir: (lane > 0) === (axis === 'x') ? 1 : -1,
+      speed: 9 + rand() * 7,          // 32–58 km/h
+      phase: rand() * LEN,
+    });
+    mesh.setColorAt(i, new THREE.Color(PAINT[Math.floor(rand() * PAINT.length)]));
+  }
+  mesh.instanceColor.needsUpdate = true;
+  mesh.frustumCulled = false;       // the instances move; the base box doesn't
+  group.add(mesh);
+
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
+  const pos = new THREE.Vector3();
+  const one = new THREE.Vector3(1, 1, 1);
+  return function update(t) {
+    for (let i = 0; i < count; i++) {
+      const c = lanes[i];
+      // distance along the avenue, wrapped to ±LEN/2
+      const s = ((c.phase + c.dir * c.speed * t) % LEN + LEN * 1.5) % LEN - LEN / 2;
+      if (c.axis === 'x') {
+        pos.set(s, Y + 0.45, c.lane);
+        q.setFromAxisAngle(up, c.dir > 0 ? 0 : Math.PI);
+      } else {
+        pos.set(c.lane, Y + 0.45, s);
+        q.setFromAxisAngle(up, c.dir > 0 ? -Math.PI / 2 : Math.PI / 2);
+      }
+      mesh.setMatrixAt(i, m.compose(pos, q, one));
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  };
+}
+
 function strip(x, top, z, w, d, t) {
   // parapet ring as 4 thin boxes merged later
   const parts = [
@@ -276,7 +390,8 @@ function strip(x, top, z, w, d, t) {
   return mergeGeometries(parts);
 }
 
-function instancedRing(mat, rand, count, zMin, zMax, hMin, hMax, footprint, glassy = false, surround = false) {
+function instancedRing(mat, rand, count, zMin, zMax, hMin, hMax, footprint, glassy = false, surround = false,
+  clearRoads = null) {
   const geo = new THREE.BoxGeometry(1, 1, 1);
   geo.translate(0, 0.5, 0); // pivot at base
   const mesh = new THREE.InstancedMesh(geo, mat, count);
@@ -298,6 +413,9 @@ function instancedRing(mat, rand, count, zMin, zMax, hMin, hMax, footprint, glas
       const ca = Math.cos(a), sa = Math.sin(a);
       [x, zz] = [x * ca + z * sa, -x * sa + z * ca];
     }
+    // Kept clear of the carriageways by the largest footprint this ring can
+    // draw, so the clearance doesn't need w and d before they are drawn.
+    if (clearRoads) [x, zz] = clearRoads(x, zz, footprint * 1.4 * 0.75);
     const h = hMin + Math.pow(rand(), 1.6) * (hMax - hMin);
     const w = footprint * (0.5 + rand() * 0.9);
     const d = footprint * (0.5 + rand() * 0.9);

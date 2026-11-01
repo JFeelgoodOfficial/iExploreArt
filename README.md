@@ -157,7 +157,10 @@ and @chadrea.
 
 Maria Decetise holds **Decetise Hall** on floor 5 (`js/world/decetise.js`) —
 one whole floor plate of a high rise, glazed the length of its north and east
-sides. The west has no wall at all: the room opens straight onto an infinity
+sides, with one square of solid wall standing in the north glass for
+*Prehistoric Present*. Two avenues cross in the street below, one along each
+axis, with cars driving them (`traffic` in `js/world/CityView.js`), so every
+window looks down a road. The west has no wall at all: the room opens straight onto an infinity
 pool that fills the terrace edge to edge and spills off the lip of the slab,
 five storeys up. Nothing is out there to stand on: a waist-high glass
 balustrade runs the length of the coping, wall to wall, and stops you there. The lift core stands in the
@@ -165,8 +168,8 @@ middle of the plate rather than against a wall, in a French parterre: gravel, a
 balustraded stone kerb, clipped hedges, a basin, park chairs, and five plane
 trees growing up through oculi cut in the ceiling, and four more out on the
 terrace at the ends of the water. Seven of her paintings hang there: six along
-the south art wall, the one you face stepping out of the lift, and one on the
-lift core's west face beside the cabin doors, from `DECETISE_HANG` in
+the south art wall, the one you face stepping out of the lift, and one alone
+on the square pier in the north glass, from `DECETISE_HANG` in
 **`data/decetise-artworks.js`** (slot order is `SLOTS[]` in the room's file;
 a slot with no entry is left bare). Titles, years, sizes and descriptions are
 her own, where she has published them; the panther painting has none yet and

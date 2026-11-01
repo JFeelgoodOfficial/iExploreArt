@@ -138,7 +138,7 @@ export const RESIDENCIES = [
       + 'fountain plays under five plane trees growing up through oculi cut in the '
       + 'ceiling, with four more out at the ends of the water; seven of her paintings '
       + 'hang there — six along the south art wall, the one you face stepping out of '
-      + 'the lift, and one on the lift core beside the cabin doors',
+      + 'the lift, and one alone on a square of wall standing in the north glass',
     bio: MARIA_DECETISE_BIO,
   },
   {

@@ -61,9 +61,10 @@ const work = (n, px, label = {}, guessIn = 0) => {
 // core (DX-C1). Six hang on the south wall, the one a visitor faces stepping
 // out of the lift. The square and the portrait take the two ends; the four
 // landscapes run between them, the two quiet interiors alternating with the
-// pulp-cover pieces. The seventh hangs on the lift core's west face, beside
-// the cabin doors. The north wall's five slots stay empty (decetise.js skips
-// a null entry).
+// pulp-cover pieces. The seventh, Prehistoric Present, hangs alone on the
+// square of solid wall left in the north glass (DX-B5), facing the bench. The
+// other north slots and the lift core stay empty (decetise.js skips a null
+// entry).
 //
 // Titles and descriptions are hers, word for word. Sizes are as she gives
 // them (width first for the landscapes). The three guesses follow her stated
@@ -111,8 +112,8 @@ export const DECETISE_HANG = [
     description: 'A regal girl and her monkey companion pose in quiet formality, '
       + 'blending portraiture with a subtle sense of fantasy and play.',
   }),
-  /* DX-B1…B5 */ null, null, null, null, null,
-  /* DX-C1 */ work(7, [1600, 1575], {
+  /* DX-B1…B4 */ null, null, null, null,
+  /* DX-B5 */ work(7, [1600, 1575], {
     title: 'Prehistoric Present', year: '2026', medium: 'Oil paint', dims: '30 × 30 in',
     description: 'This painting presents dinosaurs through shifting forms of '
       + 'representation. Moving deeper into the scene, they transform from a realistic '
@@ -120,6 +121,7 @@ export const DECETISE_HANG = [
       + 'These changes offer multiple ways of seeing the dinosaur, as physical remains, '
       + 'imagined beast, symbol, and cultural memory.',
   }),
+  /* DX-C1 */ null,
 ];
 
 // What the foyer's title wall is lettered with and opens on E while her show

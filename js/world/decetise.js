@@ -5,8 +5,9 @@ import { DECETISE_HANG } from '../../data/decetise-artworks.js';
 
 // Decetise Hall — residency five (room id `decetise`). Maria Decetise.
 //
-// One whole floor plate of a high rise. Glazed east (+X) over the city; the
-// south and north walls are both art walls; and the west side has no wall at
+// One whole floor plate of a high rise. Glazed east (+X) and north over the
+// city, with one square of solid wall left in the north glass for a picture;
+// the south wall is the art wall; and the west side has no wall at
 // all — the room opens straight onto an infinity pool that fills the terrace
 // edge to edge and spills off a weir at the lip of the slab, five storeys up.
 // A waist-high glass balustrade on the coping, wall to wall, is all that
@@ -14,13 +15,13 @@ import { DECETISE_HANG } from '../../data/decetise-artworks.js';
 // and has nothing at all beyond it.
 //
 // The lift core stands in the NORTH-EAST corner, where the east glass meets
-// the north art wall — which is where a visitor arrives, looking south down
+// the north wall — which is where a visitor arrives, looking south down
 // the plate. The middle of the plate is a courtyard — gravel parterre round a
 // stone fountain, balustraded stone kerb, clipped hedges and topiary, green
 // park chairs, lamp posts — with five plane trees running up through oculi cut
 // in the ceiling, and four more out on the terrace at the ends of the water.
-// The core's one room-facing face carries a picture of its own — twelve in
-// all. A French park met a top-floor suite.
+// A French park met a top-floor suite. Below, two avenues cross under the
+// building with traffic on them (js/world/CityView.js, `traffic`).
 //
 // Same shape as the other residencies (js/world/brutalism/brutalist.js,
 // js/world/chadrea/chadrea.js): this file owns the room and its lighting rig,
@@ -57,7 +58,7 @@ export const DX = {
 };
 
 // The lift core stands in the room's north-east corner, where the east glass
-// meets the north art wall. Its doorway opens south, into the room.
+// meets the north wall. Its doorway opens south, into the room.
 export const CORE_POS = { x: 15.0, z: -11.0 };
 
 // You arrive in the cabin, facing out of it across the plate.
@@ -111,8 +112,8 @@ export const SLOTS = [
   { id: 'DX-A4', x: 3.0, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 1.8, h: 1.8 },
   { id: 'DX-A5', x: 8.1, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 2.0, h: 1.4 },
   { id: 'DX-A6', x: 13.2, y: 1.95, z: DX.z1 - 0.12, rotY: Math.PI, w: 1.35, h: 1.9 },
-  // north wall: the run stops short of x ≈ 12 — the lift core stands against
-  // the wall's eastern end.
+  // north wall: glass now, apart from the square pier at DX-B5 (NORTH_PIER).
+  // B1–B4 stand in glass and stay empty.
   { id: 'DX-B1', x: -13.2, y: 1.95, z: DX.z0 + 0.12, rotY: 0, w: 1.5, h: 2.05 },
   { id: 'DX-B2', x: -8.1, y: 1.95, z: DX.z0 + 0.12, rotY: 0, w: 2.2, h: 1.5 },
   { id: 'DX-B3', x: -3.0, y: 1.95, z: DX.z0 + 0.12, rotY: 0, w: 1.4, h: 1.9 },
@@ -140,6 +141,11 @@ function fitted(entry, slot) {
 }
 
 const ARTIST = 'Maria Decetise';
+
+// The one piece of solid wall left on the north side: a square, as wide as the
+// room is tall, centred on slot DX-B5 and the bench that faces it. Everything
+// else on that side is glass.
+const NORTH_PIER = { x: 8.1, w: DX.ceil };
 
 // The glass balustrade along the room's open west edge, standing on the
 // coping. Shared with decetiseSegments(), which keeps visitors back from it.
@@ -439,10 +445,11 @@ export function buildDecetiseRoom(scene, opts = {}) {
     add(collar);
   }
 
-  // the two art walls — south, and its twin across the plate on the north,
-  // where a wall of glass used to stand
+  // the south art wall, solid end to end
   box((DX.x0 + DX.x1) / 2, DX.ceil / 2, DX.z1 + 0.15, DX.x1 - DX.x0 + 0.6, DX.ceil, 0.3);
-  box((DX.x0 + DX.x1) / 2, DX.ceil / 2, DX.z0 - 0.15, DX.x1 - DX.x0 + 0.6, DX.ceil, 0.3);
+  // The north side is glass again, floor to ceiling, with one square of solid
+  // wall left standing in it for a single picture (NORTH_PIER, slot DX-B5), and
+  // the run behind the lift core kept solid so the corner stays closed.
 
   // glazing: a pane, mullions at a bay's spacing, head and sill rails
   function glazing(axis, fixed, from, to, step) {
@@ -467,6 +474,12 @@ export function buildDecetiseRoom(scene, opts = {}) {
     }
   }
   glazing('z', DX.x1 + 0.05, DX.z0, DX.z1, 2.6);         // east wall of glass
+  const NP = NORTH_PIER;
+  box(NP.x, DX.ceil / 2, DX.z0 - 0.15, NP.w, DX.ceil, 0.3);              // the square pier
+  glazing('x', DX.z0 - 0.05, DX.x0, NP.x - NP.w / 2, 2.6);               // north glass, west of it
+  glazing('x', DX.z0 - 0.05, NP.x + NP.w / 2, CORE_POS.x - DX.core, 2.6); // …and up to the core
+  box((CORE_POS.x - DX.core + DX.x1 + 0.3) / 2, DX.ceil / 2, DX.z0 - 0.15,
+    DX.x1 + 0.3 - (CORE_POS.x - DX.core), DX.ceil, 0.3);                  // behind the core
   // West: one unbroken run, not two flanking a doorway. The terrace used to
   // slide open in the middle; it doesn't any more. The pool now reaches the
   // glass and there is nowhere out there to stand, so the wall is a window onto
@@ -583,7 +596,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
   // --- the lift core, in the plate's north-east corner --------------------
   // Built in the core's own local frame — the doorway on local -z, the back
   // wall on local +z — then the whole group is turned π and parked in the
-  // corner, so the back wall sits against the north art wall and the doorway
+  // corner, so the back wall sits against the north wall and the doorway
   // opens south into the room.
   const C = DX.core;
   const liftCore = new THREE.Group();
@@ -1025,7 +1038,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
     });
   }
 
-  // two stone benches facing the pictures on the north art wall
+  // two stone benches facing the north side; the eastern one faces the pier
   for (const bx of [-8, 8]) box(bx, 0.21, DX.z0 + 1.5, 3.2, 0.42, 0.62, M.stonePale);
 
   // --- the hang ----------------------------------------------------------
