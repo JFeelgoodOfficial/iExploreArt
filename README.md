@@ -170,8 +170,10 @@ lift core's west face beside the cabin doors, from `DECETISE_HANG` in
 **`data/decetise-artworks.js`** (slot order is `SLOTS[]` in the room's file;
 a slot with no entry is left bare). Titles, years, sizes and descriptions are
 her own, where she has published them; the panther painting has none yet and
-hangs as "Untitled". Three pieces have no size, so all seven hang at their
-photographs' aspect inside a common 2.1 × 1.6 m box rather than at true size.
+hangs as "Untitled". All seven hang at true size, centred at
+1.55 m: the long edge is her stated size, the short edge follows the photograph.
+Three have no published size and hang at a guessed long edge (`guessIn` in that
+file) that never reaches the label.
 **E** opens a label with the title, her name and her description, and
 the enquiry button gives her Instagram, @mdecetiseart. There is no return door on a wall: the
 way out is the cabin you arrived in — look back at its brass wall and press **E**.

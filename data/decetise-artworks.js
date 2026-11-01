@@ -5,8 +5,7 @@
 // behind its enquiry button. Kept out of the room's own file so the foyer and
 // the curator can read it without pulling in the room's geometry.
 //
-// Not every piece came with a size, so each hangs at its photograph's aspect,
-// fitted into a common box (decetise.js), rather than at true size.
+// Each piece hangs at true size (see `work` below).
 
 import { MARIA_DECETISE_BIO } from './residencies.js';
 
@@ -23,16 +22,33 @@ const CONTACT = {
 // `label` carries what she has published for a piece: title, year, medium,
 // size as she writes it, her own description, and `sold`. A piece without one
 // hangs as "Untitled" with the house line.
-const work = (n, px, label = {}) => ({
-  id: `md-${n}`,
-  title: 'Untitled', artist: ARTIST,
-  year: '', medium: '',
-  image: `assets/art/decetise/Decetise ${n}.webp`,
-  px,
-  description: `By ${ARTIST}, in residence in ${HALL}.`,
-  contact: CONTACT,
-  ...label,
-});
+//
+// Every piece hangs at true size, the way Chad Rea's do: `size` is [w, h] in
+// metres. The long edge is her stated size where she gives one; the short edge
+// comes from the photograph, so the picture is never stretched. That matters
+// once: Adulescentia is listed 16 × 11 in but photographed nearer 16 × 12.8,
+// so it hangs 16 in tall and a little wider than listed. Three pieces have no
+// published size, and `guessIn` stands in for the long edge there; it hangs
+// the piece but never reaches the label.
+const IN = 0.0254;
+const work = (n, px, label = {}, guessIn = 0) => {
+  const longIn = label.dims ? Math.max(...label.dims.match(/\d+(\.\d+)?/g).map(Number)) : guessIn;
+  const long = longIn * IN;
+  const [pw, ph] = px;
+  const size = pw >= ph
+    ? [+long.toFixed(3), +(long * ph / pw).toFixed(3)]
+    : [+(long * pw / ph).toFixed(3), +long.toFixed(3)];
+  return {
+    id: `md-${n}`,
+    title: 'Untitled', artist: ARTIST,
+    year: '', medium: '',
+    image: `assets/art/decetise/Decetise ${n}.webp`,
+    px, size,
+    description: `By ${ARTIST}, in residence in ${HALL}.`,
+    contact: CONTACT,
+    ...label,
+  };
+};
 
 // Slot order is SLOTS[] in js/world/decetise.js: the south art wall west to
 // east (DX-A1…A6), then the north wall (DX-B1…B5), then the face of the lift
@@ -44,7 +60,9 @@ const work = (n, px, label = {}) => ({
 // a null entry).
 //
 // Titles and descriptions are hers, word for word. Sizes are as she gives
-// them (width first for the landscapes); three pieces came without one.
+// them (width first for the landscapes). The three guesses follow her stated
+// sizes: the two pulp-cover pieces at 24 and 30 in, Dino Dreams at 24 in,
+// level with Dark Eyed Sailor beside it.
 export const DECETISE_HANG = [
   /* DX-A1 */ work(1, [1284, 1278], {
     title: 'Faster Than Fear', medium: 'Oil paint',
@@ -53,8 +71,8 @@ export const DECETISE_HANG = [
       + 'a game, reflecting the challenges we encounter in everyday life. Although we '
       + 'cannot always control what pursues us, we can choose how we face it, and '
       + 'whether we allow fear to define the experience.',
-  }),
-  /* DX-A2 */ work(2, [1284, 1021]),   // the panther riders: no title yet
+  }, 24),
+  /* DX-A2 */ work(2, [1284, 1021], {}, 30),   // the panther riders: no title yet
   /* DX-A3 */ work(3, [1165, 875], {
     title: 'Dark Eyed Sailor', year: '2026', medium: 'Oil paint', dims: '24 × 18 in',
     description: 'The two women share a familiar space but seem emotionally removed '
@@ -71,7 +89,7 @@ export const DECETISE_HANG = [
       + 'dinosaurs appear peaceful, almost sacred, within the quiet landscape. Their '
       + 'pixelated forms make them feel suspended between the ancient and the imagined, '
       + 'transforming them from monsters into enchanting figures of wonder.',
-  }),
+  }, 24),
   /* DX-A5 */ work(5, [1600, 1201], {
     title: 'The Things We Carry', year: '2024', medium: 'Oil paint', dims: '22 × 16 in',
     description: 'This painting explores the tension between outward composure and an '

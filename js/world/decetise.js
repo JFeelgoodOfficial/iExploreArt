@@ -125,17 +125,19 @@ export const SLOTS = [
 // The hang itself is data/decetise-artworks.js, in slot order. A slot with no
 // entry is left bare: no panel, no placard, no wash.
 //
-// Sizes aren't known, so a work hangs at its photograph's aspect inside one
-// common box rather than the slot's own `w`/`h` (which were drawn for the
-// placeholders and are mostly portrait). The pictures then read as one
-// family along the wall, their heights stepping only with their shapes.
+// A work with a `size` (metres, [w, h]) hangs at it, centred at 1.55 m, the
+// house eye line; the slot's own `w`/`h` and height were drawn for the old
+// two-metre placeholders. Without one it falls back to its photograph's aspect
+// inside a common box at the slot's height.
+const EYE = 1.55;
 const FIT = { w: 2.1, h: 1.6 };
-function fitted(px, slot) {
-  if (!px) return [slot.w, slot.h];
-  const a = px[0] / px[1];
+function fitted(entry, slot) {
+  if (entry.size) return [...entry.size, EYE];
+  if (!entry.px) return [slot.w, slot.h, slot.y];
+  const a = entry.px[0] / entry.px[1];
   return a >= FIT.w / FIT.h
-    ? [FIT.w, +(FIT.w / a).toFixed(3)]
-    : [+(FIT.h * a).toFixed(3), FIT.h];
+    ? [FIT.w, +(FIT.w / a).toFixed(3), slot.y]
+    : [+(FIT.h * a).toFixed(3), FIT.h, slot.y];
 }
 
 const ARTIST = 'Maria Decetise';
@@ -1018,13 +1020,13 @@ export function buildDecetiseRoom(scene, opts = {}) {
   SLOTS.forEach((slot, i) => {
     const entry = art[i];
     if (!entry) return;
-    const [w, h] = fitted(entry.px, slot);
+    const [w, h, y] = fitted(entry, slot);
     // A dark backing panel behind each picture, so a canvas on a pale wall has
     // an edge. The one on the lift core doesn't get one: the core is a stone
     // pier, and a panel standing proud of it read as a slab bolted to the
     // shaft rather than as a picture hung on it.
     if (!slot.id.startsWith('DX-C')) {
-      box(slot.x, slot.y, slot.z, w + 0.06, h + 0.06, 0.05,
+      box(slot.x, y, slot.z, w + 0.06, h + 0.06, 0.05,
         new THREE.MeshStandardMaterial({ color: 0x2a2521, roughness: 0.8 }));
     }
     // Dark until the photograph lands; a work with no photograph yet keeps
@@ -1044,7 +1046,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
     const face = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
     // Off the panel where there is one, off the wall itself where there isn't.
     const stand = slot.id.startsWith('DX-C') ? 0.012 : 0.031;
-    face.position.set(slot.x + Math.sin(slot.rotY) * stand, slot.y, slot.z + Math.cos(slot.rotY) * stand);
+    face.position.set(slot.x + Math.sin(slot.rotY) * stand, y, slot.z + Math.cos(slot.rotY) * stand);
     face.rotation.y = slot.rotY;
     face.name = slot.id;
     // What the info panel reads (js/ui/UI.js): the entry itself, contact and
@@ -1063,7 +1065,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
     );
     placard.position.set(
       slot.x + Math.sin(slot.rotY) * 0.035 + Math.cos(slot.rotY) * (w / 2 + 0.34),
-      slot.y - h / 2 + 0.14,
+      y - h / 2 + 0.14,
       slot.z + Math.cos(slot.rotY) * 0.035 - Math.sin(slot.rotY) * (w / 2 + 0.34)
     );
     placard.rotation.y = slot.rotY;
@@ -1073,7 +1075,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
     const strip = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 0.05, 0.09), M.glow);
     strip.position.set(
       slot.x + Math.sin(slot.rotY) * 0.28,
-      Math.min(DX.ceil - 0.35, slot.y + h / 2 + 0.75),
+      Math.min(DX.ceil - 0.35, y + h / 2 + 0.75),
       slot.z + Math.cos(slot.rotY) * 0.28
     );
     strip.rotation.y = slot.rotY;
