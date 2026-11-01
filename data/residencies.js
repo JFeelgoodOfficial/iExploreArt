@@ -136,9 +136,9 @@ export const RESIDENCIES = [
       + 'in the corner where the glass meets the north wall, and at the centre of a '
       + 'French parterre — gravel and clipped hedges and green park chairs — a stone '
       + 'fountain plays under five plane trees growing up through oculi cut in the '
-      + 'ceiling, with four more out at the ends of the water; twelve works hang there '
-      + '— six on the south art wall, five on the north, and one on the room-facing '
-      + 'flank of the lift core itself',
+      + 'ceiling, with four more out at the ends of the water; seven of her paintings '
+      + 'hang there — six along the south art wall, the one you face stepping out of '
+      + 'the lift, and one on the lift core beside the cabin doors',
     bio: MARIA_DECETISE_BIO,
   },
   {

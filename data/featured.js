@@ -24,19 +24,10 @@
 //                 still upcoming (js/world/foyer.js). Not necessarily `from`'s
 //                 day: the door can open before the official opening.
 
-import { findResidency, MARIA_DECETISE_BIO } from './residencies.js';
+import { findResidency } from './residencies.js';
 import { CHADREA_HANG, SHOW_CARD as BEAUTIFUL_DECAY_CARD } from './chadrea-artworks.js';
 import { ROCOCO_HANG, FALL_CARD } from './residency-artworks.js';
-
-// Maria Decetise has no artworks file of her own yet, so her show card lives
-// here. Same shape as the others; no contact block until she gives one.
-const DECETISE_CARD = {
-  id: 'md-show-card',
-  title: 'Paintings',
-  artist: 'Maria Decetise',
-  year: '', medium: 'About the artist',
-  description: MARIA_DECETISE_BIO,
-};
+import { DECETISE_HANG, DECETISE_CARD } from './decetise-artworks.js';
 
 export const SHOWS = [
   {
@@ -57,20 +48,17 @@ export const SHOWS = [
     opens: 'October 2',
   },
   {
-    // Decetise Hall's hang is still placeholders (DECETISE_HANG in
-    // js/world/decetise.js, every image null), so nothing hangs beside the door
-    // yet. Give the piece an id here once her photographs land. "Paintings"
-    // stands in for the show's title until she names it.
+    // "Paintings" stands in for the show's title until she names it.
     residencyId: 'decetise',
     series: 'Paintings',
     welcome: 'her paintings',
-    artworkId: null,
+    artworkId: 'md-4',
     card: DECETISE_CARD,
     from: '2026-10-29T00:00:00Z',
   },
 ];
 
-const HANGS = [...CHADREA_HANG, ...ROCOCO_HANG];
+const HANGS = [...CHADREA_HANG, ...ROCOCO_HANG, ...DECETISE_HANG];
 
 // The moment the schedule is read against. `?now=<ISO time>` stands in for the
 // clock, so the changeover can be previewed before it happens; anything that

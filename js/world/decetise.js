@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { loadArtTexture } from '../art/load.js';
+import { DECETISE_HANG } from '../../data/decetise-artworks.js';
 
 // Decetise Hall — residency five (room id `decetise`). Maria Decetise.
 //
@@ -25,6 +27,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 // main.js owns the skyline, the way back down and the room registration.
 //
 //   const room = buildDecetiseRoom(scene, { tier, art: DECETISE_HANG, ...artOpts });
+//   (DECETISE_HANG lives in data/decetise-artworks.js)
 //   const lights = setupDecetiseLighting(scene, renderer, tier);
 //   room.update(t);   // the pool's swell, the canopies' sway, the jet
 //
@@ -119,26 +122,21 @@ export const SLOTS = [
   ...CORE_FACES.map((c) => ({ id: c.id, x: c.x, y: 1.8, z: c.z, rotY: c.rotY, w: c.w, h: c.h })),
 ];
 
-// The house manifest for this hall, in slot order. Every entry is a placeholder
-// until the real files land: give one an `image` and a `px` and it hangs instead.
-// Same convention as data/brutalist-artworks.js.
-export const DECETISE_HANG = [
-  // south art wall (DX-A1…A6)
-  { title: 'Parterre, Late Light', image: null },
-  { title: 'Twelve Storeys of Weather', image: null },
-  { title: 'Allée', image: null },
-  { title: 'The Basin at Six', image: null },
-  { title: 'Hedge, Clipped Twice', image: null },
-  { title: 'Cornice and Cloud', image: null },
-  // north art wall (DX-B1…B5)
-  { title: 'Gravel, Rain Coming', image: null },
-  { title: 'The Doors Open Inward', image: null },
-  { title: 'North Light, No Weather', image: null },
-  { title: 'The Kerb at Dusk', image: null },
-  { title: 'Two Benches, Facing', image: null },
-  // the lift core (DX-C1)
-  { title: 'Plane Tree Through the Ceiling', image: null },
-];
+// The hang itself is data/decetise-artworks.js, in slot order. A slot with no
+// entry is left bare: no panel, no placard, no wash.
+//
+// Sizes aren't known, so a work hangs at its photograph's aspect inside one
+// common box rather than the slot's own `w`/`h` (which were drawn for the
+// placeholders and are mostly portrait). The pictures then read as one
+// family along the wall, their heights stepping only with their shapes.
+const FIT = { w: 2.1, h: 1.6 };
+function fitted(px, slot) {
+  if (!px) return [slot.w, slot.h];
+  const a = px[0] / px[1];
+  return a >= FIT.w / FIT.h
+    ? [FIT.w, +(FIT.w / a).toFixed(3)]
+    : [+(FIT.h * a).toFixed(3), FIT.h];
+}
 
 const ARTIST = 'Maria Decetise';
 
@@ -193,7 +191,7 @@ export function setupDecetiseLighting(scene, renderer, tier = {}) {
 // The room. opts: { tier, art, anisotropy, artMaxEdge, materials }
 // Returns { interactables, update(t), dispose() }.
 export function buildDecetiseRoom(scene, opts = {}) {
-  const { tier = {}, art = DECETISE_HANG, anisotropy = 8 } = opts;
+  const { tier = {}, art = DECETISE_HANG, anisotropy = 8, artMaxEdge = 0 } = opts;
   const rand = mulberry32(12_071);
   const flowers = tier.flowers ?? 320;      // read for parity; used to thin foliage
   const lean = flowers < 200;               // low tier: fewer canopy blobs
@@ -336,7 +334,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
     t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = anisotropy;
     return t;
   }
-  function placardTexture(title) {
+  function placardTexture(title, placeholder) {
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = 168;
     const g = cv.getContext('2d');
     g.fillStyle = '#fbf8f3'; g.fillRect(0, 0, 512, 168);
@@ -344,8 +342,10 @@ export function buildDecetiseRoom(scene, opts = {}) {
     g.fillText(ARTIST.toUpperCase(), 26, 46);
     g.fillStyle = '#1e1a17'; g.font = 'italic 600 34px "Cormorant Garamond", Georgia, serif';
     g.fillText(title.length > 26 ? `${title.slice(0, 25)}…` : title, 26, 96);
-    g.fillStyle = '#b46f3d'; g.font = '500 20px Inter, sans-serif';
-    g.fillText('placeholder · 2026', 26, 134);
+    if (placeholder) {
+      g.fillStyle = '#b46f3d'; g.font = '500 20px Inter, sans-serif';
+      g.fillText('placeholder · 2026', 26, 134);
+    }
     const t = new THREE.CanvasTexture(cv);
     t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = anisotropy;
     return t;
@@ -1016,27 +1016,40 @@ export function buildDecetiseRoom(scene, opts = {}) {
   // --- the hang ----------------------------------------------------------
   const interactables = [];
   SLOTS.forEach((slot, i) => {
-    const entry = art[i] || { title: `Slot ${slot.id}`, image: null };
-    const tex = placeholderArt(1000 + i * 977 + entry.title.length, slot.w, slot.h);
+    const entry = art[i];
+    if (!entry) return;
+    const [w, h] = fitted(entry.px, slot);
     // A dark backing panel behind each picture, so a canvas on a pale wall has
     // an edge. The one on the lift core doesn't get one: the core is a stone
     // pier, and a panel standing proud of it read as a slab bolted to the
     // shaft rather than as a picture hung on it.
     if (!slot.id.startsWith('DX-C')) {
-      box(slot.x, slot.y, slot.z, slot.w, slot.h, 0.05,
+      box(slot.x, slot.y, slot.z, w + 0.06, h + 0.06, 0.05,
         new THREE.MeshStandardMaterial({ color: 0x2a2521, roughness: 0.8 }));
     }
-    const face = new THREE.Mesh(
-      new THREE.PlaneGeometry(slot.w, slot.h),
-      new THREE.MeshStandardMaterial({ map: tex, roughness: 0.72 })
-    );
+    // Dark until the photograph lands; a work with no photograph yet keeps
+    // the generated placeholder.
+    const mat = entry.image
+      ? new THREE.MeshStandardMaterial({ color: 0x2e2823, roughness: 0.72 })
+      : new THREE.MeshStandardMaterial({
+        map: placeholderArt(1000 + i * 977 + entry.title.length, w, h), roughness: 0.72,
+      });
+    if (entry.image) {
+      loadArtTexture(entry.image, { anisotropy, px: entry.px, maxEdge: artMaxEdge }, (tx) => {
+        mat.map = tx;
+        mat.color.setHex(0xffffff);
+        mat.needsUpdate = true;
+      });
+    }
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
     // Off the panel where there is one, off the wall itself where there isn't.
     const stand = slot.id.startsWith('DX-C') ? 0.012 : 0.031;
     face.position.set(slot.x + Math.sin(slot.rotY) * stand, slot.y, slot.z + Math.cos(slot.rotY) * stand);
     face.rotation.y = slot.rotY;
     face.name = slot.id;
-    // What the info panel reads (js/ui/UI.js prints title + artist).
-    face.userData.artwork = {
+    // What the info panel reads (js/ui/UI.js): the entry itself, contact and
+    // all, or a placeholder's stand-in label.
+    face.userData.artwork = entry.image ? entry : {
       id: slot.id, title: entry.title, artist: entry.artist ?? ARTIST,
       description: entry.description
         ?? 'A placeholder stands here until the work arrives — the slot keeps its wall, its light and its label.',
@@ -1046,21 +1059,21 @@ export function buildDecetiseRoom(scene, opts = {}) {
 
     const placard = new THREE.Mesh(
       new THREE.PlaneGeometry(0.42, 0.14),
-      new THREE.MeshBasicMaterial({ map: placardTexture(entry.title) })
+      new THREE.MeshBasicMaterial({ map: placardTexture(entry.title, !entry.image) })
     );
     placard.position.set(
-      slot.x + Math.sin(slot.rotY) * 0.035 + Math.cos(slot.rotY) * (slot.w / 2 + 0.34),
-      slot.y - slot.h / 2 + 0.14,
-      slot.z + Math.cos(slot.rotY) * 0.035 - Math.sin(slot.rotY) * (slot.w / 2 + 0.34)
+      slot.x + Math.sin(slot.rotY) * 0.035 + Math.cos(slot.rotY) * (w / 2 + 0.34),
+      slot.y - h / 2 + 0.14,
+      slot.z + Math.cos(slot.rotY) * 0.035 - Math.sin(slot.rotY) * (w / 2 + 0.34)
     );
     placard.rotation.y = slot.rotY;
     add(placard);
 
     // the wash over each piece: emissive geometry, not another real light
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(slot.w * 0.8, 0.05, 0.09), M.glow);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 0.05, 0.09), M.glow);
     strip.position.set(
       slot.x + Math.sin(slot.rotY) * 0.28,
-      Math.min(DX.ceil - 0.35, slot.y + slot.h / 2 + 0.75),
+      Math.min(DX.ceil - 0.35, slot.y + h / 2 + 0.75),
       slot.z + Math.cos(slot.rotY) * 0.28
     );
     strip.rotation.y = slot.rotY;
