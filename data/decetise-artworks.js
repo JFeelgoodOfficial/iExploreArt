@@ -5,7 +5,7 @@
 // behind its enquiry button. Kept out of the room's own file so the foyer and
 // the curator can read it without pulling in the room's geometry.
 //
-// Each piece hangs at true size (see `work` below).
+// Each piece hangs at twice its size (SCALE, below).
 
 import { MARIA_DECETISE_BIO } from './residencies.js';
 
@@ -23,17 +23,23 @@ const CONTACT = {
 // size as she writes it, her own description, and `sold`. A piece without one
 // hangs as "Untitled" with the house line.
 //
-// Every piece hangs at true size, the way Chad Rea's do: `size` is [w, h] in
+// Every piece hangs at its size times SCALE (below): `size` is [w, h] in
 // metres. The long edge is her stated size where she gives one; the short edge
 // comes from the photograph, so the picture is never stretched. That matters
 // once: Adulescentia is listed 16 × 11 in but photographed nearer 16 × 12.8,
 // so it hangs 16 in tall and a little wider than listed. Three pieces have no
 // published size, and `guessIn` stands in for the long edge there; it hangs
 // the piece but never reaches the label.
+//
+// `SCALE` multiplies every hanging size, as in data/chadrea-artworks.js. It
+// stands at 2 at the owner's direction: at true size the pieces read as
+// postcards on a thirty-metre wall. Proportions between the works stay true,
+// and the labels keep her stated sizes.
+const SCALE = 2;
 const IN = 0.0254;
 const work = (n, px, label = {}, guessIn = 0) => {
   const longIn = label.dims ? Math.max(...label.dims.match(/\d+(\.\d+)?/g).map(Number)) : guessIn;
-  const long = longIn * IN;
+  const long = longIn * IN * SCALE;
   const [pw, ph] = px;
   const size = pw >= ph
     ? [+long.toFixed(3), +(long * ph / pw).toFixed(3)]
