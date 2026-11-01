@@ -213,6 +213,13 @@ export function buildDecetiseRoom(scene, opts = {}) {
   // --- materials (the house set, warmed for the hour) ----------------------
   const M = {
     plaster: new THREE.MeshStandardMaterial({ color: 0xf1ece2, roughness: 0.94, side: THREE.DoubleSide }),
+    // The walls the paintings hang on. The warm plaster went grey on the
+    // south wall, which only ever sees the sky and the bounce, and the art
+    // read drab against it. Pure white with a touch of self-light keeps it
+    // reading as a white gallery wall in shade, so the colours carry.
+    galleryWhite: new THREE.MeshStandardMaterial({
+      color: 0xffffff, roughness: 0.9, emissive: 0xffffff, emissiveIntensity: 0.22,
+    }),
     limestone: new THREE.MeshStandardMaterial({ color: 0xd9d0be, roughness: 0.88 }),
     stonePale: new THREE.MeshStandardMaterial({ color: 0xe8e1d4, roughness: 0.78 }),
     steel: new THREE.MeshStandardMaterial({ color: 0x33343a, roughness: 0.4, metalness: 0.85 }),
@@ -446,7 +453,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
   }
 
   // the south art wall, solid end to end
-  box((DX.x0 + DX.x1) / 2, DX.ceil / 2, DX.z1 + 0.15, DX.x1 - DX.x0 + 0.6, DX.ceil, 0.3);
+  box((DX.x0 + DX.x1) / 2, DX.ceil / 2, DX.z1 + 0.15, DX.x1 - DX.x0 + 0.6, DX.ceil, 0.3, M.galleryWhite);
   // The north side is glass again, floor to ceiling, with one square of solid
   // wall left standing in it for a single picture (NORTH_PIER, slot DX-B5), and
   // the run behind the lift core kept solid so the corner stays closed.
@@ -475,7 +482,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
   }
   glazing('z', DX.x1 + 0.05, DX.z0, DX.z1, 2.6);         // east wall of glass
   const NP = NORTH_PIER;
-  box(NP.x, DX.ceil / 2, DX.z0 - 0.15, NP.w, DX.ceil, 0.3);              // the square pier
+  box(NP.x, DX.ceil / 2, DX.z0 - 0.15, NP.w, DX.ceil, 0.3, M.galleryWhite); // the square pier
   glazing('x', DX.z0 - 0.05, DX.x0, NP.x - NP.w / 2, 2.6);               // north glass, west of it
   glazing('x', DX.z0 - 0.05, NP.x + NP.w / 2, CORE_POS.x - DX.core, 2.6); // …and up to the core
   box((CORE_POS.x - DX.core + DX.x1 + 0.3) / 2, DX.ceil / 2, DX.z0 - 0.15,

@@ -36,7 +36,8 @@ import { mulberry32 } from '../utils/proctex.js';
 //                looks straight down a street. The near blocks already sit
 //                between the compass points; towers that would stand in a
 //                carriageway are pushed to its kerb. A number caps the cars
-//                (true = 96).
+//                (true = 96). The four quarters the avenues leave are filled
+//                with city blocks, so the ground between the towers isn't bare.
 //
 // Everything is parented to `group`, INCLUDING the sky, so a caller wrapping
 // this in RoomManager.captureLayer gets a city that hides with its room.
@@ -203,6 +204,7 @@ export function buildCityView(scene, renderer, opts = {}) {
 
   // --- streets and traffic ----------------------------------------------------
   const cars = ROAD_HALF ? buildTraffic(group, typeof traffic === 'number' ? traffic : 96, rand) : null;
+  if (ROAD_HALF) group.add(buildBlocks(facadeMat, seed, ROAD_HALF));
 
   // --- drifting clouds ------------------------------------------------------
   // Surrounded, a cloud parked out along −Z would be edge-on from the windows
@@ -377,6 +379,53 @@ function buildTraffic(group, count, rand) {
     }
     mesh.instanceMatrix.needsUpdate = true;
   };
+}
+
+// City blocks filling the four quarters between the avenues: a grid aligned to
+// them, 34 m blocks on a 44 m pitch so a 10 m side street runs between every
+// pair, each block cut into up to four lots. Heights grow with distance, and
+// near the building they stay under the plate (the room's floor is 37 m up),
+// so the street still reads from the windows rather than a wall of roofs.
+// Its own PRNG, so adding it doesn't move anything the skyline already drew.
+function buildBlocks(mat, seed, roadHalf) {
+  const rand = mulberry32(seed * 31 + 7);
+  const B = 34, PITCH = 44, RINGS = 6;
+  const lots = [];
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    for (let i = 0; i < RINGS; i++) for (let j = 0; j < RINGS; j++) {
+      const cx = sx * (roadHalf + 3 + B / 2 + i * PITCH);
+      const cz = sz * (roadHalf + 3 + B / 2 + j * PITCH);
+      const split = rand() < 0.6;            // four lots, or one building
+      const n = split ? 2 : 1;
+      const lot = B / n;
+      for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) {
+        if (rand() < 0.1) continue;           // the odd plaza or car park
+        const x = cx - B / 2 + lot * (a + 0.5);
+        const z = cz - B / 2 + lot * (b + 0.5);
+        const r = Math.hypot(x, z);
+        let h = 8 + Math.pow(rand(), 1.5) * (14 + r * 0.22);
+        if (r < 80) h = Math.min(h, 28);
+        lots.push({ x, z, w: lot * (0.72 + rand() * 0.22), d: lot * (0.72 + rand() * 0.22), h, tone: rand(), pick: rand() });
+      }
+    }
+  }
+  const geo = new THREE.BoxGeometry(1, 1, 1);
+  geo.translate(0, 0.5, 0);
+  const mesh = new THREE.InstancedMesh(geo, mat, lots.length);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  lots.forEach((l, i) => {
+    m.compose(new THREE.Vector3(l.x, -42, l.z), q, new THREE.Vector3(l.w, l.h, l.d));
+    mesh.setMatrixAt(i, m);
+    const tone = 0.55 + l.tone * 0.45;
+    const col = l.pick < 0.2 ? new THREE.Color(tone * 0.9, tone * 0.55, tone * 0.42)
+      : l.pick < 0.55 ? new THREE.Color(tone * 1.05, tone * 0.98, tone * 0.85)
+        : new THREE.Color(tone * 0.92, tone * 0.94, tone * 0.97);
+    mesh.setColorAt(i, col);
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true;
+  return mesh;
 }
 
 function strip(x, top, z, w, d, t) {
