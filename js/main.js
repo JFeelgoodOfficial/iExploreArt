@@ -488,7 +488,7 @@ const ROOM_FACTORIES = {
     // global and the gallery already set it; the sun matches
     // setupDecetiseLighting's, or the daylight arrives from two quarters at once.
     const city = buildCityView(scene, renderer, {
-      name: 'city-decetise', seed: 1207, surround: true, fog: false,
+      name: 'city-decetise', seed: 1207, surround: true, fog: false, traffic: true,
       sunPosition: DX_SUN, nearProps: tier.name !== 'low',
     });
     // The skyline is authored to be read from near its own rooftops. Lifted, so
