@@ -159,8 +159,8 @@ Maria Decetise holds **Decetise Hall** on floor 5 (`js/world/decetise.js`) —
 one whole floor plate of a high rise, glazed the length of its north and east
 sides. The west has no wall at all: the room opens straight onto an infinity
 pool that fills the terrace edge to edge and spills off the lip of the slab,
-five storeys up. Nothing is out there to stand on — the coping is the
-threshold, and the next step is a metre of water. The lift core stands in the
+five storeys up. Nothing is out there to stand on: a waist-high glass
+balustrade runs the length of the coping, wall to wall, and stops you there. The lift core stands in the
 middle of the plate rather than against a wall, in a French parterre: gravel, a
 balustraded stone kerb, clipped hedges, a basin, park chairs, and five plane
 trees growing up through oculi cut in the ceiling, and four more out on the
@@ -170,7 +170,7 @@ lift core's west face beside the cabin doors, from `DECETISE_HANG` in
 **`data/decetise-artworks.js`** (slot order is `SLOTS[]` in the room's file;
 a slot with no entry is left bare). Titles, years, sizes and descriptions are
 her own, where she has published them; the panther painting has none yet and
-hangs as "Untitled". All seven hang at twice their size (`SCALE`
+hangs as "Untitled". All seven hang at three times their size (`SCALE`
 in that file), centred at 1.55 m: the long edge is her stated size, the short edge follows the photograph.
 Three have no published size and hang at a guessed long edge (`guessIn` in that
 file) that never reaches the label.

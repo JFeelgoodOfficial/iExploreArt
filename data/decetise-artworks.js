@@ -5,7 +5,7 @@
 // behind its enquiry button. Kept out of the room's own file so the foyer and
 // the curator can read it without pulling in the room's geometry.
 //
-// Each piece hangs at twice its size (SCALE, below).
+// Each piece hangs at three times its size (SCALE, below).
 
 import { MARIA_DECETISE_BIO } from './residencies.js';
 
@@ -32,10 +32,10 @@ const CONTACT = {
 // the piece but never reaches the label.
 //
 // `SCALE` multiplies every hanging size, as in data/chadrea-artworks.js. It
-// stands at 2 at the owner's direction: at true size the pieces read as
-// postcards on a thirty-metre wall. Proportions between the works stay true,
+// stands at 3 at the owner's direction (2, then half as much again): at true
+// size the pieces read as postcards on a thirty-metre wall. Proportions between the works stay true,
 // and the labels keep her stated sizes.
-const SCALE = 2;
+const SCALE = 3;
 const IN = 0.0254;
 const work = (n, px, label = {}, guessIn = 0) => {
   const longIn = label.dims ? Math.max(...label.dims.match(/\d+(\.\d+)?/g).map(Number)) : guessIn;

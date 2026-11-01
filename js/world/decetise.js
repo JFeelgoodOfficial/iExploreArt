@@ -9,9 +9,9 @@ import { DECETISE_HANG } from '../../data/decetise-artworks.js';
 // south and north walls are both art walls; and the west side has no wall at
 // all — the room opens straight onto an infinity pool that fills the terrace
 // edge to edge and spills off a weir at the lip of the slab, five storeys up.
-// No glass stands between the room and the water. What keeps you out of it is
-// the water: the collision plan stops you at the coping and has nothing at all
-// beyond it.
+// A waist-high glass balustrade on the coping, wall to wall, is all that
+// stands between the room and the water; the collision plan stops you at it
+// and has nothing at all beyond it.
 //
 // The lift core stands in the NORTH-EAST corner, where the east glass meets
 // the north art wall — which is where a visitor arrives, looking south down
@@ -48,9 +48,8 @@ export const DX = {
   // The pool IS the terrace. It runs from the plate's own edge — the weir hangs
   // a hair past tx0, so the sheet falls off the building, five storeys up — to
   // the room's floor edge at x0, where the coping is the room's own threshold.
-  // Nothing stands between the two: no glass, no walkway. You stop at the
-  // coping because the next step is water, which is also why the terrace needs
-  // no fence (decetiseSegments).
+  // No walkway between the two; a glass balustrade on the coping keeps the
+  // room off the water and the decks (decetiseSegments).
   pool: { x0: -24, x1: -17, z0: -8.4, z1: 8.4 },
   poolFloor: -1.15,                         // tiled bottom; you can see it
   waterY: -0.14,                            // surface, a hand under the coping
@@ -141,6 +140,10 @@ function fitted(entry, slot) {
 }
 
 const ARTIST = 'Maria Decetise';
+
+// The glass balustrade along the room's open west edge, standing on the
+// coping. Shared with decetiseSegments(), which keeps visitors back from it.
+const RAIL_X = DX.x0 + 0.15;
 
 // --- little helpers ---------------------------------------------------------
 function mulberry32(a) {
@@ -385,9 +388,14 @@ export function buildDecetiseRoom(scene, opts = {}) {
   function baseSlab(x0, z0, x1, z1) {
     box((x0 + x1) / 2, -0.56, (z0 + z1) / 2, x1 - x0, 1.1, z1 - z0, M.limestone, false);
   }
-  baseSlab(DX.x0, DX.z0 - 0.6, DX.x1 + 0.6, DX.z1 + 0.6);            // under the room
-  baseSlab(DX.tx0 - 0.6, DX.z0 - 0.6, DX.x0, DX.pool.z0);            // under the north deck
-  baseSlab(DX.tx0 - 0.6, DX.pool.z1, DX.x0, DX.z1 + 0.6);            // under the south deck
+  // Each stands TANK_GAP back from the tank. Flush, their faces lay in the very
+  // planes of the tiled tank walls and the two fought over the depth buffer:
+  // the end walls under the water flickered between tile and limestone in
+  // triangles. Set back, the tile is the only surface there.
+  const TANK_GAP = 0.03;
+  baseSlab(DX.x0 + TANK_GAP, DX.z0 - 0.6, DX.x1 + 0.6, DX.z1 + 0.6);            // under the room
+  baseSlab(DX.tx0 - 0.6, DX.z0 - 0.6, DX.x0, DX.pool.z0 - TANK_GAP);            // under the north deck
+  baseSlab(DX.tx0 - 0.6, DX.pool.z1 + TANK_GAP, DX.x0, DX.z1 + 0.6);            // under the south deck
 
   // Ceiling: four solid slabs round the courtyard, then an instanced grid of
   // panels over the courtyard itself with the oculi left out. One
@@ -470,7 +478,8 @@ export function buildDecetiseRoom(scene, opts = {}) {
   // the water — the plate's whole west side is one opening under the soffit,
   // and the pool's coping is the threshold you stand at. A glass wall here put
   // a reflection between the room and the only thing worth looking at. What
-  // stops you walking out is the water, not a pane (decetiseSegments).
+  // stops you walking out is a waist-high glass balustrade along the coping,
+  // the whole width of the plate (below, and decetiseSegments).
   box(DX.x0 + 0.08, DX.ceil - 0.34, 0, 0.36, 0.68, DX.z1 - DX.z0);   // head beam over the opening
   box(DX.x0 - 1.2, DX.ceil - 0.14, 0, 2.4, 0.28, DX.z1 - DX.z0);     // soffit out over the water
 
@@ -530,7 +539,7 @@ export function buildDecetiseRoom(scene, opts = {}) {
   // Coping on the three closed sides, overhanging the water by 30 mm the way
   // real coping does — which also keeps its face off the tank's, so there is
   // nothing coplanar left to flicker. The east run is the room's own threshold:
-  // the last stone under your feet, and then water. No glass in between.
+  // the last stone under your feet, with the glass balustrade standing on it.
   const OVER = 0.03, CW = 0.42, CH = 0.16;
   const cope = (x, z, w, d) => box(x, CH / 2 - 0.06, z, w, CH, d, M.stonePale);
   cope((P.x0 + P.x1) / 2, P.z0 - CW / 2 + OVER, P.x1 - P.x0 + CW * 2, CW);
@@ -558,6 +567,10 @@ export function buildDecetiseRoom(scene, opts = {}) {
   balustrade(DX.tx0, DX.z1, DX.x0, DX.z1);
   balustrade(DX.tx0, DX.z0, DX.tx0, P.z0 - 0.6);
   balustrade(DX.tx0, P.z1 + 0.6, DX.tx0, DX.z1);
+  // The room's own edge: glass on the coping, wall to wall, so nobody reads
+  // the water or the decks either side of it as somewhere to walk. The keep-in
+  // line in decetiseSegments() stops a visitor a player-radius short of it.
+  balustrade(RAIL_X, DX.z0, RAIL_X, DX.z1);
 
   // The four terrace trees (ALLEE) are planted further down, by the same builder
   // as the five that come up through the oculi — they need the bark, leaf and
@@ -1136,11 +1149,9 @@ export function decetiseSegments() {
     seg(x0, z0, x1, z0), seg(x1, z0, x1, z1), seg(x1, z1, x0, z1), seg(x0, z1, x0, z0),
   ];
   return [
-    // Interior shell. Three sides are wall or glass; the west is an open
-    // edge with the pool immediately beyond it, so the line below is the only
-    // thing between a visitor and the water. It sits a player-radius back from
-    // the coping, which is where you would stop anyway — the next step is a
-    // metre of water and then the side of the building.
+    // Interior shell. Three sides are wall or glass; the west is the glass
+    // balustrade on the coping, with the pool beyond it. The line sits on the
+    // rail, so a visitor stops a player-radius short of the glass.
     //
     // Nothing out on the terrace needs colliders any more. The keep-in fence
     // along the plate's edge and the ring round the pool both existed for
@@ -1148,7 +1159,7 @@ export function decetiseSegments() {
     seg(DX.x0, DX.z0 + 0.25, DX.x1 - 0.25, DX.z0 + 0.25),
     seg(DX.x1 - 0.25, DX.z0 + 0.25, DX.x1 - 0.25, DX.z1 - 0.25),
     seg(DX.x1 - 0.25, DX.z1 - 0.25, DX.x0, DX.z1 - 0.25),
-    seg(DX.x0 + 0.1, DX.z0 + 0.25, DX.x0 + 0.1, DX.z1 - 0.25),
+    seg(RAIL_X, DX.z0 + 0.25, RAIL_X, DX.z1 - 0.25),
     // The lift core, in the north-east corner. Its north and east faces stand
     // behind the shell's own lines, so the only face a visitor can reach is
     // the west one — held 0.2 off the stone so nobody pushes into the picture
